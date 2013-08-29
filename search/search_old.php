@@ -276,11 +276,17 @@ class search {
 		if ($this->relevanceSearch === TRUE) {
 			$tmp = array();
 			foreach($results as &$ma) {
-			    $tmp[] = &$ma['relevance'];
+				$tmp[] = &$ma['relevance'];
 			}
 			array_multisort($tmp, SORT_DESC, $results);
 		}
 
+		$words = array();
+		foreach ($this->searchArray as $keyword) {
+			if (!array_key_exists(strtolower($keyword),$this->boolOperands)) {
+				$words[] = '/(.*?)('.trim($keyword,"+-*").')(.*?)/i';
+			}
+		}
 
 		$output .= '<table class="searchResults">';
 
@@ -297,19 +303,14 @@ class search {
 							continue;
 						}
 
-						$value = $result[$field['fieldName']];
+						$value    = $result[$field['fieldName']];
 						$relevant = FALSE;
-						foreach ($this->searchArray as $keyword) {
-							if (!array_key_exists(strtolower($keyword),$this->boolOperands)) {
 
-								$newValue = kwic(htmlSanitize(trim($keyword,"+-*")),$value);
+						$newValue = preg_replace_callback($words, 'self::checkOpenTag', $value);
 
-								if ($newValue != $value) {
-									$value = $newValue;
-									$relevant = TRUE;
-								}
-
-							}
+						if ($value != $newValue) {
+							$value = $newValue;
+							$relevant = TRUE;
 						}
 
 						if ($field['display'] === TRUE || (strtolower($field['display']) == 'relevant' && $relevant === TRUE)) {
@@ -375,6 +376,19 @@ class search {
 			}
 		}
 		return $result;
+	}
+
+	/**
+	 * Callback function to check if matches are within HTML tags
+	 *
+	 * @param $array
+	 * @return string
+	 */
+	private function checkOpenTag($matches) {
+		if (strpos($matches[0], '<') === FALSE) {
+			return $matches[1].'<span class="kwic">'.$matches[2].'</span>'.$matches[3];
+		}
+		return $matches[0];
 	}
 
 	/**
@@ -607,7 +621,7 @@ class search {
 						array_push($tmp, $a);
 					}
 
-					// if $a == $b != $c we'll turn $a and $c into one and return that and $c
+					// if $a == $b != $c we'll turn $a and $b into one and return that and $c
 					// if $a != $b == $c we'll turn $b and $c into one and return that and $a
 					elseif (($a == $b && $b != $c) || $b == $c)	{
 						array_push($tmp, $a);
