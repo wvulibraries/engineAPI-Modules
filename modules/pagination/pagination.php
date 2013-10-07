@@ -66,13 +66,40 @@ class pagination {
 	}
 
 	/**
+	 * Generate HTML dropdown with number of elements = number of pages
+	 * intended for use for switching pages faster
+	 * 
+	 * @return string
+	 */
+	public function dropdown($name="paginationPageDropdown",$id="paginationPageDropdownID",$class="paginationPageDropdownClass") {
+
+		$output = sprintf('<select name="" id="" class="">',
+			htmlSanitize($name),
+			htmlSanitize($id),
+			htmlSanitize($class)
+			);
+
+
+		for($I=1;$I<=$this->totalPages;$I++) {
+			$output = sprintf('<option value="%s">%s</option>',
+				$I,
+				$I);
+		}
+
+		$output .= "</select>";
+
+		return($output);
+
+	}
+
+	/**
 	 * Generate HTML navBar for pagination
 	 * @return string
 	 */
 	public function nav_bar() {
 
 		$output = "";
-		$totalPages = ceil($this->totalItems/$this->itemsPerPage);
+		$totalPages = $this->totalPages();
 
 		if ($this->currentPage < 1) {
 			$this->currentPage = 1;
@@ -181,6 +208,14 @@ class pagination {
 		return $output;
 	}
 
+	/**
+	 * Returns an integer of the total number of pages
+	 *
+	 * @return int
+	 */
+	private function totalPages() {
+		return ceil($this->totalItems/$this->itemsPerPage);
+	}
 
 	/**
 	 * Returns an array with the page limits
