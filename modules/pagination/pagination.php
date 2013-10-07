@@ -80,8 +80,8 @@ class pagination {
 			);
 
 
-		for($I=1;$I<=$this->totalPages;$I++) {
-			$output = sprintf('<option value="%s">%s</option>',
+		for($I=1;$I<=$this->totalPages();$I++) {
+			$output .= sprintf('<option value="%s">%s</option>',
 				$I,
 				$I);
 		}
