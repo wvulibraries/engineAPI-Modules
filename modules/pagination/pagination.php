@@ -73,7 +73,7 @@ class pagination {
 	 */
 	public function dropdown($name="paginationPageDropdown",$id="paginationPageDropdownID",$class="paginationPageDropdownClass") {
 
-		$output = sprintf('<select name="" id="" class="">',
+		$output = sprintf('<select name="%s" id="%s" class="%s">',
 			htmlSanitize($name),
 			htmlSanitize($id),
 			htmlSanitize($class)
