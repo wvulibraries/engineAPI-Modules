@@ -91,6 +91,7 @@ class pagination {
 		$output .= "</select>";
 
 		return($output);
+		return $output;
 
 	}
 
