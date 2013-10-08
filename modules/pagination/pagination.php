@@ -68,7 +68,9 @@ class pagination {
 	/**
 	 * Generate HTML dropdown with number of elements = number of pages
 	 * intended for use for switching pages faster
-	 * 
+	 * @param string name name of select element
+	 * @param string id ID for select element
+	 * @param string class class for select element
 	 * @return string
 	 */
 	public function dropdown($name="paginationPageDropdown",$id="paginationPageDropdownID",$class="paginationPageDropdownClass") {
