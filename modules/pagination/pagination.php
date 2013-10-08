@@ -90,7 +90,45 @@ class pagination {
 
 		$output .= "</select>";
 
-		return($output);
+		return $output;
+
+	}
+
+	/**
+	 * Generate HTML dropdown for number of records per paginated page
+	 * 
+	 * @param  int maxPerPage the max number of records to display per page
+	 * @param int leastPerPage Least number of records to display per page
+	 * @param  int divisor Increment from max per page to least per page
+	 * @param string name name of select element
+	 * @param string id ID for select element
+	 * @param string class class for select element
+	 * @return string
+	 */
+	public function recordsPerPageDropdown($maxPerPage=500,$leastPerPage=25,$divisor=100, $name="paginationRecordsPerPageDropdown",$id="paginationRecordsPerPageDropdownID",$class="paginationRecordsPerPageDropdownClass") {
+		
+		if ($maxPerPage <= $leastPerPage) return "maxPerPage must be greater than leastPerPage";
+
+		$output = sprintf('<select name="%s" id="%s" class="%s">',
+			htmlSanitize($name),
+			htmlSanitize($id),
+			htmlSanitize($class)
+			);
+
+
+		for($I=$maxPerPage;$I>=$leastPerPage;$I-=$divisor) {
+			$output .= sprintf('<option value="%s">%s</option>',
+				$I,
+				$I);
+		} 
+
+		$output .= sprintf('<option value="%s">%s</option>',
+			$leastPerPage,
+			$leastPerPage
+			);
+
+		$output .= "</select>";
+
 		return $output;
 
 	}
