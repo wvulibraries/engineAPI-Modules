@@ -117,8 +117,9 @@ class pagination {
 
 
 		for($I=$maxPerPage;$I>=$leastPerPage;$I-=$divisor) {
-			$output .= sprintf('<option value="%s">%s</option>',
+			$output .= sprintf('<option value="%s"%s>%s</option>',
 				$I,
+				($I == $this->itemsPerPage)?' selected="selected"':"",
 				$I);
 		} 
 
