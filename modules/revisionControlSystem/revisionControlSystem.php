@@ -966,7 +966,7 @@ class revisionControlSystem {
 	 * @return bool|mixed|string
 	 *         Returns empty string if nothing is found
 	 */
-	private function getMetadataForID($revisionID,$type="metadata",$decode=TRUE) {
+	public function getMetadataForID($revisionID,$type="metadata",$decode=TRUE) {
 
 		if (!validate::integer($revisionID)) {
 			errorHandle::newError(__METHOD__."() - invalid ID passed for revisionID", errorHandle::DEBUG);
