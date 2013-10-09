@@ -857,6 +857,52 @@ class revisionControlSystem {
 
 	}
 
+    /**
+     * Retrieves an array of secondaryIDs
+     *
+     * This method will return an array of the recorded secondary IDs for a given production object.
+     *
+     * @author David Gersting
+     * @param string $primaryID
+     *        The primary ID of the object
+     * @param string $orderByDirection
+     *        The ORDER BY direction to apply (Valid: ASC or DESC)
+     * @param string $where
+     *        An optional WHERE clause to be added to the SQL call
+     * @return array
+     */
+    public function getSecondaryIDs($primaryID,$orderByDirection='ASC',$where=NULL){
+        $results = array();
+        $where   = (isset($where) and !empty($where)) ? " AND ($where)" : '';
+
+        // Format and validate $orderByDirection
+        $orderByDirection = trim(strtoupper($orderByDirection));
+        if($orderByDirection != 'ASC' and $orderByDirection != 'DESC'){
+            errorHandle::newError(__METHOD__."() - Invalid param for orderByDirection: '$orderByDirection' (Only 'ASC' and 'DESC' allowed)", errorHandle::DEBUG);
+            $orderByDirection = 'ASC';
+        }
+
+        // Build and run SQL
+        $sql = sprintf("SELECT secondaryID FROM `%s` WHERE (productionTable='%s' AND primaryID='%s') %s ORDER BY secondaryID %s",
+            $this->openDB->escape($this->revisionTable),
+            $this->openDB->escape($this->productionTable),
+            $this->openDB->escape($primaryID),
+            $this->openDB->escape($where),
+            $this->openDB->escape($orderByDirection)
+        );
+        $sqlResult = $this->openDB->query($sql);
+
+        // Did it work?
+        if(!$sqlResult['result']){
+            errorHandle::newError(__METHOD__."() - SQL Error: ".$sqlResult['error'], errorHandle::DEBUG);
+        }else{
+            while($row = mysql_fetch_assoc($sqlResult['result'])){
+                $results[] = $row['secondaryID'];
+            }
+        }
+        return $results;
+    }
+
 	/**
 	 * Retrieved metadata for given revision
 	 * @param $revisionID
