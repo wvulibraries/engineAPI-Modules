@@ -858,6 +858,15 @@ class revisionControlSystem {
 	}
 
     /**
+    /**
+     * Returns the production table
+     *
+     * @author Michael Bond
+     * @return string
+     */
+	public function getProductionTable() {
+		return $this->productionTable;
+	}
      * Retrieves an array of secondaryIDs
      *
      * This method will return an array of the recorded secondary IDs for a given production object.
