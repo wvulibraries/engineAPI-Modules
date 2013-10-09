@@ -858,6 +858,40 @@ class revisionControlSystem {
 	}
 
     /**
+     * Returns a revision ID number
+     *
+     * This method will return the specified revision ID from the revisions table.<br>
+     *
+     * @author Michael Bond
+     * @param string $primaryID
+     *        The primary ID for the object under revision control
+     * @param string $secondaryID
+     *        The secondary ID for the object under revision control
+     * @return array|bool
+     */
+    public function getRevisionID($primaryID,$secondaryID) {
+
+    	$sql = sprintf("SELECT `ID` FROM `%s` WHERE productionTable='%s' AND primaryID='%s' AND secondaryID='%s' LIMIT 1",
+            $this->openDB->escape($this->revisionTable),
+            $this->openDB->escape($this->productionTable),
+            $this->openDB->escape($primaryID),
+            $this->openDB->escape($secondaryID)
+        );
+        $sqlResult = $this->openDB->query($sql);
+
+        if(!$sqlResult['result']) {
+            errorHandle::newError(__METHOD__."() - SQL Error: ".$sqlResult['error'], errorHandle::DEBUG);
+            return FALSE;
+        }
+        else {
+            $row = mysql_fetch_assoc($sqlResult['result']);
+            return $row['ID'];
+        }
+
+        return FALSE;
+
+    }
+
     /**
      * Returns the revision table
      *
@@ -877,6 +911,8 @@ class revisionControlSystem {
 	public function getProductionTable() {
 		return $this->productionTable;
 	}
+
+    /**
      * Retrieves an array of secondaryIDs
      *
      * This method will return an array of the recorded secondary IDs for a given production object.
