@@ -859,6 +859,16 @@ class revisionControlSystem {
 
     /**
     /**
+     * Returns the revision table
+     *
+     * @author Michael Bond
+     * @return string
+     */
+    public function getRevisionTable() {
+		return $this->revisionTable;
+	}
+
+    /**
      * Returns the production table
      *
      * @author Michael Bond
