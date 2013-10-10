@@ -123,8 +123,9 @@ class pagination {
 				$I);
 		} 
 
-		$output .= sprintf('<option value="%s">%s</option>',
+		$output .= sprintf('<option value="%s"%s>%s</option>',
 			$leastPerPage,
+			($this->itemsPerPage == $leastPerPage)?' selected="selected"':"",
 			$leastPerPage
 			);
 
