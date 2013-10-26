@@ -69,8 +69,8 @@ class dlxs {
 		
 		$engine->defTempPattern($this->pattern,$this->function,$this);
 		
-		$this->cleanGet  = $engine->cleanGet;
-		$this->cleanPost = $engine->cleanPost;
+		$this->cleanGet  = $_GET;
+		$this->cleanPost = $_POST;
 		
 		if(isset($this->cleanGet['HTML']['type'])) {
 			$this->viewType = $this->cleanGet['HTML']['type'];

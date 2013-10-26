@@ -103,17 +103,17 @@ $return = $rcs->revert2Revision("1","1358272517");
 $compare1 = "1358272517";
 $compare2 = "1358272520";
 
-if (isset($engine->cleanPost['MYSQL']['submit'])) {
-	$return = $rcs->revert2Revision("1",$engine->cleanPost['MYSQL']['revert']);
+if (isset($_POST['MYSQL']['submit'])) {
+	$return = $rcs->revert2Revision("1",$_POST['MYSQL']['revert']);
 }
-else if (isset($engine->cleanPost['MYSQL']['compare'])) {
+else if (isset($_POST['MYSQL']['compare'])) {
 
-	if (!isset($engine->cleanPost['MYSQL']['compare1']) || !isset($engine->cleanPost['MYSQL']['compare2'])) {
+	if (!isset($_POST['MYSQL']['compare1']) || !isset($_POST['MYSQL']['compare2'])) {
 		errorHandle::errorMsg("Must select both a 'Compare 1' and a 'Compare 2'.");
 	}
 	else {
-		$compare1 = $engine->cleanPost['MYSQL']['compare1'];
-		$compare2 = $engine->cleanPost['MYSQL']['compare2'];
+		$compare1 = $_POST['MYSQL']['compare1'];
+		$compare2 = $_POST['MYSQL']['compare2'];
 	}
 }
 

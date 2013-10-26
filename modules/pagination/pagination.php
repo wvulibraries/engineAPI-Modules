@@ -51,17 +51,10 @@ class pagination {
 	public $displayPrevNext	= "yes";
 
 	/**
-	 * @var array
-	 */
-	private $cleanGet;
-
-	/**
 	 * Class constructor
 	 * @param int $total Total number of things to show
 	 */
 	function __construct($total) {
-		$engine = EngineAPI::singleton();
-		$this->cleanGet = $engine->cleanGet;
 		$this->totalItems = $total;
 	}
 

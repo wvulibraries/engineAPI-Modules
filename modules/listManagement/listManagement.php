@@ -436,7 +436,7 @@ class listManagement {
 
 		$submitButtonName = (isnull($this->submitName))?$this->table.'_submit':$this->submitName;
 
-		$error = (isset($engine->cleanPost['MYSQL'][$submitButtonName]) && $this->repost === TRUE)?TRUE:FALSE;
+		$error = (isset($_POST['MYSQL'][$submitButtonName]) && $this->repost === TRUE)?TRUE:FALSE;
 
 		$output  = "";
 		$output .= "<!-- engine Instruction break -->".'<!-- engine Instruction displayTemplateOff -->'."<!-- engine Instruction break -->";
@@ -490,7 +490,7 @@ class listManagement {
 			unset($value);
 			$value = "";
 			if ($error === TRUE && $I['disabled'] != TRUE && $I['type'] != "multiselect") {
-				$value = ($I['type'] == "wysiwyg")?$engine->cleanPost['RAW'][$I['field'].'_insert']:$engine->cleanPost['HTML'][$I['field'].'_insert'];
+				$value = ($I['type'] == "wysiwyg")?$_POST['RAW'][$I['field'].'_insert']:$_POST['HTML'][$I['field'].'_insert'];
 			}
 
 			if (is_empty($value) && !isnull($I['value'])) {
@@ -599,7 +599,7 @@ class listManagement {
 						$output .= "<option value=\"".htmlentities($option['value'])."\"";
 
 						//Handle if the form is being reposted after a failed submit attempt
-						$output .= ($error === TRUE && $engine->cleanPost['HTML'][$I['field'].'_insert'] == $option['value'])?" selected":"";
+						$output .= ($error === TRUE && $_POST['HTML'][$I['field'].'_insert'] == $option['value'])?" selected":"";
 						$output .= ($error === FALSE && isset($option['selected']) && $option['selected'] === TRUE)?" selected":"";
 
 						$output .= ">".htmlentities($option['label'])."</option>";
@@ -620,7 +620,7 @@ class listManagement {
 
 					// Yes
 					$output .= '<option value="1"';
-					$output .= ($error === TRUE && $engine->cleanPost['HTML'][$I['field'].'_insert'] == "1")?" selected":"";
+					$output .= ($error === TRUE && $_POST['HTML'][$I['field'].'_insert'] == "1")?" selected":"";
 					$output .= ($error === FALSE && isset($I['value']) && $I['value'] == "1")?" selected":"";
 					$output .= ">";
 					$output .= (isset($I['options']['yesLabel']))?htmlentities($I['options']['yesLabel']):"Yes";
@@ -628,7 +628,7 @@ class listManagement {
 
 					// No
 					$output .= '<option value="0"';
-					$output .= ($error === TRUE && $engine->cleanPost['HTML'][$I['field'].'_insert'] == "0")?" selected":"";
+					$output .= ($error === TRUE && $_POST['HTML'][$I['field'].'_insert'] == "0")?" selected":"";
 					$output .= ($error === FALSE && isset($I['value']) && $I['value'] == "0")?" selected":"";
 					$output .= ">";
 					$output .= (isset($I['options']['yesLabel']))?htmlentities($I['options']['noLabel']):"No";
@@ -638,7 +638,7 @@ class listManagement {
 				}
 				else if ($I['options']['type'] == "checkbox") {
 					$output .= '<input type="checkbox" name="'.$I['field'].'_insert" value="1"';
-					$output .= ($error === TRUE && $engine->cleanPost['HTML'][$I['field'].'_insert'] == "1")?" checked":"";
+					$output .= ($error === TRUE && $_POST['HTML'][$I['field'].'_insert'] == "1")?" checked":"";
 					$output .= ($error === FALSE && isset($I['value']) && $I['value'] == "1")?" checked":"";
 					$output .= ($I['readonly'] === TRUE)?" readonly ":"";
 					$output .= ($I['disabled'] === TRUE)?" disabled ":"";
@@ -675,7 +675,7 @@ class listManagement {
 					while ($row = mysql_fetch_array($sqlResult['result'], MYSQL_ASSOC)) {
 
 						$checked = NULL;
-						if ($error === TRUE && isset($engine->cleanPost['HTML'][$I['field'].'_insert']) && in_array($row[$I['options']['valueDisplayID']],$engine->cleanPost['HTML'][$I['field'].'_insert'])) {
+						if ($error === TRUE && isset($_POST['HTML'][$I['field'].'_insert']) && in_array($row[$I['options']['valueDisplayID']],$_POST['HTML'][$I['field'].'_insert'])) {
 							$checked = "checked ";
 						}
 						else if ($error === FALSE && isset($I['options']['selected']) && in_array($row[$I['options']['valueDisplayID']],$I['options']['selected'])) {
@@ -697,7 +697,7 @@ class listManagement {
 
 						// $output .= "<li>";
 						// $output .= '<input type="checkbox" name="'.$I['field'].'_insert[]" value="'.htmlsanitize($row[$I['options']['valueDisplayID']]).'" ';
-						// $output .= ($error === TRUE && isset($engine->cleanPost['HTML'][$I['field'].'_insert']) && in_array($row[$I['options']['valueDisplayID']],$engine->cleanPost['HTML'][$I['field'].'_insert']))?"checked":"";
+						// $output .= ($error === TRUE && isset($_POST['HTML'][$I['field'].'_insert']) && in_array($row[$I['options']['valueDisplayID']],$_POST['HTML'][$I['field'].'_insert']))?"checked":"";
 						// $output .= ($error === FALSE && isset($I['options']['selected']) && in_array($row[$I['options']['valueDisplayID']],$I['options']['selected']))?"checked":"";
 						// $output .= ' id="'.htmlSanitize($row[$I['options']['valueDisplayID']]).'"';
 						// $output .= '/>';
@@ -778,8 +778,8 @@ class listManagement {
 				if ($multiSelectError === FALSE) {
 
 					if ($error === TRUE) {
-						if (isset($engine->cleanPost['MYSQL'][$I['field']])) {
-							 $I['options']['select'] = implode(",",$engine->cleanPost['MYSQL'][$I['field']]);
+						if (isset($_POST['MYSQL'][$I['field']])) {
+							 $I['options']['select'] = implode(",",$_POST['MYSQL'][$I['field']]);
 						}
 					}
 
@@ -1289,7 +1289,7 @@ class listManagement {
 				errorHandle::errorMsg("Update Error: updateInsertID was not defined");
 				 return(!$error['error']);
 			}
-			else if (!isset($engine->cleanPost['MYSQL'][$this->updateInsertID."_insert"])) {
+			else if (!isset($_POST['MYSQL'][$this->updateInsertID."_insert"])) {
 				errorHandle::errorMsg("Update Error: updateInsertID was not set");
 				return(!$error['error']);
 			}
@@ -1319,17 +1319,17 @@ class listManagement {
 			// If it is a password field, and this is an update insert, and the password field is blank
 			// skip it. (Password is not being updated)
 			if ($this->updateInsert === TRUE && $I['type'] == "password" &&
-				is_empty($engine->cleanPost['MYSQL'][$I['field'].'_insert']))
+				is_empty($_POST['MYSQL'][$I['field'].'_insert']))
 			{
 				continue;
 			}
 
 			// Check boxes don't return if they aren't checked. Deal with that
 			if ($I["type"] == "yesNo" && $I["options"]["type"] == "checkbox") {
-				if (!isset($engine->cleanPost['MYSQL'][$I['field'].'_insert'])) {
-					$engine->cleanPost['MYSQL'][$I['field'].'_insert'] = "0";
-					$engine->cleanPost['HTML'][$I['field'].'_insert']  = "0";
-					$engine->cleanPost['RAW'][$I['field'].'_insert']   = "0";
+				if (!isset($_POST['MYSQL'][$I['field'].'_insert'])) {
+					$_POST['MYSQL'][$I['field'].'_insert'] = "0";
+					$_POST['HTML'][$I['field'].'_insert']  = "0";
+					$_POST['RAW'][$I['field'].'_insert']   = "0";
 				}
 			}
 
@@ -1339,24 +1339,24 @@ class listManagement {
 
 				// perform a blank check.
 				if ($I['type'] != "multiselect" && $I['type'] != "checkbox") {
-					if (is_empty($engine->cleanPost['MYSQL'][$I['field'].'_insert'],FALSE)) {
+					if (is_empty($_POST['MYSQL'][$I['field'].'_insert'],FALSE)) {
 						$error['string'] .= errorHandle::errorMsg("Blank entries not allowed in ".htmlentities($I['label']).". Other records may be updated still.");
 						$error['error'] = TRUE;
 						continue;
 					}
 
-					if ($I['type'] == "select" && $engine->cleanPost['MYSQL'][$I['field'].'_insert'] == "NULL") {
+					if ($I['type'] == "select" && $_POST['MYSQL'][$I['field'].'_insert'] == "NULL") {
 						$error['string'] .= errorHandle::errorMsg("Blank entries not allowed in ".htmlentities($I['label']).". Other records may be updated still.");
 						$error['error'] = TRUE;
 						continue;
 					}
 				}
-				else if ($I['type'] == "multiselect" && !isset($engine->cleanPost['MYSQL'][$I['field']])) {
+				else if ($I['type'] == "multiselect" && !isset($_POST['MYSQL'][$I['field']])) {
 					$error['string'] .= errorHandle::errorMsg("Blank entries not allowed in ".htmlentities($I['label']).". Other records may be updated still.");
 					$error['error'] = TRUE;
 					continue;
 				}
-				else if ($I['type'] == "checkbox" && !isset($engine->cleanPost['MYSQL'][$I['field']."_insert"])) {
+				else if ($I['type'] == "checkbox" && !isset($_POST['MYSQL'][$I['field']."_insert"])) {
 					$error['string'] .= errorHandle::errorMsg("Blank entries not allowed in ".htmlentities($I['label']).". Other records may be updated still.");
 					$error['error'] = TRUE;
 					continue;
@@ -1367,8 +1367,8 @@ class listManagement {
 			//check if the current field should have a valid email address
 			if ($I["email"] === TRUE) {
 				// If its not empty, and it does not have a valid email address, continue
-				if(!empty($engine->cleanPost['MYSQL'][$I["field"].'_insert']) && !validateEmailAddr($engine->cleanPost['MYSQL'][$I["field"].'_insert'])) {
-					$error['string'] .= errorHandle::errorMsg("Invalid E-Mail Address: ". htmlentities($engine->cleanPost['MYSQL'][$I["field"].'_insert']).". Other records may be updated still.");
+				if(!empty($_POST['MYSQL'][$I["field"].'_insert']) && !validateEmailAddr($_POST['MYSQL'][$I["field"].'_insert'])) {
+					$error['string'] .= errorHandle::errorMsg("Invalid E-Mail Address: ". htmlentities($_POST['MYSQL'][$I["field"].'_insert']).". Other records may be updated still.");
 					$error['error'] = TRUE;
 					continue;
 				}
@@ -1384,11 +1384,11 @@ class listManagement {
 				}
 
 				// perform a dupe check.
-				if ($I["email"] === TRUE && $engine->cleanPost['MYSQL'][$I['field'].'_insert'] == "dev@null.com") {
+				if ($I["email"] === TRUE && $_POST['MYSQL'][$I['field'].'_insert'] == "dev@null.com") {
 					// dev@null.com is a special case email. We allow duplicates of it
 				}
-				else if ($this->duplicateCheck($engine->cleanPost['MYSQL'][$I['field'].'_insert'],$I["field"])) {
-					$error['string'] .= errorHandle::errorMsg("Entry, ".htmlentities($engine->cleanPost['MYSQL'][$I['field'].'_insert']).", already in database. Other records may be updated still.");
+				else if ($this->duplicateCheck($_POST['MYSQL'][$I['field'].'_insert'],$I["field"])) {
+					$error['string'] .= errorHandle::errorMsg("Entry, ".htmlentities($_POST['MYSQL'][$I['field'].'_insert']).", already in database. Other records may be updated still.");
 					$error['error'] = TRUE;
 					continue;
 				}
@@ -1401,12 +1401,12 @@ class listManagement {
 					continue;
 				}
 
-				if ($I['blank'] === TRUE && is_empty($engine->cleanPost['MYSQL'][$I['field'].'_insert'])) {
+				if ($I['blank'] === TRUE && is_empty($_POST['MYSQL'][$I['field'].'_insert'])) {
 					// skip validation if field is blank and allowed to be blank
 					//continue;
 				}
 				else {
-					$validateResult = $this->validateData($I['validate'],$engine->cleanPost['MYSQL'][$I['field'].'_insert']);
+					$validateResult = $this->validateData($I['validate'],$_POST['MYSQL'][$I['field'].'_insert']);
 					if ($validateResult !== FALSE) {
 						$error['string'] .= $validateResult;
 						$error['error'] = TRUE;
@@ -1417,15 +1417,15 @@ class listManagement {
 
 			// Change dates into unix time stamps
 			if ($I['type'] == "date") {
-				if (!is_empty($engine->cleanPost['MYSQL'][$I['field'].'_insert'])) {
-					$engine->cleanPost['MYSQL'][$I['field'].'_insert'] = dateToUnix($engine->cleanPost['MYSQL'][$I['field'].'_insert']);
+				if (!is_empty($_POST['MYSQL'][$I['field'].'_insert'])) {
+					$_POST['MYSQL'][$I['field'].'_insert'] = dateToUnix($_POST['MYSQL'][$I['field'].'_insert']);
 				}
 			}
 
 			// passwords
 			if ($I['type'] == "password") {
-				if ($engine->cleanPost['MYSQL'][$I['field'].'_insert'] !=
-					$engine->cleanPost['MYSQL'][$I['field'].'_insert_verify'])
+				if ($_POST['MYSQL'][$I['field'].'_insert'] !=
+					$_POST['MYSQL'][$I['field'].'_insert_verify'])
 				{
 					$error['string'] .= errorHandle::errorMsg("Passwords do not match");
 					$error['error']   = TRUE;
@@ -1435,7 +1435,7 @@ class listManagement {
 
 			// Multiselect doesn't have a _insert variable, checkbox is an array
 			if ($I['type'] != "multiselect" && $I['type'] != "checkbox" && $I['type'] != "radio" && $I['disabled'] === FALSE) {
-				$engine->cleanPost['MYSQL'][$I['field'].'_insert'] = stripCarriageReturns($engine->cleanPost['MYSQL'][$I['field'].'_insert']);
+				$_POST['MYSQL'][$I['field'].'_insert'] = stripCarriageReturns($_POST['MYSQL'][$I['field'].'_insert']);
 			}
 
 		} // Foreach field
@@ -1471,7 +1471,7 @@ class listManagement {
 				// the form
 				if ($this->repost === TRUE) {
 					$submitButtonName = (isnull($this->submitName))?$this->table.'_submit':$this->submitName;
-					$engine->cleanPost['MYSQL'][$submitButtonName] = NULL;
+					$_POST['MYSQL'][$submitButtonName] = NULL;
 				}
 				return($returnValue);
 			}
@@ -1548,7 +1548,7 @@ class listManagement {
 				return(FALSE);
 			}
 
-			$return = $emailObj->addSubject((isset($engine->cleanPost['MYSQL']['subject_insert']))?$engine->cleanPost['MYSQL']['subject_insert']:"Subject Field not Provided");
+			$return = $emailObj->addSubject((isset($_POST['MYSQL']['subject_insert']))?$_POST['MYSQL']['subject_insert']:"Subject Field not Provided");
 			if ($return == FALSE) {
 				errorHandle::errorMsg("Email (SUBJECT) not configured properly");
 				return(FALSE);
@@ -1560,7 +1560,7 @@ class listManagement {
 					continue;
 				}
 
-				$body .= $I['field'] .": ".$engine->cleanPost['MYSQL'][$I['field'].'_insert']."\n";
+				$body .= $I['field'] .": ".$_POST['MYSQL'][$I['field'].'_insert']."\n";
 			}
 
 			$return = $emailObj->addBody($body);
@@ -1607,7 +1607,7 @@ class listManagement {
 				$this->database->escape($this->table),
 				$this->buildInsertUpdateString(),
 				$this->database->escape($this->updateInsertID),
-				$engine->cleanPost['MYSQL'][$this->updateInsertID."_insert"]
+				$_POST['MYSQL'][$this->updateInsertID."_insert"]
 				);
 
 		}
@@ -1637,7 +1637,7 @@ class listManagement {
 			// the form
 			if ($this->repost === TRUE) {
 				$submitButtonName = (isnull($this->submitName))?$this->table.'_submit':$this->submitName;
-				$engine->cleanPost['MYSQL'][$submitButtonName] = NULL;
+				$_POST['MYSQL'][$submitButtonName] = NULL;
 			}
 
 			if (!isnull($checkboxFields)) {
@@ -1645,7 +1645,7 @@ class listManagement {
 					$linkObjectID = $sqlResult['id'];
 				}
 				else {
-					$linkObjectID = $engine->cleanPost['MYSQL'][$this->updateInsertID."_insert"];
+					$linkObjectID = $_POST['MYSQL'][$this->updateInsertID."_insert"];
 				}
 
 				foreach ($checkboxFields as $I) {
@@ -1671,8 +1671,8 @@ class listManagement {
 							return(!$error['error']);
 						} // if sql error
 
-						//if (isset($engine->cleanPost['MYSQL'][$I['field']."_insert"])) {
-							foreach ($engine->cleanPost['MYSQL'][$I['field']."_insert"] as $K=>$value) {
+						//if (isset($_POST['MYSQL'][$I['field']."_insert"])) {
+							foreach ($_POST['MYSQL'][$I['field']."_insert"] as $K=>$value) {
 								$sql = sprintf("INSERT INTO %s(%s, %s) VALUES('%s','%s')",
 									$this->database->escape($I['options']['linkTable']),
 									$this->database->escape($I['options']['linkValueField']),
@@ -1722,7 +1722,7 @@ class listManagement {
 					$linkObjectID = $sqlResult['id'];
 				}
 				else {
-					$linkObjectID = $engine->cleanPost['MYSQL'][$this->updateInsertID."_insert"];
+					$linkObjectID = $_POST['MYSQL'][$this->updateInsertID."_insert"];
 				}
 
 				foreach ($multiSelectFields as $I) {
@@ -1748,8 +1748,8 @@ class listManagement {
 						return(!$error['error']);
 					} // if sql error
 
-					if (isset($engine->cleanPost['MYSQL'][$I['field']])) {
-						foreach ($engine->cleanPost['MYSQL'][$I['field']] as $K=>$value) {
+					if (isset($_POST['MYSQL'][$I['field']])) {
+						foreach ($_POST['MYSQL'][$I['field']] as $K=>$value) {
 							$sql = sprintf("INSERT INTO %s(%s, %s) VALUES('%s','%s')",
 								$this->database->escape($I['options']['linkTable']),
 								$this->database->escape($I['options']['linkValueField']),
@@ -1773,7 +1773,7 @@ class listManagement {
 								return(!$error['error']);
 							} // if sql error
 						} // foreach $K=>$value
-					} // if isset($engine->cleanPost['MYSQL'][$I['field']]
+					} // if isset($_POST['MYSQL'][$I['field']]
 				} // foreach $multiSelectFields
 			} // If Multiselect
 
@@ -1791,7 +1791,7 @@ class listManagement {
 				$engine->localVars("listObjInsertID",$sqlResult['id']);
 			}
 			else {
-				$engine->localVars("listObjInsertID",$engine->cleanPost['MYSQL'][$this->updateInsertID."_insert"]);
+				$engine->localVars("listObjInsertID",$_POST['MYSQL'][$this->updateInsertID."_insert"]);
 			}
 		}
 
@@ -1833,13 +1833,13 @@ class listManagement {
 		$error           = array();
 		$error["error"]  = FALSE;
 
-		if (isset($engine->cleanPost['MYSQL']['delete'])) {
+		if (isset($_POST['MYSQL']['delete'])) {
 
 			if (!empty($this->deletedIDs)) {
 				$this->deletedIDs = array();
 			}
 
-			foreach($engine->cleanPost['MYSQL']['delete'] as $value) {
+			foreach($_POST['MYSQL']['delete'] as $value) {
 
 				$this->deletedIDs[] = $value;
 
@@ -1903,7 +1903,7 @@ class listManagement {
 		while ($row = mysql_fetch_array($sqlResult['result'], MYSQL_BOTH)) {
 
 			//grab the first column in the current row, if it is set, throw it in $temp
-			if (!isset($engine->cleanPost['MYSQL']["check_".$row[0]])) {
+			if (!isset($_POST['MYSQL']["check_".$row[0]])) {
 				continue;
 			}
 
@@ -1925,10 +1925,10 @@ class listManagement {
 
 				// Check boxes don't return if they aren't checked. Deal with that
 				if ($I["type"] == "yesNo" && $I["options"]["type"] == "checkbox") {
-					if (!isset($engine->cleanPost['MYSQL'][$I['field'].'_'.$row[0]])) {
-						$engine->cleanPost['MYSQL'][$I['field'].'_'.$row[0]] = "0";
-						$engine->cleanPost['HTML'][$I['field'].'_'.$row[0]]  = "0";
-						$engine->cleanPost['RAW'][$I['field'].'_'.$row[0]]   = "0";
+					if (!isset($_POST['MYSQL'][$I['field'].'_'.$row[0]])) {
+						$_POST['MYSQL'][$I['field'].'_'.$row[0]] = "0";
+						$_POST['HTML'][$I['field'].'_'.$row[0]]  = "0";
+						$_POST['RAW'][$I['field'].'_'.$row[0]]   = "0";
 					}
 				}
 
@@ -1936,7 +1936,7 @@ class listManagement {
 				// If the field is NOT allowed to have blanks
 				if ($I["blank"] === FALSE && $I['disabled'] === FALSE) {
 					// perform a blank check. Continue to the next row in the database if there is a blank.
-					if (is_empty($engine->cleanPost['MYSQL'][$I['field'].'_'.$row[0]],FALSE)) {
+					if (is_empty($_POST['MYSQL'][$I['field'].'_'.$row[0]],FALSE)) {
 						errorHandle::errorMsg("Blank entries not allowed in ".htmlentities($I['label']).". Other records may be updated still.");
 						$error["error"]   = TRUE;
 						continue 2;
@@ -1946,11 +1946,11 @@ class listManagement {
 				// Change dates into unix time stamps
 				if ($I['type'] == "date") {
 
-					if (!is_empty($engine->cleanPost['MYSQL'][$I["field"].'_'.$row[0]])) {
-						$engine->cleanPost['MYSQL'][$I["field"].'_'.$row[0]] = strtotime($engine->cleanPost['MYSQL'][$I["field"].'_'.$row[0]]);
+					if (!is_empty($_POST['MYSQL'][$I["field"].'_'.$row[0]])) {
+						$_POST['MYSQL'][$I["field"].'_'.$row[0]] = strtotime($_POST['MYSQL'][$I["field"].'_'.$row[0]]);
 					}
 					else {
-						$engine->cleanPost['MYSQL'][$I["field"].'_'.$row[0]] = "";
+						$_POST['MYSQL'][$I["field"].'_'.$row[0]] = "";
 					}
 				}
 
@@ -1958,8 +1958,8 @@ class listManagement {
 				//check if the current field should have a valid email address
 				if ($I["email"] === TRUE && $I['disabled'] === FALSE) {
 					// If its not empty, and it does not have a valid email address, continue next database row
-					if(!empty($engine->cleanPost['MYSQL'][$I["field"].'_'.$row[0]]) && !validateEmailAddr($engine->cleanPost['MYSQL'][$I["field"].'_'.$row[0]])) {
-						errorHandle::errorMsg("Invalid E-Mail Address: ". htmlentities($engine->cleanPost['MYSQL'][$I["field"].'_'.$row[0]]).". Other records may be updated still.");
+					if(!empty($_POST['MYSQL'][$I["field"].'_'.$row[0]]) && !validateEmailAddr($_POST['MYSQL'][$I["field"].'_'.$row[0]])) {
+						errorHandle::errorMsg("Invalid E-Mail Address: ". htmlentities($_POST['MYSQL'][$I["field"].'_'.$row[0]]).". Other records may be updated still.");
 						$error["error"]   = TRUE;
 						continue 2;
 					}
@@ -1971,7 +1971,7 @@ class listManagement {
 
 					$dupeCheck = TRUE;
 					if ($this->updateBlankIsDupe === FALSE &&
-						is_empty($engine->cleanPost['MYSQL'][$I['field'].'_'.$row[0]]))
+						is_empty($_POST['MYSQL'][$I['field'].'_'.$row[0]]))
 					{
 						$dupeCheck = FALSE;
 					}
@@ -1983,25 +1983,25 @@ class listManagement {
 						// don't scream on changes. Saving the old, just in case it was set.
 						$tempUI = $this->updateInsert;
 						$tempID = $this->updateInsertID;
-						$tempPT = (isset($engine->cleanPost['MYSQL'][$this->updateInsertID."_insert"]))?$engine->cleanPost['MYSQL'][$this->updateInsertID."_insert"]:NULL;
+						$tempPT = (isset($_POST['MYSQL'][$this->updateInsertID."_insert"]))?$_POST['MYSQL'][$this->updateInsertID."_insert"]:NULL;
 
 						$this->updateInsert   = TRUE;
 						// Suspect -- $this->primaryKey ???
 						// $this->updateInsertID = $this->primaryKey;
 						$this->updateInsertID = (isset($this->updateInsertID))?$this->updateInsertID:$this->primaryKey;
 
-						$engine->cleanPost['MYSQL'][$this->updateInsertID."_insert"] = $row[0];
+						$_POST['MYSQL'][$this->updateInsertID."_insert"] = $row[0];
 
 						// perform a dupe check. Continue to the next row in the database if there is a dupe in that field.
-						// $row[$I["field"]] != $engine->cleanPost['MYSQL'][$I['field'].'_'.$row[0]] &&
-						if ($this->duplicateCheck($engine->cleanPost['MYSQL'][$I['field'].'_'.$row[0]],$I["field"],$row[0])) {
-							errorHandle::errorMsg("Entry, ".htmlentities($engine->cleanPost['MYSQL'][$I['field'].'_'.$row[0]]).", already in database. Other records may be updated still.");
+						// $row[$I["field"]] != $_POST['MYSQL'][$I['field'].'_'.$row[0]] &&
+						if ($this->duplicateCheck($_POST['MYSQL'][$I['field'].'_'.$row[0]],$I["field"],$row[0])) {
+							errorHandle::errorMsg("Entry, ".htmlentities($_POST['MYSQL'][$I['field'].'_'.$row[0]]).", already in database. Other records may be updated still.");
 							$error["error"]   = TRUE;
 
 							// Set updateInsert back to original Values
 							$this->updateInsert   = $tempUI;
 							$this->updateInsertID = $tempID;
-							$engine->cleanPost['MYSQL'][$this->updateInsertID."_insert"] = $tempPT;
+							$_POST['MYSQL'][$this->updateInsertID."_insert"] = $tempPT;
 
 							continue 2;
 						}
@@ -2009,17 +2009,17 @@ class listManagement {
 						// Set updateInsert back to original Values
 						$this->updateInsert   = $tempUI;
 						$this->updateInsertID = $tempID;
-						$engine->cleanPost['MYSQL'][$this->updateInsertID."_insert"] = $tempPT;
+						$_POST['MYSQL'][$this->updateInsertID."_insert"] = $tempPT;
 					} // if Dupe Check
 				}
 
 				if (isset($I['validate'])) {
-					if ($I['blank'] === TRUE && is_empty($engine->cleanPost['MYSQL'][$I['field'].'_'.$row[0]])) {
+					if ($I['blank'] === TRUE && is_empty($_POST['MYSQL'][$I['field'].'_'.$row[0]])) {
 						// skip validation if field is blank and allowed to be blank
 						// continue;
 					}
 					else {
-						$validateResult = $this->validateData($I['validate'],$engine->cleanPost['MYSQL'][$I['field'].'_'.$row[0]]);
+						$validateResult = $this->validateData($I['validate'],$_POST['MYSQL'][$I['field'].'_'.$row[0]]);
 						if ($validateResult !== FALSE) {
 							$error["error"]   = TRUE;
 							continue 2;
@@ -2028,7 +2028,7 @@ class listManagement {
 				}
 
 				if ($I['type'] != 'radio') {
-					$engine->cleanPost['MYSQL'][$I['field'].'_'.$row[0]] = stripCarriageReturns($engine->cleanPost['MYSQL'][$I['field'].'_'.$row[0]]);
+					$_POST['MYSQL'][$I['field'].'_'.$row[0]] = stripCarriageReturns($_POST['MYSQL'][$I['field'].'_'.$row[0]]);
 				}
 
 			} // For each defined field
@@ -2085,8 +2085,8 @@ class listManagement {
 	public function haveDeletes() {
 		$engine    = EngineAPI::singleton();
 		$deleteIDs = array();
-		if (isset($engine->cleanPost['MYSQL']['delete'])) {
-			foreach($engine->cleanPost['MYSQL']['delete'] as $value) {
+		if (isset($_POST['MYSQL']['delete'])) {
+			foreach($_POST['MYSQL']['delete'] as $value) {
 				$deleteIDs[] = $value;
 			}
 			return($deleteIDs);
@@ -2104,7 +2104,7 @@ class listManagement {
 			$this->database->escape($this->table),
 			$this->buildInsertUpdateString(TRUE),
 			$this->primaryKey,
-			$engine->cleanPost['MYSQL'][$this->updateInsertID."_insert"]
+			$_POST['MYSQL'][$this->updateInsertID."_insert"]
 			);
 
 		$sqlResult                = $this->database->query($sql);
@@ -2153,10 +2153,10 @@ class listManagement {
 			foreach ($this->fields as $I) {
 				// Check boxes don't return if they aren't checked. Deal with that
 				if ($I["type"] == "yesNo" && $I["options"]["type"] == "checkbox") {
-					if (!isset($engine->cleanPost['MYSQL'][$I['field'].'_'.$row[0]])) {
-						$engine->cleanPost['MYSQL'][$I['field'].'_'.$row[0]] = "0";
-						$engine->cleanPost['HTML'][$I['field'].'_'.$row[0]]  = "0";
-						$engine->cleanPost['RAW'][$I['field'].'_'.$row[0]]   = "0";
+					if (!isset($_POST['MYSQL'][$I['field'].'_'.$row[0]])) {
+						$_POST['MYSQL'][$I['field'].'_'.$row[0]] = "0";
+						$_POST['HTML'][$I['field'].'_'.$row[0]]  = "0";
+						$_POST['RAW'][$I['field'].'_'.$row[0]]   = "0";
 					}
 				}
 			}
@@ -2212,7 +2212,7 @@ class listManagement {
 		if ($this->updateInsert === TRUE || !isnull($row)) {
 			$idMatch = sprintf(" AND %s!='%s'",
 				$this->database->escape($this->updateInsertID),
-				(isset($engine->cleanPost['MYSQL'][$this->updateInsertID."_insert"]))?$this->database->escape($engine->cleanPost['MYSQL'][$this->updateInsertID."_insert"]):$row
+				(isset($_POST['MYSQL'][$this->updateInsertID."_insert"]))?$this->database->escape($_POST['MYSQL'][$this->updateInsertID."_insert"]):$row
 
 			);
 		}
@@ -2225,7 +2225,7 @@ class listManagement {
 					$value = $V['value'];
 				}
 				else {
-					$value = $engine->cleanPost['MYSQL'][$V['field'].'_'.$row];
+					$value = $_POST['MYSQL'][$V['field'].'_'.$row];
 				}
 				$str = $V['field']."='".$value."'";
 				$temp[] = $str;
@@ -2277,21 +2277,21 @@ class listManagement {
 			}
 
 			if ($I['type'] == "radio") {
-				if (isset($engine->cleanPost['MYSQL'][$I["field"]]) && $engine->cleanPost['MYSQL'][$I["field"]] == $row) {
-					$engine->cleanPost['MYSQL'][$I["field"]."_".$row] = 1;
+				if (isset($_POST['MYSQL'][$I["field"]]) && $_POST['MYSQL'][$I["field"]] == $row) {
+					$_POST['MYSQL'][$I["field"]."_".$row] = 1;
 				}
 				else {
-					$engine->cleanPost['MYSQL'][$I["field"]."_".$row] = 0;
+					$_POST['MYSQL'][$I["field"]."_".$row] = 0;
 				}
 			}
 
-			$temp[] = $this->database->escape($I["field"])."='".$engine->cleanPost['MYSQL'][$I["field"]."_".$row]."'";
+			$temp[] = $this->database->escape($I["field"])."='".$_POST['MYSQL'][$I["field"]."_".$row]."'";
 		}
 		foreach ($this->hiddenFields as $I) {
 			if($I['disabled'] === TRUE) {
 				continue;
 			}
-			$temp[] = $this->database->escape($I["field"])."='".$engine->cleanPost['MYSQL'][$I["field"]."_".$row]."'";
+			$temp[] = $this->database->escape($I["field"])."='".$_POST['MYSQL'][$I["field"]."_".$row]."'";
 		}
 		$output = implode($sep,$temp);
 
@@ -2315,20 +2315,20 @@ class listManagement {
 			// If it is a password field, and this is an update insert, and the password field is blank
 			// skip it. (Password is not being updated)
 			if ($this->updateInsert === TRUE && $I['type'] == "password" &&
-				is_empty($engine->cleanPost['MYSQL'][$I['field'].'_insert']))
+				is_empty($_POST['MYSQL'][$I['field'].'_insert']))
 			{
 				continue;
 			}
 
 			$temp[] = sprintf("%s='%s'",
 				$this->database->escape($I["field"]),
-				($I['type'] == "password")?hash($this->passwordHash,$engine->cleanPost['MYSQL'][$I["field"]."_insert"]):$engine->cleanPost['MYSQL'][$I["field"]."_insert"]);
+				($I['type'] == "password")?hash($this->passwordHash,$_POST['MYSQL'][$I["field"]."_insert"]):$_POST['MYSQL'][$I["field"]."_insert"]);
 		}
 		foreach ($this->hiddenFields as $I) {
 			if($I['disabled'] === TRUE) {
 				continue;
 			}
-			$temp[] = $this->database->escape($I["field"])."='".$engine->cleanPost['MYSQL'][$I["field"]."_insert"]."'";
+			$temp[] = $this->database->escape($I["field"])."='".$_POST['MYSQL'][$I["field"]."_insert"]."'";
 		}
 		$output = implode($sep,$temp);
 		return($output);
@@ -2369,7 +2369,7 @@ class listManagement {
 				continue;
 			}
 
-			$value = ($I['type'] == "password")?bin2hex(hash($this->passwordHash,$engine->cleanPost['MYSQL'][$I["field"]."_insert"])):$engine->cleanPost['MYSQL'][$I["field"]."_insert"];
+			$value = ($I['type'] == "password")?bin2hex(hash($this->passwordHash,$_POST['MYSQL'][$I["field"]."_insert"])):$_POST['MYSQL'][$I["field"]."_insert"];
 
 			$temp[] = "'".$value."'";
 		}
@@ -2377,7 +2377,7 @@ class listManagement {
 			if($I['disabled'] === TRUE) {
 				continue;
 			}
-			$temp[] = "'".$engine->cleanPost['MYSQL'][$I["field"]."_insert"]."'";
+			$temp[] = "'".$_POST['MYSQL'][$I["field"]."_insert"]."'";
 		}
 		$output = implode(",",$temp);
 		return($output);

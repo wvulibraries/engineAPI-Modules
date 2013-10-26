@@ -41,8 +41,8 @@ class Snippet {
 		// setup default result URL for snippetList
 
 		// this action thing was purposed for the ereserves software. this needs removed and made more generic
-		if (isset($this->engine->cleanGet['HTML']['action'])) {
-			$this->resultURL = $_SERVER['PHP_SELF']."?action=".$this->engine->cleanGet['HTML']['action'];
+		if (isset($_GET['HTML']['action'])) {
+			$this->resultURL = $_SERVER['PHP_SELF']."?action=".$_GET['HTML']['action'];
 		}
 		else {
 			$this->resultURL = $_SERVER['PHP_SELF']."?action=whatever";
