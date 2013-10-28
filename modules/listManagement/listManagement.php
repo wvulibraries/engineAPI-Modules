@@ -1788,10 +1788,10 @@ class listManagement {
 
 			// Drop the Insert ID into a local variable suitable for framing
 			if ($this->updateInsert === FALSE) {
-				$engine->localVars("listObjInsertID",$sqlResult['id']);
+				localvars::add("listObjInsertID",$sqlResult['id']);
 			}
 			else {
-				$engine->localVars("listObjInsertID",$_POST['MYSQL'][$this->updateInsertID."_insert"]);
+				localvars::add("listObjInsertID",$_POST['MYSQL'][$this->updateInsertID."_insert"]);
 			}
 		}
 
@@ -1808,7 +1808,7 @@ class listManagement {
 
 		if (!isnull($this->redirectURL)) {
 			$errorStack        = urlencode(serialize($engine->errorStack));
-			$this->redirectURL = preg_replace('/\{insertID\}/',$engine->localVars("listObjInsertID"),$this->redirectURL);
+			$this->redirectURL = preg_replace('/\{insertID\}/',localvars::get("listObjInsertID"),$this->redirectURL);
 			$this->redirectURL = preg_replace('/\{errorStack\}/',$errorStack,$this->redirectURL);
 			$this->redirectURL = stripNewLines($this->redirectURL);
 			header("Location: ".$this->redirectURL);
