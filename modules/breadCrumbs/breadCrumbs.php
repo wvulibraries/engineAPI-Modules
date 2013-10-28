@@ -9,8 +9,7 @@ class breadCrumbs {
 	public $function = "breadCrumbs::templateMatches";
 
 	function __construct() {
-		$this->engine = EngineAPI::singleton();
-		$this->engine->defTempPattern($this->pattern,$this->function,$this);
+		templates::defTempPatterns($this->pattern,$this->function,$this);
 	}
 
 	/**
@@ -19,8 +18,7 @@ class breadCrumbs {
 	 * @return mixed
 	 */
 	public static function templateMatches($matches) {
-		$engine   = EngineAPI::singleton();
-		$obj      = $engine->retTempObj("breadCrumbs");
+		$obj      = templates::retTempObj("breadCrumbs");
 		$attPairs = attPairs($matches[1]);
 		return($obj->breadCrumbs($attPairs));
 	}

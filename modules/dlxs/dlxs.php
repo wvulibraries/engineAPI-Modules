@@ -67,7 +67,7 @@ class dlxs {
 		
 		$engine = EngineAPI::singleton();
 		
-		$engine->defTempPattern($this->pattern,$this->function,$this);
+		templates::defTempPatterns($this->pattern,$this->function,$this);
 		
 		$this->cleanGet  = $_GET;
 		$this->cleanPost = $_POST;
@@ -95,8 +95,7 @@ class dlxs {
 	}
 	
 	public static function templateMatches($matches) {
-		$engine   = EngineAPI::singleton();
-		$dlxs      = $engine->retTempObj("dlxs");
+		$dlxs     = templates::retTempObj("dlxs");
 		$attPairs = attPairs($matches[1]);
 		
 		$output = "Error: in dlxs.php";

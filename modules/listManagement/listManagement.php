@@ -111,10 +111,10 @@ class listManagement {
 		$engine         = EngineAPI::singleton();
 		$this->database = ($database instanceof engineDB) ? $database : $engine->openDB;
 
-		$engine->defTempPattern($this->pattern,$this->function,$this);
+		templates::defTempPatterns($this->pattern,$this->function,$this);
 
 		// Object may already have been declared once and destroyed.
-		$engine->reDefTempPatternObject($this->pattern,$this->function,$this);
+		templates::reDefTempPatternObject($this->pattern,$this->function,$this);
 	}
 
 	function __destruct() {
@@ -128,9 +128,7 @@ class listManagement {
 	*/
 	public static function templateMatches($matches) {
 
-		$engine   = EngineAPI::singleton();
-
-		$obj      = $engine->retTempObj("listManagement");
+		$obj      = templates::retTempObj("listManagement");
 
 		$attPairs = attPairs($matches[1]);
 

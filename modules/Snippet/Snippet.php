@@ -36,7 +36,7 @@ class Snippet {
 		$this->table     = $this->engine->openDB->escape($table);
 		$this->field     = $this->engine->openDB->escape($field);
 		
-		$this->engine->defTempPattern($this->pattern,$this->function,$this);
+		templates::defTempPatterns($this->pattern,$this->function,$this);
 		
 		// setup default result URL for snippetList
 
@@ -59,8 +59,7 @@ class Snippet {
 	 */
 	public static function templateMatches($matches) {
 
-		$engine   = EngineAPI::singleton();
-		$snippet  = $engine->retTempObj("Snippet");
+		$snippet  = templates::retTempObj("Snippet");
 		$attPairs = attPairs($matches[1]);
 
 		$output   = "Error in snippet.php";
