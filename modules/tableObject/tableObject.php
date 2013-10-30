@@ -233,8 +233,8 @@ class tableObject {
 		}
 		
 		if ($this->sortable === TRUE) {
-			global $engineVars;
-			$output .= "<script src=\"".$engineVars['sortableTables']."\" type=\"text/javascript\"></script>";
+			
+			$output .= "<script src=\"".enginevars::get("sortableTables")."\" type=\"text/javascript\"></script>";
 		}
 		
 		$output .= "<table";

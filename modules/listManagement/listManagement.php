@@ -725,8 +725,8 @@ class listManagement {
 				$output .= "</textarea>";
 
 				if ($I['type'] == "wysiwyg") {
-					$output .= '<script type="text/javascript">window.CKEDITOR_BASEPATH="'.EngineAPI::$engineVars['engineInc'].'/CKEditor/"</script>';
-					$output .= '<script type="text/javascript" src="'.EngineAPI::$engineVars['engineInc'].'/CKEditor/ckeditor.js"></script>';
+					$output .= '<script type="text/javascript">window.CKEDITOR_BASEPATH="'.enginevars::get("engineInc").'/CKEditor/"</script>';
+					$output .= '<script type="text/javascript" src="'.enginevars::get("engineInc").'/CKEditor/ckeditor.js"></script>';
 					$output .= '<script type="text/javascript">';
 					$output .= 'if (CKEDITOR.instances["'.$I['field'].'_insert"]) { CKEDITOR.remove(CKEDITOR.instances["'.$I['field'].'_insert"]); }';
 					$output .= 'CKEDITOR.replace("'.$I['field'].'_insert");';
@@ -908,9 +908,9 @@ class listManagement {
 		$output = "";
 
 		if ($this->sortable === TRUE) {
-			global $engineVars;
+			
 
-			$output .= "<script src=\"".$engineVars['sortableTables']."\" type=\"text/javascript\"></script>";
+			$output .= "<script src=\"".enginevars::get("sortableTables")."\" type=\"text/javascript\"></script>";
 			$output .= '<script type="text/javascript">';
 			$output .= '$(document).ready(function()
 				{
@@ -922,8 +922,8 @@ class listManagement {
 			$output .= "</script>";
 		}
 		if ($this->dragOrdering === TRUE) {
-			global $engineVars;
-			$output .= "<script src=\"".$engineVars['tablesDragnDrop']."\" type=\"text/javascript\"></script>";
+			
+			$output .= "<script src=\"".enginevars::get("tablesDragnDrop")."\" type=\"text/javascript\"></script>";
 		}
 
 		$output .= "\n<!-- engine Instruction break -->".'<!-- engine Instruction displayTemplateOff -->'."\n<!-- engine Instruction break -->";

@@ -39,7 +39,7 @@ class breadCrumbs {
 	 */
 	public function breadCrumbs($attPairs) {
 		$engine   = EngineAPI::singleton();
-		global $engineVars;
+		
 
 		$callingFunction        = array("breadCrumbs","breadCrumbs");
 		$tempParams             = array();
@@ -51,14 +51,14 @@ class breadCrumbs {
 		/* setup initial variables */
 		$str2upper = (isset($attPairs['titlecase']) and str2bool($attPairs['titlecase']));
 
-		$ellipse = (isset($engineVars['breadCrumbsEllipse']))?$engineVars['breadCrumbsEllipse']:" &#133; ";
+		$ellipse = (enginevars::is_set("breadCrumbsEllipse"))?enginevars::get("breadCrumbsEllipse"):" &#133; ";
 		$ellipse = (isset($attPairs['ellipse']))?$attPairs['ellipse']:$ellipse;
 
-		$spacer = (isset($engineVars['breadCrumbsSpacer']))?$engineVars['breadCrumbsSpacer']:">>";
+		$spacer = (enginevars::is_set("breadCrumbsSpacer"))?enginevars::get("breadCrumbsSpacer"):">>";
 		$spacer = (isset($attPairs['spacer']))?$attPairs['spacer']:$spacer;
 
 		$type   = (isset($attPairs['type']))?$attPairs['type']:"hierarchical";
-		$displayNum = (isset($engineVars['breadCrumbsDisplayNum']))?$engineVars['breadCrumbsDisplayNum']:0;
+		$displayNum = (enginevars::is_set("breadCrumbsDisplayNum"))?enginevars::get("breadCrumbsDisplayNum"):0;
 		$displayNum = (isset($attPairs['displayNum']))?$attPairs['displayNum']:$displayNum;
 
 		$start  = 0;
@@ -84,8 +84,8 @@ class breadCrumbs {
 				}
 			}
 
-			$path = $engineVars['documentRoot'];
-			$href = $engineVars['WVULSERVER'];
+			$path = enginevars::get("documentRoot");
+			$href = enginevars::get("WVULSERVER");
 			for ($I = 0;$I < $urlCount;$I++) {
 
 				$path .= "/$url[$I]";
