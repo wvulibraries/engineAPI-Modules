@@ -62,10 +62,10 @@ class photoAlbum {
 	 *        The directory where the photos are
 	 */
 	function __construct($directory=NULL) {
-		global $engineVars;
+		
 
 		if(isnull($directory) || !file_exists($directory)) return(FALSE);
-		include_once($engineVars['phpthumb']);
+		include_once(enginevars::get("phpthumb"));
 		
 		$this->engine = EngineAPI::singleton();
 		$this->dir    = $directory;
@@ -101,7 +101,7 @@ class photoAlbum {
 	 * @param string $directory
 	 */
 	public function scanDir($directory=NULL) {
-		global $engineVars;
+		
 		
 		if (isnull($directory)) {
 			$directory = $this->dir;
@@ -130,8 +130,8 @@ class photoAlbum {
 			$this->photos[$count]['thumbFile'] = $directory."thumbs/".$V;
 			
 			
-			$this->photos[$count]['url']       = str_replace($engineVars['documentRoot'],"",$this->photos[$count]['filename']);
-			$this->photos[$count]['thumbURL']  = str_replace($engineVars['documentRoot'],"",$this->photos[$count]['thumbFile']);
+			$this->photos[$count]['url']       = str_replace(enginevars::get("documentRoot"),"",$this->photos[$count]['filename']);
+			$this->photos[$count]['thumbURL']  = str_replace(enginevars::get("documentRoot"),"",$this->photos[$count]['thumbFile']);
 			
 			if (!file_exists($this->photos[$count]['thumbFile'])) {
 			

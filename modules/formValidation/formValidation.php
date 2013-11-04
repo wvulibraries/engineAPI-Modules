@@ -100,19 +100,17 @@ class formValidation {
 	 */
 	public function validate($bool=TRUE) {
 
-		$engine = EngineAPI::Singleton();
-
 		if (!$this->validateSanType()) {
 			errorHandle::newError(__METHOD__."() - Invalid sanType", errorHandle::DEBUG);
 			return(FALSE);
 		}
 
 		$inputs = array();
-		if (isset($engine->cleanPost[$this->sanType])) {
-			$inputs['post'] = $engine->cleanPost[$this->sanType];
+		if (isset($_POST[$this->sanType])) {
+			$inputs['post'] = $_POST[$this->sanType];
 		}
-		if (isset($engine->cleanGet[$this->sanType])) {
-			$inputs['get']  = $engine->cleanGet[$this->sanType];
+		if (isset($_GET[$this->sanType])) {
+			$inputs['get']  = $_GET[$this->sanType];
 		}
 
 		if (!isnull($this->type) && !isset($inputs[$this->type])) {
@@ -212,9 +210,8 @@ class formValidation {
 	 * @return bool
 	 */
 	private function validateSanType() {
-		$engine = EngineAPI::Singleton();
 
-		if (isset($engine->cleanGet[$this->sanType]) || isset($engine->cleanPost[$this->sanType])) {
+		if (isset($_GET[$this->sanType]) || isset($_POST[$this->sanType])) {
 			return(TRUE);
 		}
 

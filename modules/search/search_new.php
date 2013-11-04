@@ -32,7 +32,7 @@ class search{
      * @return searchSolr|mixed
      */
     public static function getClient($provider, $config=NULL){
-        $engineVars = EngineAPI::$engineVars;
+        $engineVars = enginevars::export();
         $cfg = array();
 
         if(isset($config)){

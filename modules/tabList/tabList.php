@@ -4,10 +4,6 @@
  * @package EngineAPI\modules\tabList
  */
 class tabList {
-	/**
-	 * @var EngineAPI
-	 */
-	private $engine = NULL;
 
 	/**
 	 * @todo This doesn't look used
@@ -24,7 +20,6 @@ class tabList {
 	function __construct($table) {
 
 		$this->table  = $table;
-		$this->engine = EngineAPI::singleton();
 		
 	}
 
@@ -36,12 +31,12 @@ class tabList {
 	 */
 	public function buildList($range,$current) {
 		
-		if (isset($this->engine->cleanGet['HTML']['currentTabItem'])) {
-			unset($this->engine->cleanGet['HTML']['currentTabItem']);
+		if (isset($_GET['HTML']['currentTabItem'])) {
+			unset($_GET['HTML']['currentTabItem']);
 		}		
 		$queryString = array();
-		if (isset($this->engine->cleanGet['HTML'])) {
-			foreach ($this->engine->cleanGet['HTML'] as $I=>$V) {
+		if (isset($_GET['HTML'])) {
+			foreach ($_GET['HTML'] as $I=>$V) {
 				$queryString[] = "$I=$V";
 			}
 			$queryString = implode("&amp;",$queryString);

@@ -397,9 +397,8 @@ class search {
 	 */
 	private function createSearchArray() {
 
-		$engine        = EngineAPI::singleton();
-		$searchString  = isset($engine->cleanPost['RAW']['searchString'])?$engine->cleanPost['RAW']['searchString']:array();
-		$bool          = isset($engine->cleanPost['MYSQL']['bool'])?$engine->cleanPost['MYSQL']['bool']:array();
+		$searchString  = isset($_POST['RAW']['searchString'])?$_POST['RAW']['searchString']:array();
+		$bool          = isset($_POST['MYSQL']['bool'])?$_POST['MYSQL']['bool']:array();
 		$keywords      = array();
 		$fullSearchStr = NULL;
 
@@ -655,11 +654,10 @@ class search {
 	 */
 	public function displayForm($rows=1,$addGet=TRUE) {
 
-		$engine = EngineAPI::singleton();
 		$output = NULL;
-		$bool   = isset($engine->cleanPost['HTML']['bool'])?$engine->cleanPost['HTML']['bool']:array();
-		$type   = isset($engine->cleanPost['HTML']['searchTypes'])?$engine->cleanPost['HTML']['searchTypes']:array();
-		$search = isset($engine->cleanPost['HTML']['searchString'])?$engine->cleanPost['HTML']['searchString']:array();
+		$bool   = isset($_POST['HTML']['bool'])?$_POST['HTML']['bool']:array();
+		$type   = isset($_POST['HTML']['searchTypes'])?$_POST['HTML']['searchTypes']:array();
+		$search = isset($_POST['HTML']['searchString'])?$_POST['HTML']['searchString']:array();
 
 		$this->searchRows = $rows;
 

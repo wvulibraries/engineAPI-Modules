@@ -43,7 +43,7 @@ class syndication {
 
 		$engine = EngineAPI::singleton();
 
-		$this->templateDir = EngineAPI::$engineVars['syndicationTemplateDir'];
+		$this->templateDir = enginevars::get("syndicationTemplateDir");
 		
 		if (!isnull($template) && is_readable($this->templateDir."/".$template)) {
 			$this->template = $this->templateDir."/".$template;
@@ -208,10 +208,10 @@ class syndication {
 	 */
 	public static function get($url,$cache=NULL,$cacheDir=NULL) {
 
-		$cacheUpdate = (!isnull($cache) && validate::integer($cache))?$cache:EngineAPI::$engineVars['syndicationCache'];
+		$cacheUpdate = (!isnull($cache) && validate::integer($cache))?$cache:enginevars::get("syndicationCache");
 
 		$fileHash    = hash("md5",$url);
-		$filename    = (!isnull($cacheDir) && is_writable($cacheDir))?$cacheDir."/".$fileHash:EngineAPI::$engineVars['syndicationCacheDir']."/".$fileHash;
+		$filename    = (!isnull($cacheDir) && is_writable($cacheDir))?$cacheDir."/".$fileHash:enginevars::get("syndicationCacheDir")."/".$fileHash;
 
 		$currentTime = time();
 

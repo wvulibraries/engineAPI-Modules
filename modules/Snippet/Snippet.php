@@ -36,13 +36,13 @@ class Snippet {
 		$this->table     = $this->engine->openDB->escape($table);
 		$this->field     = $this->engine->openDB->escape($field);
 		
-		$this->engine->defTempPattern($this->pattern,$this->function,$this);
+		templates::defTempPatterns($this->pattern,$this->function,$this);
 		
 		// setup default result URL for snippetList
 
 		// this action thing was purposed for the ereserves software. this needs removed and made more generic
-		if (isset($this->engine->cleanGet['HTML']['action'])) {
-			$this->resultURL = $_SERVER['PHP_SELF']."?action=".$this->engine->cleanGet['HTML']['action'];
+		if (isset($_GET['HTML']['action'])) {
+			$this->resultURL = $_SERVER['PHP_SELF']."?action=".$_GET['HTML']['action'];
 		}
 		else {
 			$this->resultURL = $_SERVER['PHP_SELF']."?action=whatever";
@@ -59,8 +59,7 @@ class Snippet {
 	 */
 	public static function templateMatches($matches) {
 
-		$engine   = EngineAPI::singleton();
-		$snippet  = $engine->retTempObj("Snippet");
+		$snippet  = templates::retTempObj("Snippet");
 		$attPairs = attPairs($matches[1]);
 
 		$output   = "Error in snippet.php";
@@ -92,7 +91,7 @@ class Snippet {
 	 */
 	public function insertSnippetList($class="we_snippetList",$type="ul",$collapse=FALSE,$showURL=FALSE) {
 		
-		global $engineVars;
+		
 		
 		$sql = sprintf("SELECT * FROM %s ORDER BY snippetName",
 			$this->table
@@ -121,7 +120,7 @@ class Snippet {
 				$output .= "<".$type." class=\"".$class."\">";
 			}
 			else {
-				$output .= "<span onclick=\"toggleMenu('".$class."');\" class=\"toggleLink\"><img src=\"".$engineVars['imgListRetractedIcon']."\" id=\"".$class."_img\" width=\"8px\" height=\"8px\" /> Snippet List</span>";
+				$output .= "<span onclick=\"toggleMenu('".$class."');\" class=\"toggleLink\"><img src=\"".enginevars::get("imgListRetractedIcon")."\" id=\"".$class."_img\" width=\"8px\" height=\"8px\" /> Snippet List</span>";
 				$output .= "<".$type." id=\"".$class."\" class=\"".$class."\">";
 			}
 		}
@@ -136,16 +135,16 @@ class Snippet {
 			if ($type == "ul" || $type == "ol" || $type == "li") {
 				$output .= "<li>";
 			}
-			$output .= "<span class=\"deleteSpan\"><a href=\"".$this->resultURL."&amp;deleteID=".$row['ID']."\" onclick=\"return engineDeleteConfirm('".htmlsanitize($row['snippetName'])."');\"><img src=\"".$engineVars['imgDeleteIcon']."\" alt=\"delete\"  style=\"cursor: not-allowed;\"/></a></span>";
+			$output .= "<span class=\"deleteSpan\"><a href=\"".$this->resultURL."&amp;deleteID=".$row['ID']."\" onclick=\"return engineDeleteConfirm('".htmlsanitize($row['snippetName'])."');\"><img src=\"".enginevars::get("imgDeleteIcon")."\" alt=\"delete\"  style=\"cursor: not-allowed;\"/></a></span>";
 			$output .= "&nbsp;";
 			if ($showURL === TRUE && $collapse === TRUE) {
-				$output .= "<span onclick=\"toggleSnippetInfo('".$row['ID']."_snippet');\" class=\"toggleLink\"><img style=\"cursor: help;\" src=\"".$engineVars['imgListRetractedIcon']."\" id=\"".$row['ID']."_snippet_img\" /> </span>";
+				$output .= "<span onclick=\"toggleSnippetInfo('".$row['ID']."_snippet');\" class=\"toggleLink\"><img style=\"cursor: help;\" src=\"".enginevars::get("imgListRetractedIcon")."\" id=\"".$row['ID']."_snippet_img\" /> </span>";
 			}
 			$output .= "<a href=\"".$this->resultURL."&amp;snippetID=".htmlsanitize($row['ID'])."\">".htmlsanitize($row['snippetName'])."</a>";
 			if ($showURL === TRUE && $collapse === TRUE) {
 				$output .= "<".$type." id=\"".$row['ID']."_snippet\" style=\"display:none\">";
-				$output .= "<li>Auth Required: <a href=\"".$engineVars['WEBROOT'].$this->snippetURL.$row['ID']."\">".$engineVars['WEBROOT'].$this->snippetURL.$row['ID']."</a></li>";
-				$output .= "<li>Public: <a href=\"".$engineVars['WEBROOT'].$this->snippetPublicURL.$row['ID']."\">".$engineVars['WEBROOT'].$this->snippetPublicURL.$row['ID']."</a></li>";
+				$output .= "<li>Auth Required: <a href=\"".enginevars::get("WEBROOT").$this->snippetURL.$row['ID']."\">".enginevars::get("WEBROOT").$this->snippetURL.$row['ID']."</a></li>";
+				$output .= "<li>Public: <a href=\"".enginevars::get("WEBROOT").$this->snippetPublicURL.$row['ID']."\">".enginevars::get("WEBROOT").$this->snippetPublicURL.$row['ID']."</a></li>";
 				$output .= "<li>{snippet field=\"".$this->field."\" id=\"".$row['ID']."\"}</li>";
 				$output .= "</".$type.">";
 			}
@@ -174,12 +173,12 @@ class Snippet {
 					if (visible[ID] == \"true\") {
 						temp.style.display = \"block\";
 						var img = document.getElementById(ID+\"_img\");
-						img.src=\"".$engineVars['imgListExpandedIcon']."\";
+						img.src=\"".enginevars::get("imgListExpandedIcon")."\";
 					}
 					else {
 						temp.style.display = \"none\";
 						var img = document.getElementById(ID+\"_img\");
-						img.src=\"".$engineVars['imgListRetractedIcon']."\";
+						img.src=\"".enginevars::get("imgListRetractedIcon")."\";
 					}
 				}
 			</script>";
@@ -203,14 +202,14 @@ class Snippet {
 				snippetInfoArray[ID][id] = \"true\";
 				$.cookie(id, \"true\");
 				var img = document.getElementById(id+\"_img\");
-				img.src=\"".$engineVars['imgListExpandedIcon']."\";
+				img.src=\"".enginevars::get("imgListExpandedIcon")."\";
 			}
 			else { 
 				$('#'+id+'').hide('slow');
 				snippetInfoArray[ID][id] = \"false\";
 				$.cookie(id, \"false\");
 				var img = document.getElementById(id+\"_img\");
-				img.src=\"".$engineVars['imgListRetractedIcon']."\";
+				img.src=\"".enginevars::get("imgListRetractedIcon")."\";
 			}
 		}
 		</script>

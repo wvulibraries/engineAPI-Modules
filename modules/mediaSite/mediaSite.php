@@ -3336,7 +3336,7 @@ class mediaSite {
 
 	function __construct($attPairs=array()) {
 
-		global $engineVars;
+		$engineVars = enginevars::export();
 
 		$this->mediasiteServerRoot = isset($attPairs['url'])      ? $attPairs['url']      : $engineVars['mediaSite']['url'];
 		$this->mediasiteUsername   = isset($attPairs['username']) ? $attPairs['username'] : $engineVars['mediaSite']['username'];
