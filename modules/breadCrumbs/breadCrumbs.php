@@ -44,7 +44,7 @@ class breadCrumbs {
 		$callingFunction        = array("breadCrumbs","breadCrumbs");
 		$tempParams             = array();
 		$tempParams['attPairs'] = $attPairs;
-		$trail                  = $engine->execFunctionExtension($callingFunction,$tempParams,"before");
+		$trail                  = functions::getInstance()->execFunctionExtension($callingFunction,$tempParams,"before");
 
 		if($trail) return($trail);
 
