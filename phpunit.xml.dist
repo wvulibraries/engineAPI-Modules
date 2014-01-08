@@ -1,0 +1,7 @@
+<phpunit colors="true">
+    <testsuites>
+        <testsuite name="engineAPI-Modules">
+            <directory>tests/</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>
