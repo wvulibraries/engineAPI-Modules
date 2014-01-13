@@ -1,75 +1,17 @@
 <?php
+define('ENGINE_BASE', '/tmp/git/engineAPI');
+date_default_timezone_set('UTC');
 
-// Load up EngineAPI
-//require_once __DIR__.'/../../engineAPI/engine/engineAPI/latest/engine.php';
-//$engine = EngineAPI::singleton();
+require_once ENGINE_BASE.'/engine/engineAPI/latest/engine.php';
+EngineAPI::singleton();
+//errorHandle::errorReporting(errorHandle::E_ALL);
 
-
-// Start output-buffering for any header for cookie functions ('headers already sent' error)
-ob_start();
-
-$helperFunctions   = __DIR__.'/../../engineAPI/engine/engineAPI/latest/helperFunctions';
-$modulesDirectory  = "src/modules";
-$availableModules  = array();
-
-// Load helper function Modules
-$hfDirHandle = @opendir($helperFunctions) or die("Unable to open: ".$helperFunctions);
-while (false !== ($file = readdir($hfDirHandle))) {
-    // Check to make sure that it isn't a hidden file and that it is a PHP file
-    if ($file != "." && $file != ".." && $file) {
-        $fileChunks = array_reverse(explode(".", $file));
-        $ext= $fileChunks[0];
-        if ($ext == "php") {
-            require_once $helperFunctions."/".$file;
-        }
-    }
+$modulesBase = __DIR__.'/../src/modules';
+$dirHandle = @opendir($modulesBase);
+while (false !== ($file = readdir($dirHandle))) {
+    if($file[0] == '.') continue;
+    $file = "$modulesBase/$file";
+    if(is_dir($file)) autoloader::getInstance()->addLibrary($file);
 }
-
-$modules_dirHandle = @opendir($modulesDirectory) or die("Unable to open (Modules): ".$modulesDirectory);
-while (false !== ($dir = readdir($modules_dirHandle))) {
-
-    $moduleDirectory = $modulesDirectory."/".$dir;
-
-    // Check to make sure that it isn't a hidden file and that the file is a directory
-    if ($dir != "." && $dir != ".." && is_dir($moduleDirectory) === TRUE) {
-
-        $singleMod_dirHandle = @opendir($moduleDirectory) or die("Unable to open (Single Module): ".$moduleDirectory);
-
-        while (false !== ($file = readdir($singleMod_dirHandle))) {
-
-            if ($file != "." && $file != ".." && $file) {
-
-                // if ($file == "onLoad.php") {
-                // 	include_once($moduleDirectory."/".$file);
-                // }
-                // else {
-                $fileChunks = array_reverse(explode(".", $file));
-                $ext= $fileChunks[0];
-                if ($ext == "php") {
-                    $availableModules[$fileChunks[1]] = $moduleDirectory."/".$file;
-                }
-                // }
-
-            }
-        }
-    }
-}
-
-function autoloader($className) {
-
-    if (!class_exists($className, FALSE)) {
-
-        global $availableModules;
-
-        if (isset($availableModules[$className]) && file_exists($availableModules[$className])) {
-            require_once $availableModules[$className];
-            return TRUE;
-        }
-    }
-
-    return;
-}
-
-spl_autoload_register("autoloader",TRUE);
 
 ?>

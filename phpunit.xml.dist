@@ -1,4 +1,10 @@
 <phpunit colors="true" bootstrap="tests/bootstrap.php">
+    <php>
+        <var name="DB_DSN"    value="mysql:dbname=engineCMS;host=localhost" />
+        <var name="DB_USER"   value="root" />
+        <var name="DB_PASSWD" value="" />
+        <var name="DB_DBNAME" value="engineCMS" />
+    </php>
     <testsuites>
         <testsuite name="engineAPI-Modules">
             <directory>tests/</directory>
