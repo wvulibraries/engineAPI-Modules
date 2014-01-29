@@ -4,7 +4,6 @@ class formBuilder implements Countable{
 	const DEFAULT_ORDER     = '_z_';
 	const DEFAULT_FORM_NAME = '';
 
-
 	/**
 	 * @var self[] An array of all defined forms
 	 */
@@ -14,11 +13,6 @@ class formBuilder implements Countable{
 	 * @var string The name given to this form
 	 */
 	private $formName;
-
-	/**
-	 * @var string The action for the generated <form> tag
-	 */
-	private $formAction;
 
 	/**
 	 * @var string Filepath to form templates
@@ -41,11 +35,6 @@ class formBuilder implements Countable{
 	private $fieldIDs = array();
 
 	/**
-	 * @var string[] List of fields which have been rendered (used for de-duping during render)
-	 */
-	private $fieldsRendered = array();
-
-	/**
 	 * @var field[] Array of all primary fields
 	 */
 	private $primaryFields = array();
@@ -61,21 +50,21 @@ class formBuilder implements Countable{
 	private $dbTableOptions;
 
 	/**
-	 * @var int Counts the number of rows
+	 * @var string The template to use for insertForm
 	 */
-	private $counterRows = 0;
+	public $insertFormTemplate = 'default';
 
 	/**
-	 * @var int Counts the number of fields
+	 * @var string The template to use for editTable
 	 */
-	private $counterFields = 0;
+	public $editTableTemplate = 'default';
 
 	/**
 	 * Class constructor
 	 *
 	 * @param string $formName
 	 */
-	function __construct($formName){
+	public function __construct($formName){
 		$this->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
 		$this->formName    = trim(strtolower($formName));
 		templates::defTempPatterns('/\{formBuilder\s+(.+?)\}/', __CLASS__.'::templateMatches', $this);
@@ -84,8 +73,19 @@ class formBuilder implements Countable{
 	/**
 	 * Class destructor
 	 */
-	function __destruct(){
+	public function __destruct(){
 		unset(self::$formObjects[$this->formName]);
+	}
+
+	/**
+	 * [Magic Method] Read-only getter for our instance variables
+	 * @param string $name
+	 * @return mixed
+	 */
+	public function __get($name){
+		return isset($this->$name)
+			? $this->$name
+			: NULL;
 	}
 
 	/**
@@ -115,6 +115,15 @@ class formBuilder implements Countable{
 	}
 
 	/**
+	 * [Factory] Creates formBuilderTemplate instance and returns it
+	 * @return formBuilderTemplate
+	 */
+	private function createFormTemplate(){
+		$template = new formBuilderTemplate($this);
+		return $template;
+	}
+
+	/**
 	 * Link the form to a backend database table
 	 *
 	 * @param $dbTableOptions
@@ -138,34 +147,26 @@ class formBuilder implements Countable{
 	 *
 	 * @param array $matches
 	 * @return string
-	 * @TODO
 	 */
 	public static function templateMatches($matches){
-		$attPairs = attPairs($matches[1]);
+		$attrPairs = attPairs($matches[1]);
 
 		// Determine form name
-		$formName = isset($attPairs['name']) ? $attPairs['name'] : self::DEFAULT_FORM_NAME;
+		$formName = isset($attrPairs['name']) ? $attrPairs['name'] : self::DEFAULT_FORM_NAME;
 		$formName = trim(strtolower($formName));
 
 		// Locate the form, and if it's not defined return empty string
-		$form = isset(self::$formObjects[$formName]) ? self::$formObjects[$formName] : NULL;
-		if (!isset($form)) {
+		if(isset(self::$formObjects[$formName])){
+			$form = self::$formObjects[$formName];
+		}else{
 			errorHandle::newError(__METHOD__."() Form '$formName' not defined", errorHandle::DEBUG);
 			return '';
 		}
 
-		if (!isset($attPairs['display'])) $attPairs['display'] = '';
-		switch ($attPairs['display']) {
-			case "insertForm":
-				return $form->displayInsertForm();
-			case "editTable":
-				return $form->displayEditTable();
-			default:
-				errorHandle::newError(__METHOD__."() Unsupported display type '{$attPairs['display']}' for form '$formName'", errorHandle::DEBUG);
-				return '';
-		}
+		if (!isset($attrPairs['display'])) $attrPairs['display'] = '';
+		return $form->display($attrPairs['display'], $attrPairs);
 	}
-
+	
 	/**
 	 * Returns the number of fields
 	 *
@@ -382,7 +383,7 @@ class formBuilder implements Countable{
 	 * @param bool $editStrip
 	 * @return array
 	 */
-	private function getSortedFields($editStrip = NULL){
+	public function getSortedFields($editStrip = NULL){
 		// Get local copied of the fieldOrderings
 		$fieldOrdering = $this->fieldOrdering;
 
@@ -415,345 +416,73 @@ class formBuilder implements Countable{
 	}
 
 	/**
-	 * Locate and return the file contents of the requested template
+	 * Main display method for the form
 	 *
-	 * If $path and $type point to a valid file on the file system, then load and return it
-	 * Else, assume $path contains the template text itself (it's a blob)
-	 *
-	 * @param string $path
-	 * @param string $type
+	 * @param string $formType
+	 * @param array $options
 	 * @return string
 	 */
-	private function loadTemplate($path, $type){
-		// This anonymous function allows $path to accept a file or directory
-		$routeToFile = function ($path, $type){
-			// If path is a full filepath, just use what we got
-			if (is_file($path)) return file_get_contents($path);
+	public function display($formType, $options){
+		switch (strtolower($formType)) {
+			case 'insertform':
+				return $this->displayInsertForm($options);
 
-			// If path isn't a directory, then what the heck is it?
-			if (!is_dir($path)) return '';
+			case 'edittable':
+				return $this->displayEditTable($options);
 
-			/* Try and locate the file based on $type
-			 * $type may be the filename itself (ie foo.txt)
-			 * $type may be the basename of the file in which case we look for files with appropriate extensions (.txt .htm(l) .php)
-			 */
-			$basePath = $path.DIRECTORY_SEPARATOR.$type;
-			if (file_exists($basePath)) return file_get_contents($basePath);
-			foreach (array('txt', 'html', 'htm', 'php') as $ext) {
-				if (file_exists("$basePath.$ext")) return file_get_contents("$basePath.$ext");
-			}
+			case 'js':
+				// Figure out JS assets for ALL forms
+				break;
 
-			// Well, we're out of ideas
-			return '';
-		};
-
-		// Try and load a custom/global template (a full file path from the developer)
-		if (file_exists($path)) {
-			$output = $routeToFile($path, $type);
-			if (!isempty($output)) return $output;
+			default:
+				errorHandle::newError(__METHOD__."() Unsupported display type '{$options['display']}' for form '$formName'", errorHandle::DEBUG);
+				return '';
 		}
-
-		// Try and load one of our distribution templates (the ones next to this module)
-		if (file_exists($this->templateDir.$path)) {
-			$output = $routeToFile($this->templateDir.$path, $type);
-			if (!isempty($output)) return $output;
-		}
-
-		// All else fails: load the default
-		return $path;
-
 	}
 
 	/**
 	 * Displays an Insert Form using a given template
 	 *
-	 * @param string $template
-	 * @param string $formAction
+	 * @param array $options
 	 * @return string
 	 * @todo Needs testing
 	 */
-	public function displayInsertForm($template = NULL, $formAction = NULL){
-		if (isnull($template)) $template = 'default';
-		$this->formAction = $formAction;
-		$template         = $this->processTemplate($this->loadTemplate($template, 'insert'));
-		$this->formAction = NULL;
+	public function displayInsertForm($options = array()){
+		// Create the template object
+		$template = $this->createFormTemplate();
 
-		return $template;
+		// Set the template
+		$templatePath = isset($options['template']) ? $options['template'] : $this->insertFormTemplate;
+		$template->loadTemplate($templatePath, 'insert');
+
+		// Apply any options
+		$template->formAction = isset($options['formAction']) ? $options['formAction'] : NULL;
+
+		// Render time!
+		return $template->render();
 	}
 
 	/**
 	 * Displays an Edit Table using a given template
 	 *
-	 * @param string $template
-	 * @param string $formAction
+	 * @param array $options
 	 * @return string
 	 * @todo Needs testing
 	 */
-	public function displayEditTable($template = NULL, $formAction = NULL){
-		if (isnull($template)) $template = 'default';
-		$this->formAction = $formAction;
-		$template         = $this->processTemplate($this->loadTemplate($template, 'edit'));
-		$this->formAction = NULL;
+	public function displayEditTable($options = array()){
+		// Create the template object
+		$template = $this->createFormTemplate();
 
-		return $template;
-	}
+		// Set the template
+		$templatePath = isset($options['template']) ? $options['template'] : $this->editTableTemplate;
+		$template->loadTemplate($templatePath, 'edit');
 
-	/**
-	 * Process all the form template tags
-	 *
-	 * @param string $templateText
-	 * @return string
-	 */
-	public function processTemplate($templateText){
-		// Reset the list of rendered fields
-		$this->fieldsRendered = array();
-		// Process {fieldsLoop}
-		$templateText = preg_replace_callback('|{fieldsLoop(.*?)}(.+?){/fieldsLoop}|i', array($this, '__processFieldLoop'), $templateText);
-		// Process {rowLoop}
-		$templateText = preg_replace_callback('|{rowLoop(.*?)}(.+?){/rowLoop}|i', array($this, '__processRowLoop'), $templateText);
-		// Process general tags
-		$templateText = preg_replace_callback('|{([/\w]+)\s?(.*?)}|', array($this, '__processTemplateGeneral'), $templateText);
+		// Apply any options
+		$template->formAction         = isset($options['formAction']) ? $options['formAction'] : NULL;
+		$template->insertFormURL      = isset($options['insertFormURL']) ? $options['insertFormURL'] : NULL;
+		$template->insertFormCallback = isset($options['insertFormCallback']) ? $options['insertFormCallback'] : NULL;
 
-		return $templateText;
-	}
-
-	/**
-	 * [PREG Callback] Process all {fieldLoop}'s
-	 *
-	 * @param array $matches
-	 * @return string
-	 */
-	private function __processFieldLoop($matches){
-		$output     = '';
-		$options    = attPairs($matches[1]);
-		$block      = $matches[2];
-		$list       = isset($options['list'])       ? explode(',', $options['list'])   : $this->listFields();
-		$editStrip  = isset($options['editStrip'])  ? str2bool($options['editStrip'])  : NULL;
-		$showHidden = isset($options['showHidden']) ? str2bool($options['showHidden']) : TRUE;
-
-		if ($showHidden || $showHidden === NULL) {
-			foreach ($this->fields as $field) {
-				// Skip the field if it's not in the list
-				if (!in_array($field->name, $list)) continue;
-				// Skip fields that have already been rendered
-				if (in_array($field->name, $this->fieldsRendered)) continue;
-				// We only care if this is a hidden field
-				if ($field->type == 'hidden') {
-					$output .= $field->render();
-					$this->fieldsRendered[] = $field->name;
-				}
-			}
-		}
-
-		foreach ($this->getSortedFields($editStrip) as $field) {
-			// Skip fields that have already been rendered
-			if (in_array($field->name, $this->fieldsRendered)) continue;
-
-			// Skip any hidden fields, we've already processed them
-			if ($field->type == 'hidden') continue;
-
-			// Skip the field if it's not in the list
-			if (!in_array($field->name, $list)) continue;
-
-			// Replace any unnamed field with a named version for this field
-			$output .= preg_replace('/{field(?!.*name=".+".*).*}/', '{field $1 name="'.$field->name.'"}', $block);
-		}
-
-		return $output;
-	}
-
-	/**
-	 * [PREG Callback] Process all {rowLoop}'s
-	 *
-	 * @param array $matches
-	 * @return string
-	 */
-	private function __processRowLoop($matches){
-		$output  = '';
-		$options = attPairs($matches[1]);
-		$block   = $matches[2];
-
-		// Extract db table stuff into vars
-		$dbConnection = isset($this->dbTableOptions['dbConnection']) ? $this->dbTableOptions['dbConnection'] : 'appDB';
-		$order        = isset($this->dbTableOptions['order']) ? $this->dbTableOptions['order'] : NULL;
-		$where        = isset($this->dbTableOptions['where']) ? $this->dbTableOptions['where'] : NULL;
-		$limit        = isset($this->dbTableOptions['limit']) ? $this->dbTableOptions['limit'] : NULL;
-		$table        = $this->dbTableOptions['table'];
-
-		// Sanity check
-		if (isnull($table)) {
-			errorHandle::newError(__METHOD__."() No table defined in dbTableOptions! (Did you forget to call linkToDatabase()?)", errorHandle::DEBUG);
-			return '';
-		}
-
-		// Get the db connection we'll be talking to
-		if (!$db = db::getInstance()->$dbConnection) {
-			errorHandle::newError(__METHOD__."() Database connection failed to establish", errorHandle::DEBUG);
-			return '';
-		}
-
-		// Build the SQL
-		$sql = sprintf('SELECT * FROM `%s`', $db->escape($table));
-		if (!isempty($where)) $sql .= " WHERE $where";
-		if (!isempty($order)) $sql .= " ORDER BY $order";
-		if (!isempty($limit)) $sql .= " LIMIT $limit";
-
-		// Run the SQL
-		$sqlResult = $db->query($sql);
-
-		// Save the number of rows
-		$this->counterRows = $sqlResult->rowCount();
-
-		// Figure out the fields we need to loop on (and save the number of fields)
-		preg_match_all('/{field.*?name="(\w+)".*?}/', $block, $matches);
-		$templateFields      = array_intersect($sqlResult->fieldNames(), $matches[1]);
-		$this->counterFields = sizeof($templateFields);
-
-		// Loop over each row, transforming the block into a compiled block
-		while ($row = $sqlResult->fetch()) {
-			$rowBlock = $block;
-			foreach ($row as $field => $value) {
-				if (!in_array($field, $templateFields)) continue;
-				$rowBlock = preg_replace('/{field\s+((?=.*name="'.preg_quote($field).'".*)(?!.*value=".+".*).*)}/', '{field $1 value="'.$value.'"}', $rowBlock);
-				$rowBlock = preg_replace('/{field\s+((?=.*name="'.preg_quote($field).'".*)(?=.*display="value".*).*)}/', $value, $rowBlock);
-			}
-			$output .= $rowBlock;
-		}
-
-		// Replace any field or row count tags inside our block
-		$output = str_replace('{rowCount}', $this->counterRows, $output);
-		$output = str_replace('{fieldCount}', $this->counterFields, $output);
-
-		// Return the compiled block
-		return $output;
-	}
-
-	/**
-	 * [PREG Callback] Process general template tags
-	 *
-	 * @param array $matches
-	 * @return string
-	 */
-	private function __processTemplateGeneral($matches){
-		$tmplTag   = trim($matches[1]);
-		$attrPairs = attPairs($matches[2]);
-		switch (strtolower($tmplTag)) {
-			case 'formtitle':
-				return $this->formName;
-
-			case 'form':
-				$output = '';
-				$showHidden = isset($attrPairs['hidden']) ? str2bool($attrPairs['hidden']) : FALSE;
-				unset($attrPairs['hidden']);
-
-				// Build any extra attributes for the <form> tag
-				$attrs = array();
-				foreach ($attrPairs as $key => $value) {
-					$attrs[] = $key.'="'.$value.'"';
-				}
-				// Build the <form> tag
-				$output .= sprintf('<form method="post"%s %s>',
-					(isnull($this->formAction) ? '' : ' action="'.$this->formAction.'"'),
-					implode(' ', $attrs));
-
-				// Add any hidden fields (if needed)
-				if($showHidden){
-					foreach($this->fields as $field){
-						if (in_array($field->name, $this->fieldsRendered)) continue;
-						if($field->type == 'hidden') {
-							$output .= $field->render();
-							$this->fieldsRendered[] = $field->name;
-						}
-					}
-				}
-
-				// Return the result
-				return $output;
-
-			case '/form':
-				return '</form>';
-
-			case 'fields':
-				$output  = '';
-				$display = isset($attrPairs['display'])
-					? trim(strtolower($attrPairs['display']))
-					: 'full';
-
-				foreach ($this->fields as $field) {
-					if (in_array($field->name, $this->fieldsRendered)) continue;
-					$this->fieldsRendered[] = $field->name;
-
-					switch ($display) {
-						case 'full':
-							$output .= $field->render();
-							break;
-						case 'fields':
-							$output .= $field->renderField();
-							break;
-						case 'labels':
-							$output .= $field->renderLabel();
-							break;
-						case 'hidden':
-							if($field->type == 'hidden') $output .= $field->render();
-							break;
-						default:
-							errorHandle::newError(__METHOD__."() Invalid 'display' for {fields}! (only full|fields|labels valid)", errorHandle::DEBUG);
-							return '';
-					}
-				}
-
-				return $output;
-
-			case 'field':
-				if (!isset($attrPairs['name'])) {
-					errorHandle::newError(__METHOD__."() 'name' is required for {field} tags", errorHandle::DEBUG);
-					return '';
-				}
-
-				$field = $this->getField($attrPairs['name']);
-				if (isnull($field)) {
-					errorHandle::newError(__METHOD__."() No field defined for '{$attrPairs['name']}'!", errorHandle::DEBUG);
-					return '';
-				}
-
-				$display  = isset($attrPairs['display'])
-					? trim(strtolower($attrPairs['display']))
-					: 'full';
-				$template = isset($attrPairs['template'])
-					? trim(strtolower($attrPairs['template']))
-					: NULL;
-
-				switch ($display) {
-					case 'full':
-						return $field->render($template);
-					case 'field':
-						return $field->renderField();
-					case 'label':
-						return $field->renderLabel();
-					default:
-						errorHandle::newError(__METHOD__."() Invalid 'display' for field '{$attrPairs['name']}'! (only full|field|label valid)", errorHandle::DEBUG);
-						return '';
-				}
-
-			case 'fieldset':
-				$legend = isset($attrPairs['legend']) && !isempty($attrPairs['legend'])
-					? '<legend>'.$attrPairs['legend'].'</legend>'
-					: '';
-
-				return '<fieldset>'.$legend;
-
-			case '/fieldset':
-				return '</fieldset>';
-
-			case 'rowcount':
-				return (string)$this->counterRows;
-
-			case 'fieldcount':
-				return (string)$this->counterFields;
-
-			// By default we need to return the whole tag because it must not be one of our tags.
-			default:
-				return $matches[0];
-		}
+		// Render time!
+		return $template->render();
 	}
 }
