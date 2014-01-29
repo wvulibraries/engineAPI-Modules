@@ -1,0 +1,39 @@
+<section class="formBuilder editTable">
+	<header>
+		<h1>{formTitle}</h1>
+	</header>
+
+	{form}
+	<table>
+		<thead>
+		<tr>
+			{fieldsLoop editStrip="true"}
+			<th>{field display="label"}</th>
+			{/fieldsLoop}
+		</tr>
+		</thead>
+		<tbody>
+		{rowLoop}
+		<tr class="editStripFields">
+			<input type="hidden" id="something_id" value="123">
+			<input type="hidden" id="something_key" value="abc">
+			<i class="some-icon" data-insertFormPath="$(this).parent().next('.expandable').children('td:first')"></i>
+			{fieldsLoop editStrip="true" showHidden="true"}
+			<td>{field display="field"}</td>
+			{/fieldsLoop}
+		</tr>
+		<tr class="expandable">
+			<td colspan="{fieldCount}">
+			</td>
+		</tr>
+		{/rowLoop}
+		</tbody>
+	</table>
+	{/form}
+</section>
+
+
+{formBuilder display="editTable" insertFormURL="/foo/bar.php" insertFormCallback="function()"}
+
+<input src="jquery.js">
+{formBuilder display="js"} <!-- Load assets for ALL registered forms (effectively, ignores name) -->
