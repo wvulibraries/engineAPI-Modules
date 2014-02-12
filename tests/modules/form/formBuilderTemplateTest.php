@@ -43,23 +43,45 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_templates_formBegin(){
-		$this->assertEquals('<form method="post" >', $this->formTemplate->render('{form}'));
+		$html = $this->formTemplate->render('{form}');
+		$this->assertContains('<form method="post">', $html);
+		$this->assertContains('<input type="hidden" name="__formName"', $html);
+		$this->assertContains('<input type="hidden" name="__csrfID"', $html);
+		$this->assertContains('<input type="hidden" name="__csrfToken"', $html);
 	}
 
 	function test_templates_formBegin_hiddenTrue(){
 		$this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'type' => 'hidden')));
 		$this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'type' => 'text')));
-		$this->assertEquals('<form method="post" >'.$foo->render(), $this->formTemplate->render('{form hidden="true"}'));
+		$html = $this->formTemplate->render('{form hidden="true"}');
+
+		$this->assertContains('<form method="post">', $html);
+		$this->assertContains('<input type="hidden" name="__formName"', $html);
+		$this->assertContains('<input type="hidden" name="__csrfID"', $html);
+		$this->assertContains('<input type="hidden" name="__csrfToken"', $html);
+		$this->assertContains($foo->render(), $html);
+		$this->assertNotContains($bar->render(), $html);
 	}
 
 	function test_templates_formBegin_hiddenFalse(){
 		$this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'type' => 'hidden')));
 		$this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'type' => 'text')));
-		$this->assertEquals('<form method="post" >', $this->formTemplate->render('{form hidden="false"}'));
+		$html = $this->formTemplate->render('{form hidden="false"}');
+
+		$this->assertContains('<form method="post">', $html);
+		$this->assertContains('<input type="hidden" name="__formName"', $html);
+		$this->assertContains('<input type="hidden" name="__csrfID"', $html);
+		$this->assertContains('<input type="hidden" name="__csrfToken"', $html);
+		$this->assertNotContains($foo->render(), $html);
+		$this->assertNotContains($bar->render(), $html);
 	}
 
 	function test_templates_formBegin_miscAttributes(){
-		$this->assertEquals('<form method="post" foo="bar" red="green">', $this->formTemplate->render('{form foo="bar" red="green"}'));
+		$html = $this->formTemplate->render('{form foo="bar" red="green"}');
+		$this->assertContains('<form method="post" foo="bar" red="green">', $html);
+		$this->assertContains('<input type="hidden" name="__formName"', $html);
+		$this->assertContains('<input type="hidden" name="__csrfID"', $html);
+		$this->assertContains('<input type="hidden" name="__csrfToken"', $html);
 	}
 
 	function test_templates_formEnd(){
