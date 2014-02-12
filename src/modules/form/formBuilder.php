@@ -60,6 +60,16 @@ class formBuilder implements Countable{
 	public $editTableTemplate = 'default';
 
 	/**
+	 * @var string Location of insertForm Ajax Callback
+	 */
+	public $insertFormURL;
+
+	/**
+	 * @var string Javascript function to process Ajax call
+	 */
+	public $insertFormCallback;
+
+	/**
 	 * Class constructor
 	 *
 	 * @param string $formName
@@ -202,18 +212,18 @@ class formBuilder implements Countable{
 		if (isset($this->fields[$field->name])) return FALSE;
 
 		// If there's a label, make sure it's unique
-		if (!isempty($field->label) && in_array($field->label, $this->fieldLabels)) return FALSE;
+		if (!is_empty($field->label) && in_array($field->label, $this->fieldLabels)) return FALSE;
 
 		// If there's a field ID, make sure it's unique
-		if (!isempty($field->fieldID) && in_array($field->fieldID, $this->fieldIDs)) return FALSE;
+		if (!is_empty($field->fieldID) && in_array($field->fieldID, $this->fieldIDs)) return FALSE;
 
 		// If we're here, then all is well. Save the field and return
-		if (!isempty($field->fieldID)) $this->fieldIDs[$field->name] = $field->fieldID;
-		if (!isempty($field->label)) $this->fieldLabels[$field->name] = $field->label;
+		if (!is_empty($field->fieldID)) $this->fieldIDs[$field->name] = $field->fieldID;
+		if (!is_empty($field->label)) $this->fieldLabels[$field->name] = $field->label;
 		$this->fields[$field->name] = $field;
 
 		// Record the sort-order for this field
-		$order                         = !isempty($field->order) ? $field->order : self::DEFAULT_ORDER;
+		$order                         = !is_empty($field->order) ? $field->order : self::DEFAULT_ORDER;
 		$this->fieldOrdering[$order][] = $field;
 
 		return TRUE;
@@ -416,6 +426,26 @@ class formBuilder implements Countable{
 	}
 
 	/**
+	 * Returns an array of JS/CSS asset files needed by this form and its fields
+	 *
+	 * This array will follow the convention: assetName => assetFile
+	 *
+	 * @return array
+	 */
+	private function getAssets(){
+		// Form assets
+		$assets = array(
+			'formEvents' => __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'formEvents.js'
+		);
+		// Get, and merge-in, all field assets
+		foreach ($this->fields as $field) {
+			$assets = array_merge($assets, $field->getAssets());
+		}
+		// Return the final array
+		return $assets;
+	}
+
+	/**
 	 * Main display method for the form
 	 *
 	 * @param string $formType
@@ -431,8 +461,34 @@ class formBuilder implements Countable{
 				return $this->displayEditTable($options);
 
 			case 'js':
-				// Figure out JS assets for ALL forms
-				break;
+				$assetFiles = array();
+				foreach (self::$formObjects as $form) {
+					$assetFiles = array_merge($assetFiles, $form->getAssets());
+				}
+
+				$jsAssetBlob  = '';
+				$cssAssetBlob = '';
+				foreach ($assetFiles as $file) {
+					$ext = pathinfo($file, PATHINFO_EXTENSION);
+					switch ($ext) {
+						case 'less':
+						case 'sass':
+						case 'css':
+							$cssAssetBlob .= minifyCSS($file);
+							break;
+						case 'js':
+							$jsAssetBlob .= minifyJS($file);
+							break;
+						default:
+							errorHandle::newError(__METHOD__."() Unknown asset file type '$ext'. Ignoring file!", errorHandle::DEBUG);
+							break;
+					}
+				}
+
+				$output = '';
+				if (!is_empty($jsAssetBlob))  $output .= "<script>".$jsAssetBlob."</script>";
+				if (!is_empty($cssAssetBlob)) $output .= "<style>".$cssAssetBlob."</style>";
+				return $output;
 
 			default:
 				errorHandle::newError(__METHOD__."() Unsupported display type '{$options['display']}' for form '$formName'", errorHandle::DEBUG);
@@ -445,7 +501,6 @@ class formBuilder implements Countable{
 	 *
 	 * @param array $options
 	 * @return string
-	 * @todo Needs testing
 	 */
 	public function displayInsertForm($options = array()){
 		// Create the template object
@@ -467,7 +522,6 @@ class formBuilder implements Countable{
 	 *
 	 * @param array $options
 	 * @return string
-	 * @todo Needs testing
 	 */
 	public function displayEditTable($options = array()){
 		// Create the template object
@@ -478,8 +532,8 @@ class formBuilder implements Countable{
 		$template->loadTemplate($templatePath, 'edit');
 
 		// Apply any options
-		$template->formAction         = isset($options['formAction']) ? $options['formAction'] : NULL;
-		$template->insertFormURL      = isset($options['insertFormURL']) ? $options['insertFormURL'] : NULL;
+		$template->formAction         = isset($options['formAction'])         ? $options['formAction']         : NULL;
+		$template->insertFormURL      = isset($options['insertFormURL'])      ? $options['insertFormURL']      : NULL;
 		$template->insertFormCallback = isset($options['insertFormCallback']) ? $options['insertFormCallback'] : NULL;
 
 		// Render time!

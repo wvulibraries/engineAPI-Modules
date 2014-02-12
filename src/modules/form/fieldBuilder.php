@@ -61,7 +61,7 @@ class fieldBuilder{
 		if (is_string($field)) $field = array('name' => $field);
 
 		// Make sure we got a field name
-		if (!isset($field['name']) || isempty($field['name'])) {
+		if (!isset($field['name']) || is_empty($field['name'])) {
 			errorHandle::newError(__METHOD__."() Field name required!", errorHandle::DEBUG);
 			return FALSE;
 		}
@@ -120,12 +120,34 @@ class fieldBuilder{
 	}
 
 	/**
+	 * Returns an array of JS/CSS asset files needed by this field
+	 *
+	 * This array will follow the convention: assetName => assetFile
+	 *
+	 * @return array
+	 */
+	public function getAssets(){
+		switch(strtolower($this->field['type'])){
+			case 'wysiwyg':
+				return array(
+					'wysiwyg' => __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'wysiwyg.js'
+				);
+			case 'multiselect':
+				return array(
+					'multiSelect' => __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multiSelect.js'
+				);
+			default:
+				return array();
+		}
+	}
+
+	/**
 	 * Make sure we have a fieldID set
 	 * This is done to make sure that <label> and field inputs link to one another
 	 * Note: This sets fieldID on this field's data to the generated ID
 	 */
 	private function ensureFieldID(){
-		if (!isset($this->field['fieldID']) || isempty($this->field['fieldID'])) $this->field['fieldID'] = uniqid('formField_');
+		if (!isset($this->field['fieldID']) || is_empty($this->field['fieldID'])) $this->field['fieldID'] = uniqid('formField_');
 	}
 
 	/**
@@ -164,13 +186,13 @@ class fieldBuilder{
 		// Try and load a custom/global template (a full file path from the developer)
 		if (file_exists($path)) {
 			$output = $routeToFile($path, $type);
-			if (!isempty($output)) return $output;
+			if (!is_empty($output)) return $output;
 		}
 
 		// Try and load one of our distribution templates (the ones next to this module)
 		if (file_exists($this->templateDir.$path)) {
 			$output = $routeToFile($this->templateDir.$path, $type);
-			if (!isempty($output)) return $output;
+			if (!is_empty($output)) return $output;
 		}
 
 		// All else fails: load the default
@@ -230,7 +252,7 @@ class fieldBuilder{
 	 */
 	public function renderField($options = array()){
 		$this->ensureFieldID();
-		if (isempty($this->renderedField)) {
+		if (is_empty($this->renderedField)) {
 			$this->renderOptions = $options;
 			switch ($this->field['type']) {
 				case 'select':
@@ -265,7 +287,7 @@ class fieldBuilder{
 
 		// Continue for a normal field
 		$this->ensureFieldID();
-		if (isempty($this->renderedLabel)) {
+		if (is_empty($this->renderedLabel)) {
 			$this->renderOptions = $options;
 			$this->renderedLabel = sprintf('<label for="%s"%s>%s</label>',
 				$this->getFieldOption('fieldID'),
@@ -288,7 +310,7 @@ class fieldBuilder{
 			$this->field['type'],
 			$this->getFieldOption('value'),
 			$this->buildFieldAttributes(),
-			(!isempty($this->field['placeholder']) ? ' placeholder="'.$this->field['placeholder'].'"' : '')
+			(!is_empty($this->field['placeholder']) ? ' placeholder="'.$this->field['placeholder'].'"' : '')
 		);
 	}
 
@@ -368,8 +390,8 @@ class fieldBuilder{
 		$attributes = (array)$this->field['labelMetadata'];
 
 		if (!$this->field['disableStyling']) {
-			if (!isempty($this->field['labelCSS'])) $attributes['style'] = $this->field['labelCSS'];
-			if (!isempty($this->field['labelClass'])) $attributes['class'] = $this->field['labelClass'];
+			if (!is_empty($this->field['labelCSS'])) $attributes['style'] = $this->field['labelCSS'];
+			if (!is_empty($this->field['labelClass'])) $attributes['class'] = $this->field['labelClass'];
 		}
 
 		return $this->__buildAttributes($attributes);
@@ -399,8 +421,8 @@ class fieldBuilder{
 	}
 
 	private function getFieldOption($name){
-		if (isset($this->renderOptions[$name]) && !isempty($this->renderOptions[$name])) return $this->renderOptions[$name];
-		if (isset($this->field[$name]) && !isempty($this->field[$name])) return $this->field[$name];
+		if (isset($this->renderOptions[$name]) && !is_empty($this->renderOptions[$name])) return $this->renderOptions[$name];
+		if (isset($this->field[$name]) && !is_empty($this->field[$name])) return $this->field[$name];
 		return NULL;
 	}
 

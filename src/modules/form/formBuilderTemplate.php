@@ -76,10 +76,10 @@ class formBuilderTemplate {
 		$output = $routeToFile($path, $type);
 
 		// If that failed, prefix $path with the templateDir
-		if(isempty($output)) $output = $routeToFile($this->formBuilder->templateDir.$path, $type);
+		if(is_empty($output)) $output = $routeToFile($this->formBuilder->templateDir.$path, $type);
 
 		// If even that failed, just use $path as the template
-		$this->template = isempty($output) ? $path : $output;
+		$this->template = is_empty($output) ? $path : $output;
 	}
 
 	function render($templateText=NULL){
@@ -179,9 +179,9 @@ class formBuilderTemplate {
 
 		// Build the SQL
 		$sql = sprintf('SELECT * FROM `%s`', $db->escape($table));
-		if (!isempty($where)) $sql .= " WHERE $where";
-		if (!isempty($order)) $sql .= " ORDER BY $order";
-		if (!isempty($limit)) $sql .= " LIMIT $limit";
+		if (!is_empty($where)) $sql .= " WHERE $where";
+		if (!is_empty($order)) $sql .= " ORDER BY $order";
+		if (!is_empty($limit)) $sql .= " LIMIT $limit";
 
 		// Run the SQL
 		$sqlResult = $db->query($sql);
@@ -321,7 +321,7 @@ class formBuilderTemplate {
 				}
 
 			case 'fieldset':
-				$legend = isset($attrPairs['legend']) && !isempty($attrPairs['legend'])
+				$legend = isset($attrPairs['legend']) && !is_empty($attrPairs['legend'])
 					? '<legend>'.$attrPairs['legend'].'</legend>'
 					: '';
 

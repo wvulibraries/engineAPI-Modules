@@ -1,5 +1,5 @@
 <?php
-class formBuilderTemplateTest extends PHPUnit_Framework_TestCase {
+class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 	/**
 	 * @var formBuilder
 	 */
@@ -13,6 +13,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase {
 		$this->form         = formBuilder::createForm();
 		$this->formTemplate = new formBuilderTemplate($this->form);
 	}
+
 	static function setUpBeforeClass(){
 		// Reset database
 		db::getInstance()->appDB->query(file_get_contents(__DIR__.'/fieldBuilderTest.sql'));
@@ -36,7 +37,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase {
 
 		$this->assertEquals('', $this->formTemplate->render($template));
 
-		$form = formBuilder::createForm('foo');
+		$form         = formBuilder::createForm('foo');
 		$formTemplate = new formBuilderTemplate($form);
 		$this->assertEquals('foo', $formTemplate->render($template));
 	}
@@ -272,7 +273,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase {
 		db::getInstance()->appDB->query(file_get_contents(__DIR__.'/fieldBuilderTest.sql'));
 
 		// Create a new form
-		$form = formBuilder::createForm("rowLoop", array('table' => 'fieldBuilderTest', 'limit' => 3));
+		$form         = formBuilder::createForm("rowLoop", array('table' => 'fieldBuilderTest', 'limit' => 3));
 		$formTemplate = new formBuilderTemplate($form);
 
 		// Add a field
