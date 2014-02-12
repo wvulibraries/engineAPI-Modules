@@ -116,7 +116,7 @@ class formBuilderTemplate {
 		$showHidden = isset($options['showHidden']) ? str2bool($options['showHidden']) : TRUE;
 
 		if ($showHidden || $showHidden === NULL) {
-			foreach ($this->formBuilder->fields as $field) {
+			foreach ($this->formBuilder->getFields() as $field) {
 				// Skip the field if it's not in the list
 				if (!in_array($field->name, $list)) continue;
 				// Skip fields that have already been rendered
@@ -236,14 +236,24 @@ class formBuilderTemplate {
 				foreach ($attrPairs as $key => $value) {
 					$attrs[] = $key.'="'.$value.'"';
 				}
+				$attrs = sizeof($attrs) ? ' '.implode(' ', $attrs): '';
+
 				// Build the <form> tag
-				$output .= sprintf('<form method="post"%s %s>',
+				$output .= sprintf('<form method="post"%s%s>',
 					(isnull($this->formAction) ? '' : ' action="'.$this->formAction.'"'),
-					implode(' ', $attrs));
+					$attrs);
+
+				// Include the formName
+				$output .= sprintf('<input type="hidden" name="__formName" value="%s">', $this->formBuilder->getName());
+
+				// Include the CSRF token
+				list($csrfID, $csrfToken) = session::csrfTokenRequest();
+				$output .= sprintf('<input type="hidden" name="__csrfID" value="%s">', $csrfID);
+				$output .= sprintf('<input type="hidden" name="__csrfToken" value="%s">', $csrfToken);
 
 				// Add any hidden fields (if needed)
 				if($showHidden){
-					foreach($this->formBuilder->fields as $field){
+					foreach($this->formBuilder->getFields() as $field){
 						if (in_array($field->name, $this->fieldsRendered)) continue;
 						if($field->type == 'hidden') {
 							$output .= $field->render();
@@ -264,7 +274,7 @@ class formBuilderTemplate {
 					? trim(strtolower($attrPairs['display']))
 					: 'full';
 
-				foreach ($this->formBuilder->fields as $field) {
+				foreach ($this->formBuilder->getFields() as $field) {
 					if (in_array($field->name, $this->fieldsRendered)) continue;
 					$this->fieldsRendered[] = $field->name;
 

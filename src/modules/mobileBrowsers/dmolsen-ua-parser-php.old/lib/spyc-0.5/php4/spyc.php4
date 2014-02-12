@@ -404,7 +404,7 @@ class Spyc {
       $tempPath = $this->getParentPathByIndent($this->indent);
       $line = $this->stripIndent($line, $this->indent);
       if ($this->isComment($line)) continue;
-      if ($this->isEmpty($line)) continue;
+      if ($this->is_empty($line)) continue;
       $this->path = $tempPath;
 
       $literalBlockStyle = $this->startsLiteralBlock($line);

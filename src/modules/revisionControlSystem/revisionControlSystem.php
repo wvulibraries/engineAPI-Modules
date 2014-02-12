@@ -226,12 +226,12 @@ class revisionControlSystem {
 
 		$row       = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
 
-		if (isset($row['ID']) && !isempty($row['ID'])) {
+		if (isset($row['ID']) && !is_empty($row['ID'])) {
 			$metaDataArray = $row['ID'];
 		}
 
 		// Find for digitalObjectArray
-		if (!isempty($digitalObjectArray)) {
+		if (!is_empty($digitalObjectArray)) {
 			$sql       = sprintf("SELECT ID FROM %s WHERE digitalObjects='%s' LIMIT 1",
 				$this->openDB->escape($this->revisionTable),
 				$this->openDB->escape($digitalObjectArray)
@@ -245,14 +245,14 @@ class revisionControlSystem {
 
 			$row       = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
 
-			if (isset($row['ID']) && !isempty($row['ID'])) {
+			if (isset($row['ID']) && !is_empty($row['ID'])) {
 				$digitalObjectArray = $row['ID'];
 			}
 
 		}
 
 		// Find for relatedDataArray
-		if (!isempty($relatedDataArray)) {
+		if (!is_empty($relatedDataArray)) {
 			$sql       = sprintf("SELECT ID FROM %s WHERE relatedData='%s' LIMIT 1",
 				$this->openDB->escape($this->revisionTable),
 				$this->openDB->escape($relatedDataArray)
@@ -266,7 +266,7 @@ class revisionControlSystem {
 
 			$row       = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
 
-			if (isset($row['ID']) && !isempty($row['ID'])) {
+			if (isset($row['ID']) && !is_empty($row['ID'])) {
 				$relatedDataArray = $row['ID'];
 			}
 		}
@@ -388,7 +388,7 @@ class revisionControlSystem {
 		}
 		$setString = implode(",",$setString);
 
-		if (!isempty($row['digitalObjects'])) {
+		if (!is_empty($row['digitalObjects'])) {
 			$setString .= sprintf(",`digitalObjects`='%s'",
 				$this->openDB->escape($row['digitalObjects'])
 				);
@@ -690,7 +690,7 @@ class revisionControlSystem {
 
 		}
 
-		if (!isempty($row_1['relatedData'])) {
+		if (!is_empty($row_1['relatedData'])) {
 			$relatedData_1 = '<ul class="engineRCSCompareTable_UL_1">';
 			foreach ($row_1['relatedData'] as $tableName=>$V) {
 				$relatedData_1 .= sprintf('Table: <strong>%s</strong><ul>',htmlSanitize($tableName));
@@ -713,7 +713,7 @@ class revisionControlSystem {
 			$relatedData_1 .= '</ul>';
 		}
 
-		if (!isempty($row_2['relatedData'])) {
+		if (!is_empty($row_2['relatedData'])) {
 			$relatedData_2 = '<ul class="engineRCSCompareTable_UL_2">';
 			foreach ($row_2['relatedData'] as $tableName=>$V) {
 				$relatedData_2 .= sprintf('Table: <strong>%s</strong><ul>',htmlSanitize($tableName));
@@ -736,7 +736,7 @@ class revisionControlSystem {
 			$relatedData_2 .= '</ul>';
 		}
 
-		if (!isempty($relatedData_1) || !isempty($relatedData_2)) {
+		if (!is_empty($relatedData_1) || !is_empty($relatedData_2)) {
 			$output .= '<tr>';
 			$output .= '<td class="fieldName">Related Data</td>';
 			$output .= sprintf('<td>%s</td>',$relatedData_1);
@@ -744,7 +744,7 @@ class revisionControlSystem {
 			$output .= '</tr>';
 		}
 
-		if (!isempty($row_1['digitalObjects']) || !isempty($row_2['digitalObjects'])) {
+		if (!is_empty($row_1['digitalObjects']) || !is_empty($row_2['digitalObjects'])) {
 
 			if (isset($fields['digitalObjects'])) {
 				$digitalObjects_1 = $fields['digitalObjects']($row_1['digitalObjects']);
@@ -1012,7 +1012,7 @@ class revisionControlSystem {
 
 		}
 
-		if (isempty($row[$type])) {
+		if (is_empty($row[$type])) {
 			return("");
 		}
 
