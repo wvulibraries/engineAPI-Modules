@@ -45,7 +45,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 	function test_templates_formBegin(){
 		$html = $this->formTemplate->render('{form}');
 		$this->assertContains('<form method="post">', $html);
-		$this->assertContains('<input type="hidden" name="__formName"', $html);
+		$this->assertContains('<input type="hidden" name="__formID"', $html);
 		$this->assertContains('<input type="hidden" name="__csrfID"', $html);
 		$this->assertContains('<input type="hidden" name="__csrfToken"', $html);
 	}
@@ -56,7 +56,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$html = $this->formTemplate->render('{form hidden="true"}');
 
 		$this->assertContains('<form method="post">', $html);
-		$this->assertContains('<input type="hidden" name="__formName"', $html);
+		$this->assertContains('<input type="hidden" name="__formID"', $html);
 		$this->assertContains('<input type="hidden" name="__csrfID"', $html);
 		$this->assertContains('<input type="hidden" name="__csrfToken"', $html);
 		$this->assertContains($foo->render(), $html);
@@ -69,7 +69,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$html = $this->formTemplate->render('{form hidden="false"}');
 
 		$this->assertContains('<form method="post">', $html);
-		$this->assertContains('<input type="hidden" name="__formName"', $html);
+		$this->assertContains('<input type="hidden" name="__formID"', $html);
 		$this->assertContains('<input type="hidden" name="__csrfID"', $html);
 		$this->assertContains('<input type="hidden" name="__csrfToken"', $html);
 		$this->assertNotContains($foo->render(), $html);
@@ -79,7 +79,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 	function test_templates_formBegin_miscAttributes(){
 		$html = $this->formTemplate->render('{form foo="bar" red="green"}');
 		$this->assertContains('<form method="post" foo="bar" red="green">', $html);
-		$this->assertContains('<input type="hidden" name="__formName"', $html);
+		$this->assertContains('<input type="hidden" name="__formID"', $html);
 		$this->assertContains('<input type="hidden" name="__csrfID"', $html);
 		$this->assertContains('<input type="hidden" name="__csrfToken"', $html);
 	}
