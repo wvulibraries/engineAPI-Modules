@@ -25,6 +25,13 @@ class formFieldsTest extends PHPUnit_Framework_TestCase{
 		$this->assertCount(1, $this->formFields);
 	}
 
+	function test_addFieldWithString(){
+		$this->assertCount(0, $this->formFields);
+		$test = $this->formFields->addField('foo');
+		$this->assertTrue($test);
+		$this->assertCount(1, $this->formFields);
+	}
+
 	function test_addFieldWithFieldBuilder(){
 		$this->assertCount(0, $this->formFields);
 		$field = fieldBuilder::createField('foo');
@@ -35,11 +42,6 @@ class formFieldsTest extends PHPUnit_Framework_TestCase{
 
 	function test_addFieldReturnsFalseOnError_noName(){
 		$test = $this->formFields->addField(array());
-		$this->assertFalse($test);
-	}
-
-	function test_addFieldReturnsFalseOnError_notArrayOrFieldbuilder(){
-		$test = $this->formFields->addField('foo');
 		$this->assertFalse($test);
 	}
 

@@ -9,6 +9,38 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 
 	function setUp(){
 		$this->form = formBuilder::createForm();
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY, 'flash');
+	}
+
+	private function assertFormData($formType){
+		$validFormTypes = array('insertForm', 'updateForm', 'editTable');
+
+		// Get the save form data from the session
+		$formData = session::get(formBuilder::SESSION_SAVED_FORMS_KEY);
+		$this->assertCount(1, $formData, 'Assert the savedForm array has 1 element');
+
+		// Get the saved form's data
+		$formData = array_pop($formData);
+
+		// General asserts
+		$this->assertTrue(is_array($formData), 'Assert the savedForm data is an array');
+		$this->assertArrayHasKey('formbuilder', $formData, "formData contains 'formData' element");
+		$this->assertInstanceOf('formBuilder', $formData['formbuilder'], "formData contains valid formBuilder object");
+		$this->assertArrayHasKey('formtype', $formData, "formData contains 'formType' element");
+		$this->assertTrue(in_array($formData['formtype'], $validFormTypes), "formData contains valid formType");
+
+		// Specific asserts
+		switch ($formType) {
+			case 'insertForm':
+				// Nothing more needed
+				break;
+			case 'updateForm':
+				// TODO: test primary keys
+				break;
+			case 'editTable':
+				// Nothing more needed
+				break;
+		}
 	}
 
 	// -------------------------------------------------
@@ -46,12 +78,14 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 	function test_displayInsertForm_absoluteTemplatePathDir(){
 		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test');
 		$formOutput = $this->form->displayInsertForm($options);
+		$this->assertFormData('insertForm');
 		$this->assertEquals('Test Insert Form', $formOutput);
 	}
 
 	function test_displayInsertForm_absoluteTemplatePathFile(){
 		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test/insert.html');
 		$formOutput = $this->form->displayInsertForm($options);
+		$this->assertFormData('insertForm');
 		$this->assertEquals('Test Insert Form', $formOutput);
 	}
 
@@ -59,24 +93,28 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
 		$options                 = array('template' => 'test');
 		$formOutput              = $this->form->displayInsertForm($options);
+		$this->assertFormData('insertForm');
 		$this->assertEquals('Test Insert Form', $formOutput);
 	}
 
 	function test_displayInsertForm_noParameters(){
 		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
 		$formOutput              = $this->form->displayInsertForm();
+		$this->assertFormData('insertForm');
 		$this->assertEquals('Insert Form Template', $formOutput);
 	}
 
 	function test_displayInsertForm_nullTemplate(){
 		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
 		$formOutput              = $this->form->displayInsertForm(NULL);
+		$this->assertFormData('insertForm');
 		$this->assertEquals('Insert Form Template', $formOutput);
 	}
 
 	function test_displayInsertForm_templateBlob(){
 		$options    = array('template' => 'Test String');
 		$formOutput = $this->form->displayInsertForm($options);
+		$this->assertFormData('insertForm');
 		$this->assertEquals('Test String', $formOutput);
 	}
 

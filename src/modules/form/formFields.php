@@ -7,6 +7,7 @@ abstract class formFields implements Countable{
 	 * @var fieldBuilder[]
 	 */
 	protected $fields = array();
+
 	/**
 	 * @var array Index of field labels (to maintain uniqueness)
 	 */
@@ -21,6 +22,11 @@ abstract class formFields implements Countable{
 	 * @var array Store the ordering of the fields
 	 */
 	protected $fieldOrdering = array();
+
+	/**
+	 * @var fieldBuilder[] Array of all primary fields
+	 */
+	protected $primaryFields = array();
 
 	/**
 	 * Returns the number of fields
@@ -38,8 +44,8 @@ abstract class formFields implements Countable{
 	 * @return bool
 	 */
 	public function addField($field){
-		// If we got an array, make it a fieldBuilder
-		if (is_array($field)) $field = fieldBuilder::createField($field);
+		// If we got an array or string, make it a fieldBuilder
+		if (is_array($field) || is_string($field)) $field = fieldBuilder::createField($field);
 
 		// Make sure we're working with a fieldBuilder
 		if (!($field instanceof fieldBuilder)) return FALSE;
@@ -203,6 +209,70 @@ abstract class formFields implements Countable{
 
 		// Return the final, sorted, array of fields
 		return $sortedFields;
+	}
+
+	/**
+	 * Sets the given fields as primary fields for this form
+	 *
+	 * This will reset the current list, taking any passed in for the new set
+	 * You can pass an unlimited number of fields in, so long as they're valid and have been added to the form
+	 *
+	 * @param string|fieldBuilder ...
+	 * @return bool
+	 */
+	public function setPrimaryField(){
+		// Reset the primary fields
+		$this->primaryFields = array();
+
+		// Get all the fields passed in and loop on each
+		$fields = func_get_args();
+		foreach ($fields as $field) {
+			// If it's a string, try and convert it to one of our fields
+			if (is_string($field)) {
+				if (isnull($field = $this->getField($field))) {
+					errorHandle::newError(__METHOD__."() Field not declared!", errorHandle::DEBUG);
+					return FALSE;
+				}
+			}
+
+			// Make sure we have a valid fieldBuilder object
+			if (!($field instanceof fieldBuilder)) {
+				errorHandle::newError(__METHOD__."() Not a valid fieldBuilder object!", errorHandle::DEBUG);
+				return FALSE;
+			}
+
+			// Make sure the field has been added to the form
+			if (!in_array($field, $this->fields)) {
+				errorHandle::newError(__METHOD__."() Field not added to this form!", errorHandle::DEBUG);
+				return FALSE;
+			}
+
+			// Save the new field to the list
+			$this->primaryFields[] = $field->name;
+		}
+		return TRUE;
+	}
+
+	/**
+	 * Returns an array of primary fields
+	 *
+	 * @return fieldBuilder[]
+	 */
+	public function getPrimaryFields(){
+		$fields = array();
+		foreach ($this->primaryFields as $field) {
+			$fields[] = $this->getField($field);
+		}
+		return array_filter($fields);
+	}
+
+	/**
+	 * Returns an array of primary field names
+	 *
+	 * @return array
+	 */
+	public function listPrimaryFields(){
+		return $this->primaryFields;
 	}
 
 }

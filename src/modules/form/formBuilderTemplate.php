@@ -16,6 +16,11 @@ class formBuilderTemplate {
 	public $formAction;
 
 	/**
+	 * @var string The generated formID for this form
+	 */
+	public $formID;
+
+	/**
 	 * @var string[] List of fields which have been rendered (used for de-duping during render)
 	 */
 	private $fieldsRendered = array();
@@ -82,7 +87,7 @@ class formBuilderTemplate {
 		$this->template = is_empty($output) ? $path : $output;
 	}
 
-	function render($templateText=NULL){
+	public function render($templateText=NULL){
 		// Reset the list of rendered fields
 		$this->fieldsRendered = array();
 
@@ -90,13 +95,13 @@ class formBuilderTemplate {
 		if(isnull($templateText)) $templateText = $this->template;
 
 		// Process {fieldsLoop}
-		$templateText = preg_replace_callback('|{fieldsLoop(.*?)}(.+?){/fieldsLoop}|i', array($this, '__renderFieldLoop'), $templateText);
+		$templateText = preg_replace_callback('|{fieldsLoop(.*?)}(.+?){/fieldsLoop}|ism', array($this, '__renderFieldLoop'), $templateText);
 
 		// Process {rowLoop}
-		$templateText = preg_replace_callback('|{rowLoop(.*?)}(.+?){/rowLoop}|i', array($this, '__renderRowLoop'), $templateText);
+		$templateText = preg_replace_callback('|{rowLoop(.*?)}(.+?){/rowLoop}|ism', array($this, '__renderRowLoop'), $templateText);
 
 		// Process general tags
-		$templateText = preg_replace_callback('|{([/\w]+)\s?(.*?)}|', array($this, '__renderGeneralTags'), $templateText);
+		$templateText = preg_replace_callback('|{([/\w]+)\s?(.*?)}|ism', array($this, '__renderGeneralTags'), $templateText);
 
 		return $templateText;
 	}
@@ -110,7 +115,7 @@ class formBuilderTemplate {
 	private function __renderFieldLoop($matches){
 		$output     = '';
 		$options    = attPairs($matches[1]);
-		$block      = $matches[2];
+		$block      = trim($matches[2]);
 		$list       = isset($options['list'])       ? explode(',', $options['list'])   : $this->formBuilder->listFields();
 		$editStrip  = isset($options['editStrip'])  ? str2bool($options['editStrip'])  : NULL;
 		$showHidden = isset($options['showHidden']) ? str2bool($options['showHidden']) : TRUE;
@@ -155,15 +160,15 @@ class formBuilderTemplate {
 	private function __renderRowLoop($matches){
 		$output  = '';
 		$options = attPairs($matches[1]);
-		$block   = $matches[2];
+		$block   = trim($matches[2]);
 
 		// Extract db table stuff into vars
-		$dbTableOptions = $this->formBuilder->dbTableOptions;
-		$dbConnection   = isset($dbTableOptions['dbConnection']) ? $dbTableOptions['dbConnection'] : 'appDB';
-		$order          = isset($dbTableOptions['order']) ? $dbTableOptions['order'] : NULL;
-		$where          = isset($dbTableOptions['where']) ? $dbTableOptions['where'] : NULL;
-		$limit          = isset($dbTableOptions['limit']) ? $dbTableOptions['limit'] : NULL;
-		$table          = $dbTableOptions['table'];
+		$dbOptions    = $this->formBuilder->dbOptions;
+		$dbConnection = isset($dbOptions['connection']) ? $dbOptions['connection'] : 'appDB';
+		$order        = isset($dbOptions['order'])      ? $dbOptions['order']      : NULL;
+		$where        = isset($dbOptions['where'])      ? $dbOptions['where']      : NULL;
+		$limit        = isset($dbOptions['limit'])      ? $dbOptions['limit']      : NULL;
+		$table        = $dbOptions['table'];
 
 		// Sanity check
 		if (isnull($table)) {
@@ -172,7 +177,7 @@ class formBuilderTemplate {
 		}
 
 		// Get the db connection we'll be talking to
-		if (!$db = db::getInstance()->$dbConnection) {
+		if (!$db = db::get($dbConnection)) {
 			errorHandle::newError(__METHOD__."() Database connection failed to establish", errorHandle::DEBUG);
 			return '';
 		}
@@ -244,7 +249,7 @@ class formBuilderTemplate {
 					$attrs);
 
 				// Include the formName
-				$output .= sprintf('<input type="hidden" name="__formName" value="%s">', $this->formBuilder->getName());
+				$output .= sprintf('<input type="hidden" name="__formID" value="%s">', $this->formID);
 
 				// Include the CSRF token
 				list($csrfID, $csrfToken) = session::csrfTokenRequest();
@@ -276,23 +281,28 @@ class formBuilderTemplate {
 
 				foreach ($this->formBuilder->getFields() as $field) {
 					if (in_array($field->name, $this->fieldsRendered)) continue;
-					$this->fieldsRendered[] = $field->name;
 
 					switch ($display) {
 						case 'full':
+							$this->fieldsRendered[] = $field->name;
 							$output .= $field->render();
 							break;
 						case 'fields':
+							$this->fieldsRendered[] = $field->name;
 							$output .= $field->renderField();
 							break;
 						case 'labels':
+							$this->fieldsRendered[] = $field->name;
 							$output .= $field->renderLabel();
 							break;
 						case 'hidden':
-							if($field->type == 'hidden') $output .= $field->render();
+							if($field->type == 'hidden'){
+								$this->fieldsRendered[] = $field->name;
+								$output .= $field->render();
+							}
 							break;
 						default:
-							errorHandle::newError(__METHOD__."() Invalid 'display' for {fields}! (only full|fields|labels valid)", errorHandle::DEBUG);
+							errorHandle::newError(__METHOD__."() Invalid 'display' for {fields}! (only full|fields|labels|hidden valid)", errorHandle::DEBUG);
 							return '';
 					}
 				}

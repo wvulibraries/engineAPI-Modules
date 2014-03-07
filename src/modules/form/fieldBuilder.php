@@ -3,39 +3,34 @@
 
 class fieldBuilder{
 	/**
-	 * The field definition
-	 *
-	 * @var array
+	 * @var array The field definition
 	 */
 	private $field;
 
 	/**
-	 * The rendered field HTML cache
-	 *
-	 * @var
+	 * @var string The rendered field HTML cache
 	 */
 	private $renderedField;
 
 	/**
-	 * The rendered field label HTML cache
-	 *
-	 * @var
+	 * @var string The rendered field label HTML cache
 	 */
 	private $renderedLabel;
 
 	/**
-	 * Filepath to form templates
-	 *
-	 * @var string
+	 * @var string Filepath to form templates
 	 */
 	public $templateDir;
 
 	/**
-	 * Local options passed to render
-	 *
-	 * @var array
+	 * @var array Local options passed to render
 	 */
 	private $renderOptions;
+
+	/**
+	 * @var string Internal render type (controls which method will render the field)
+	 */
+	private $renderType;
 
 	/**
 	 * Class constructor
@@ -45,6 +40,9 @@ class fieldBuilder{
 	public function __construct($field){
 		// Make sure we get a sane array
 		$this->field = array_merge($this->getDefaultField(), (array)$field);
+
+		// Normalize field definitions
+		if(isset($this->field['type'])) $this->field['type'] = trim(strtolower($this->field['type']));
 
 		// Set the default template directory container path
 		$this->templateDir = __DIR__.DIRECTORY_SEPARATOR.'fieldTemplates'.DIRECTORY_SEPARATOR;
@@ -127,14 +125,15 @@ class fieldBuilder{
 	 * @return array
 	 */
 	public function getAssets(){
-		switch(strtolower($this->field['type'])){
+		switch($this->field['type']){
 			case 'wysiwyg':
 				return array(
-					'wysiwyg' => __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'wysiwyg.js'
+//					__DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'ckeditor'.DIRECTORY_SEPARATOR.'ckeditor.js',
+					__DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'wysiwyg.js'
 				);
 			case 'multiselect':
 				return array(
-					'multiSelect' => __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multiSelect.js'
+					__DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multiSelect.js'
 				);
 			default:
 				return array();
@@ -156,11 +155,10 @@ class fieldBuilder{
 	 * If $path and $type point to a valid file on the file system, then load and return it
 	 * Else, assume $path contains the template text itself (it's a blob)
 	 *
-	 * @param string $path
-	 * @param string $type
+	 * @param string $path The base path to look in
 	 * @return string
 	 */
-	private function loadTemplate($path, $type){
+	private function loadTemplate($path){
 		// This anonymous function allows $path to accept a file or directory
 		$routeToFile = function ($path, $type){
 			// If path is a full filepath, just use what we got
@@ -185,19 +183,68 @@ class fieldBuilder{
 
 		// Try and load a custom/global template (a full file path from the developer)
 		if (file_exists($path)) {
-			$output = $routeToFile($path, $type);
+			$output = $routeToFile($path, $this->renderType);
 			if (!is_empty($output)) return $output;
 		}
 
 		// Try and load one of our distribution templates (the ones next to this module)
 		if (file_exists($this->templateDir.$path)) {
-			$output = $routeToFile($this->templateDir.$path, $type);
+			$output = $routeToFile($this->templateDir.$path, $this->renderType);
 			if (!is_empty($output)) return $output;
 		}
 
 		// All else fails: load the default
 		return $path;
 
+	}
+
+	/**
+	 * Sets the 'rendered' value for this field
+	 *
+	 * This is used later if the field is read-only to get back to the original value (ignoring any end-user munging)
+	 *
+	 * @param $value
+	 */
+	public function setRenderedValue($value){
+		$this->field['renderedValue'] = $value;
+	}
+
+	/**
+	 * Determine the internal field type
+	 *
+	 * This method will map the external field type to our internal type which controls
+	 * how the field is actually rendered. A good example of this would be the HTML5 types
+	 * which area really just <input> fields
+	 */
+	private function determineInternalFieldType(){
+		// Only continue if we don't know
+		if(!isset($this->renderType)){
+			switch ($this->field['type']) {
+				case 'radio':
+				case 'checkbox':
+				case 'select':
+				case 'multiselect':
+				case 'plaintext':
+				case 'password':
+				case 'wysiwyg':
+				case 'file':
+				case 'textarea':
+					$type = $this->field['type'];
+					break;
+				case 'dropdown':
+					$type = 'select';
+				case 'bool':
+				case 'boolean':
+					$type = 'boolean';
+					break;
+				case 'text':
+				case 'string':
+				default:
+					$type = 'input';
+					break;
+			}
+			$this->renderType = $type;
+		}
 	}
 
 	/**
@@ -209,32 +256,12 @@ class fieldBuilder{
 	 * @return string
 	 */
 	public function render($template = NULL, $options = array()){
-		// If this field is hidden, then just return the field itself (no label needed)
-		if ($this->field['type'] == 'hidden') return $this->renderField($options);
-
 		// If no template is given, just combine the label and field
 		if (isnull($template)) return $this->renderLabel($options).$this->renderField($options);
 
-		// Continue with a normal field template
-		switch ($this->field['type']) {
-			case 'select':
-				$type = 'select';
-				break;
-			case 'multiSelect':
-				$type = 'multiselect';
-				break;
-			case 'wysiwyg':
-				$type = 'wysiwyg';
-				break;
-			case 'text':
-			default:
-				$type = 'input';
-				break;
-		}
-
-
-		// Load the template
-		$template = $this->loadTemplate($template, $type);
+		// Determine the internal type and load the template
+		$this->determineInternalFieldType();
+		$template = $this->loadTemplate($template);
 
 		// Replace the {label} and {field} tags
 		$template = str_replace('{label}', $this->renderLabel($options), $template);
@@ -251,24 +278,19 @@ class fieldBuilder{
 	 * @return string
 	 */
 	public function renderField($options = array()){
+		$this->setRenderedValue($this->field['value']);
 		$this->ensureFieldID();
 		if (is_empty($this->renderedField)) {
+			// Determine the internal type
+			$this->determineInternalFieldType();
+
+			// Determine the rendering function
+			$func = array($this, '__render_'.$this->field['type']);
+			if (!is_callable($func)) $func = array($this, '__render_input');
+
+			// Render time!
 			$this->renderOptions = $options;
-			switch ($this->field['type']) {
-				case 'select':
-					$this->renderedField = $this->__renderSelectField();
-					break;
-				case 'multiSelect':
-					$this->renderedField = $this->__renderMultiSelect();
-					break;
-				case 'wysiwyg':
-					$this->renderedField = $this->__renderWYSIWYG();
-					break;
-				case 'text':
-				default:
-					$this->renderedField = $this->__renderInputField();
-					break;
-			}
+			$this->renderedField = call_user_func($func);
 			$this->renderOptions = NULL;
 		}
 
@@ -282,8 +304,9 @@ class fieldBuilder{
 	 * @return string
 	 */
 	public function renderLabel($options = array()){
-		// If the field is hidden, then we don't need any label at all
-		if ($this->field['type'] == 'hidden') return '';
+		// If this field does not require a label, don't render one!
+		$ignoredTypes = array('hidden','button','submit','reset','plaintext');
+		if (in_array($this->field['type'], $ignoredTypes)) return '';
 
 		// Continue for a normal field
 		$this->ensureFieldID();
@@ -301,11 +324,10 @@ class fieldBuilder{
 	}
 
 	/**
-	 * [Internal Helper] Render an <input> field
-	 *
+	 * [Render Helper] Render an <input> field
 	 * @return string
 	 */
-	private function __renderInputField(){
+	private function __render_input(){
 		return sprintf('<input type="%s" value="%s" %s%s>',
 			$this->field['type'],
 			$this->getFieldOption('value'),
@@ -315,11 +337,10 @@ class fieldBuilder{
 	}
 
 	/**
-	 * [Internal Helper] Render a <select> field
-	 *
+	 * [Render Helper] Render a <select> field
 	 * @return string
 	 */
-	private function __renderSelectField(){
+	private function __render_select(){
 		// If there are multiple values, force multiple to be TRUE (needed for valid HTML5)
 		if (is_array($this->field['value'])) $this->field['multiple'] = TRUE;
 		// Return the built tag
@@ -329,26 +350,171 @@ class fieldBuilder{
 	}
 
 	/**
-	 * [Internal Helper] Render a Multi-select box
-	 *
+	 * [Render Helper] Render a Multi-select box
 	 * @return string
 	 */
-	private function __renderMultiSelect(){
+	private function __render_multiselect(){
 		return 'multiSelect';
 	}
 
 	/**
-	 * [Internal Helper] Render a WYSIWYG editor
-	 *
+	 * [Render Helper] Render a WYSIWYG editor
 	 * @return string
 	 */
-	private function __renderWYSIWYG(){
-		return 'wysiwyg';
+	private function __render_wysiwyg(){
+//		$fieldClass = $this->getFieldOption('class');
+//		if(FALSE === strpos('ckeditor', $fieldClass)) $this->renderOptions['class'] = "$fieldClass ckeditor";
+
+		$output = $this->__render_textarea();
+//		$output .= sprintf("<script>CKEDITOR.replace(%s, { customConfig: '' } );</script>", $this->getFieldOption('fieldID'));
+		return $output;
+	}
+
+	/**
+	 * [Render Helper] Render a radio field
+	 * @return string
+	 */
+	private function __render_radio(){
+		$output = '';
+
+		// Make sure there's options
+		$options = $this->getFieldOption('options');
+		if(!$options){
+			errorHandle::newError(__METHOD__.'() You must provide options to render a radio field!', errorHandle::DEBUG);
+			return '';
+		}
+
+		foreach($options as $value => $label){
+			// Append the value to fieldID for uniqueness
+			$this->renderOptions['fieldID'] = $this->field['fieldID']."_".str_replace(' ','_',$value);
+			// Render time
+			$output .= sprintf('<label class="radioLabel"><input type="radio" value="%s" %s%s> %s</label>',
+				$value,
+				($this->getFieldOption('value') == $value ? ' checked ' : ''),
+				$this->buildFieldAttributes(),
+				$label
+			);
+		}
+		return $output;
+	}
+
+	/**
+	 * [Render Helper] Render a checkbox field
+	 * @return string
+	 */
+	private function __render_checkbox(){
+		$output = '';
+
+		// Make the given values an array (may be a CSV)
+		$values = (array)$this->getFieldOption('value');
+		if(is_string($values)) $values = explode(',', $values);
+
+		// Make sure there's options
+		$options = $this->getFieldOption('options');
+		if(!$options){
+			errorHandle::newError(__METHOD__.'() You must provide options to render a checkbox field!', errorHandle::DEBUG);
+			return '';
+		}
+
+		if(sizeof($options) > 1){
+			// Make the name checkbox array friendly
+			$this->renderOptions['name'] = $this->field['name'].'[]';
+
+			foreach($options as $value => $label){
+				// Append the value to fieldID for uniqueness
+				$this->renderOptions['fieldID'] = $this->field['fieldID']."_".str_replace(' ','_',$value);
+
+				// Render time
+				$output .= sprintf('<label class="checkboxLabel"><input type="checkbox" value="%s" %s%s> %s</label>',
+					$value,
+					(in_array($value, $values) ? ' checked ' : ''),
+					$this->buildFieldAttributes(),
+					$label);
+			}
+		}else{
+			$keys = array_keys($options);
+			return sprintf('<input type="checkbox" value="%s" %s%s>',
+				$keys[0],
+				(in_array($keys[0], $values) ? ' checked ' : ''),
+				$this->buildFieldAttributes());
+		}
+
+		return $output;
+	}
+
+	/**
+	 * [Render Helper] Render a plaintext field
+	 * @return string
+	 */
+	private function __render_plaintext(){
+		return $this->getFieldOption('value');
+	}
+
+	/**
+	 * [Render Helper] Render a password field
+	 * @return string
+	 */
+	private function __render_password(){
+		// Render the password field
+		$output = $this->__render_input();
+
+		// Render the password confirmation field
+		$this->renderOptions['name']    = $this->getFieldOption('name').'_confirm';
+		$this->renderOptions['fieldID'] = $this->getFieldOption('fieldID').'_confirm';
+		$output .= $this->__render_input();
+
+		return $output;
+	}
+
+	/**
+	 * [Render Helper] Render a textarea field
+	 * @return string
+	 */
+	private function __render_textarea(){
+		return sprintf('<textarea %s%s>%s</textarea>',
+			$this->buildFieldAttributes(),
+			(!is_empty($this->field['placeholder']) ? ' placeholder="'.$this->field['placeholder'].'"' : ''),
+			$this->getFieldOption('value')
+		);
+	}
+
+	/**
+	 * [Render Helper] Render a boolean field
+	 * @return string
+	 */
+	private function __render_boolean(){
+		$options = $this->getFieldOption('options');
+		$type    = isset($options['type']) ? $options['type'] : 'select';
+
+		// Blank the options
+		$this->renderOptions['options'] = array();
+
+		// Determine labels
+		$no  = isset($options['labels']) ? array_shift($options['labels']) : 'No';
+		$yes = isset($options['labels']) ? array_shift($options['labels']) : 'Yes';
+
+		switch(trim(strtolower($type))){
+			case 'check':
+			case 'checkbox':
+				$this->renderOptions['options'][1] = 'Yes';
+				return $this->__render_checkbox();
+
+			case 'radio':
+				$this->renderOptions['options'][0] = $no;
+				$this->renderOptions['options'][1] = $yes;
+				return $this->__render_radio();
+
+			default:
+			case 'select':
+				if(isset($options['includeBlank']) && $options['includeBlank']) $this->renderOptions['options'][''] = '';
+			$this->renderOptions['options'][0] = $no;
+			$this->renderOptions['options'][1] = $yes;
+				return $this->__render_select();
+		}
 	}
 
 	/**
 	 * Returns an array with all default field options
-	 *
 	 * @return array
 	 */
 	private function getDefaultField(){
@@ -376,7 +542,7 @@ class fieldBuilder{
 			'labelCSS'       => '',
 			'labelClass'     => '',
 			'labelID'        => '',
-			'selectValues'   => array(),
+			'options'        => array(),
 			'multiple'       => FALSE
 		);
 	}
@@ -404,7 +570,7 @@ class fieldBuilder{
 	 */
 	private function buildFieldAttributes(){
 		$attributes         = (array)$this->field['fieldMetadata'];
-		$attributes['name'] = $this->field['name'];
+		$attributes['name'] = $this->getFieldOption('name');
 
 		if (str2bool($this->getFieldOption('disabled'))) $attributes['bool'][] = 'disabled';
 		if (str2bool($this->getFieldOption('readonly'))) $attributes['bool'][] = 'readonly';
@@ -468,18 +634,18 @@ class fieldBuilder{
 	private function buildSelectOptions(){
 		$output = '';
 
-		if (sizeof($this->field['selectValues'])) {
-			$options = $this->field['selectValues'];
-		} elseif (isset($this->field['linkedTo'])) {
-
-			$dbConnection = isset($this->field['linkedTo']['dbConnection']) ? $this->field['linkedTo']['dbConnection'] : 'appDB';
-			$key          = isset($this->field['linkedTo']['key']) ? $this->field['linkedTo']['key'] : NULL;
-			$field        = isset($this->field['linkedTo']['field']) ? $this->field['linkedTo']['field'] : NULL;
-			$table        = isset($this->field['linkedTo']['table']) ? $this->field['linkedTo']['table'] : NULL;
-			$order        = isset($this->field['linkedTo']['order']) ? $this->field['linkedTo']['order'] : NULL;
-			$where        = isset($this->field['linkedTo']['where']) ? $this->field['linkedTo']['where'] : NULL;
-			$limit        = isset($this->field['linkedTo']['limit']) ? $this->field['linkedTo']['limit'] : NULL;
-			$sql          = isset($this->field['linkedTo']['sql']) ? $this->field['linkedTo']['sql'] : NULL;
+		if (sizeof($this->getFieldOption('options'))) {
+			$options = $this->getFieldOption('options');
+		} elseif (sizeof($this->getFieldOption('linkedTo'))) {
+			$linkedTo = $this->getFieldOption('linkedTo');
+			$dbConnection = isset($linkedTo['dbConnection']) ? $linkedTo['dbConnection'] : 'appDB';
+			$key          = isset($linkedTo['key'])          ? $linkedTo['key']          : NULL;
+			$field        = isset($linkedTo['field'])        ? $linkedTo['field']        : NULL;
+			$table        = isset($linkedTo['table'])        ? $linkedTo['table']        : NULL;
+			$order        = isset($linkedTo['order'])        ? $linkedTo['order']        : NULL;
+			$where        = isset($linkedTo['where'])        ? $linkedTo['where']        : NULL;
+			$limit        = isset($linkedTo['limit'])        ? $linkedTo['limit']        : NULL;
+			$sql          = isset($linkedTo['sql'])          ? $linkedTo['sql']          : NULL;
 
 			// Get the db connection we'll be talking to
 			$db = db::getInstance()->$dbConnection;
@@ -519,7 +685,7 @@ class fieldBuilder{
 
 		// Loop, and build the options
 		foreach ($options as $key => $val) {
-			$selected = in_array($key, (array)$this->field['value'])
+			$selected = in_array($key, (array)$this->field['value'], TRUE)
 				? ' selected'
 				: '';
 			$output .= sprintf('<option value="%s"%s>%s</option>',

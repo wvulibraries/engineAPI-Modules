@@ -1,12 +1,23 @@
 <?php
 
 class formBuilder extends formFields{
-	const DEFAULT_FORM_NAME = '';
+	const DEFAULT_FORM_NAME       = '';
+	const SESSION_SAVED_FORMS_KEY = 'formBuilderForms';
+
+	/**
+	 * @var string The base URL where our form assets are located at
+	 */
+	private $formAssetsURL;
 
 	/**
 	 * @var self[] An array of all defined forms
 	 */
 	private static $formObjects = array();
+
+	/**
+	 * @var formProcessor[] An array of all created formProcessor objects (keyed off their formID's)
+	 */
+	private static $formProcessorObjects = array();
 
 	/**
 	 * @var string The name given to this form
@@ -19,14 +30,9 @@ class formBuilder extends formFields{
 	public $templateDir;
 
 	/**
-	 * @var field[] Array of all primary fields
-	 */
-	private $primaryFields = array();
-
-	/**
 	 * @var array Array containing metadata linking this form to an underlying database table
 	 */
-	private $dbTableOptions;
+	public $dbOptions;
 
 	/**
 	 * @var string The template to use for insertForm
@@ -56,7 +62,12 @@ class formBuilder extends formFields{
 	public function __construct($formName){
 		$this->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
 		$this->formName    = trim(strtolower($formName));
-		templates::defTempPatterns('/\{formBuilder\s+(.+?)\}/', __CLASS__.'::templateMatches', $this);
+
+		$engineVars = enginevars::getInstance();
+		$this->formAssetsURL = $engineVars->get('formAssetsURL', $engineVars->get('engineInc').DIRECTORY_SEPARATOR.'formBuilderAssets');
+
+
+		templates::defTempPatterns('/\{form\s+(.+?)\}/', __CLASS__.'::templateMatches', $this);
 	}
 
 	/**
@@ -77,54 +88,82 @@ class formBuilder extends formFields{
 			: NULL;
 	}
 
-	/**
-	 * Retruns the name of this formBuilder
-	 * @return string
-	 */
-	public function getName(){
-		return $this->formName;
+	public function addField($field){
+		$result = parent::addField($field);
+		if($result){
+			$field = array_peak($this->fields,'end');
+			if($field->type == 'file'){
+				$this->formEncoding = '';
+			}
+		}
+		return $result;
 	}
 
 	/**
 	 * Process a form submission
 	 *
-	 * @param string $formName
-	 * @param array $data
-	 * @return int
+	 * @param string $formID
+	 * @return int Result code from formProcessor object
 	 */
-	public static function process($formName=NULL, $data=NULL){
-		// Default to POST
-		if (!isset($data)) $data = $_POST;
+	public static function process($formID=NULL){
+		$processor = self::createProcessor($formID);
+		return ($processor instanceof formProcessor)
+			? $processor->processPost()
+			: $processor;
+	}
 
+	/**
+	 * Create a formProcessor object for a given formID
+	 *
+	 * This can be useful if you need to manipulate the formProcessor object before actually processing it
+	 *
+	 * @param string $formID
+	 * @return formProcessor|int formProcessor object or formProcessor error code
+	 */
+	public static function createProcessor($formID=NULL){
 		// If no formName was passed, try and find it in the POST
-		if (!isset($formName)) {
-			if (!isset($data['__formName'])) return formProcessor::ERR_NO_NAME;
-			$formName = $data['__formName'];
+		if (!isset($formID)) {
+			if (!isset($_POST['MYSQL']['__formID'])) return formProcessor::ERR_NO_ID;
+			$formID = $_POST['MYSQL']['__formID'];
 		}
 
-		// Normalize the formName
-		$formName = trim(strtolower($formName));
+		if(!isset(self::$formProcessorObjects[$formID])){
+			// Make sure the formID is valid and retrieve the saved form
+			$savedForm = session::get(self::SESSION_SAVED_FORMS_KEY.".$formID.formBuilder");
+			if(!$savedForm) return formProcessor::ERR_INVALID_ID;
 
-		// Make sure the formName is valid
-		if (!isset(self::$formObjects[$formName])) return formProcessor::ERR_INVALID_NAME;
+			// Make sure we are linked to a backend db
+			if(!sizeof($savedForm->dbOptions)){
+				errorHandle::newError(__METHOD__."() No database link defined for this form! (must process manually)", errorHandle::DEBUG);
+				return FALSE;
+			}
 
-		// Create the form processor and GO BABY GO!
-		$formBuilder   = self::$formObjects[$formName];
-		$formProcessor = formProcessor::createProcessor();
-		foreach ($formBuilder->fields as $field) {
-			$formProcessor->addField($field);
+			// Create the form processor
+			$formProcessor = new formProcessor($savedForm->dbOptions['table'], $savedForm->dbOptions['connection']);
+
+			// Set the processorType
+			$formProcessor->setProcessorType(session::get(self::SESSION_SAVED_FORMS_KEY.".$formID.formType"));
+
+			// Add our fields to the form processor
+			foreach ($savedForm->fields as $field) {
+				$formProcessor->addField($field);
+			}
+
+			// Save the formProcessor to the cache
+			self::$formProcessorObjects[$formID] = $formProcessor;
 		}
-		return $formProcessor->process();
+
+		return self::$formProcessorObjects[$formID];
 	}
 
 	/**
 	 * [Factory] Create a new form object
 	 *
 	 * @param string $formName
-	 * @param string $dbTableOptions
+	 * @param string $dbOptions
 	 * @return bool|formBuilder
 	 */
-	public static function createForm($formName = NULL, $dbTableOptions = NULL){
+	public static function createForm($formName = NULL, $dbOptions = NULL){
 		if (isnull($formName)) $formName = self::DEFAULT_FORM_NAME;
 		$formName = trim(strtolower($formName));
 
@@ -138,7 +177,7 @@ class formBuilder extends formFields{
 		self::$formObjects[$formName] = new self($formName);
 
 		// link dbTableOptions if it's passed in
-		if (!isnull($dbTableOptions) && !self::$formObjects[$formName]->linkToDatabase($dbTableOptions)) return FALSE;
+		if (!isnull($dbOptions) && !self::$formObjects[$formName]->linkToDatabase($dbOptions)) return FALSE;
 
 		return self::$formObjects[$formName];
 	}
@@ -155,19 +194,23 @@ class formBuilder extends formFields{
 	/**
 	 * Link the form to a backend database table
 	 *
-	 * @param $dbTableOptions
+	 * @param $dbOptions
 	 * @return bool
 	 */
-	public function linkToDatabase($dbTableOptions){
+	public function linkToDatabase($dbOptions){
 		// If only a string is passed, make it the table name
-		if (is_string($dbTableOptions)) $dbTableOptions = array('table' => $dbTableOptions);
+		if (is_string($dbOptions)) $dbOptions = array('table' => $dbOptions);
+
+		// Determine the db connection
+		$dbOptions['connection'] = isset($dbOptions['connection']) ? db::get($dbOptions['connection']) : db::get('appDB');
+
 		// Make sure that at least the table name is present
-		if (!isset($dbTableOptions['table'])) {
+		if (!isset($dbOptions['table'])) {
 			errorHandle::newError(__METHOD__."() You must pass at least a 'name' element with dbTableOptions!", errorHandle::DEBUG);
 			return FALSE;
 		}
-		$this->dbTableOptions = $dbTableOptions;
 
+		$this->dbOptions = $dbOptions;
 		return TRUE;
 	}
 
@@ -206,70 +249,6 @@ class formBuilder extends formFields{
 	}
 
 	/**
-	 * Sets the given fields as primary fields for this form
-	 *
-	 * This will reset the current list, taking any passed in for the new set
-	 * You can pass an unlimited number of fields in, so long as they're valid and have been added to the form
-	 *
-	 * @param string|fieldBuilder ...
-	 * @return bool
-	 */
-	public function setPrimaryField(){
-		// Reset the primary fields
-		$this->primaryFields = array();
-
-		// Get all the fields passed in and loop on each
-		$fields = func_get_args();
-		foreach ($fields as $field) {
-			// If it's a string, try and convert it to one of our fields
-			if (is_string($field)) {
-				if (isnull($field = $this->getField($field))) {
-					errorHandle::newError(__METHOD__."() Field not declared!", errorHandle::DEBUG);
-					return FALSE;
-				}
-			}
-
-			// Make sure we have a valid fieldBuilder object
-			if (!($field instanceof fieldBuilder)) {
-				errorHandle::newError(__METHOD__."() Not a valid fieldBuilder object!", errorHandle::DEBUG);
-				return FALSE;
-			}
-
-			// Make sure the field has been added to the form
-			if (!in_array($field, $this->fields)) {
-				errorHandle::newError(__METHOD__."() Field not added to this form!", errorHandle::DEBUG);
-				return FALSE;
-			}
-
-			// Save the new field to the list
-			$this->primaryFields[] = $field->name;
-		}
-		return TRUE;
-	}
-
-	/**
-	 * Returns an array of primary fields
-	 *
-	 * @return fieldBuilder[]
-	 */
-	public function getPrimaryFields(){
-		$fields = array();
-		foreach ($this->primaryFields as $field) {
-			$fields[] = $this->getField($field);
-		}
-		return array_filter($fields);
-	}
-
-	/**
-	 * Returns an array of primary field names
-	 *
-	 * @return array
-	 */
-	public function listPrimaryFields(){
-		return $this->primaryFields;
-	}
-
-	/**
 	 * Returns an array of JS/CSS asset files needed by this form and its fields
 	 *
 	 * This array will follow the convention: assetName => assetFile
@@ -277,16 +256,15 @@ class formBuilder extends formFields{
 	 * @return array
 	 */
 	private function getAssets(){
+		$assets = array();
 		// Form assets
-		$assets = array(
-			'formEvents' => __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'formEvents.js'
-		);
+		$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'formEvents.js';
 		// Get, and merge-in, all field assets
 		foreach ($this->fields as $field) {
-			$assets = array_merge($assets, $field->getAssets());
+			$assets = array_merge($assets, (array)$field->getAssets());
 		}
 		// Return the final array
-		return $assets;
+		return array_unique($assets);
 	}
 
 	/**
@@ -297,14 +275,17 @@ class formBuilder extends formFields{
 	 * @return string
 	 */
 	public function display($formType, $options){
-		switch (strtolower($formType)) {
+		switch (trim(strtolower($formType))) {
+			case 'insert':
 			case 'insertform':
+			case 'update':
+			case 'updateform':
 				return $this->displayInsertForm($options);
 
 			case 'edittable':
 				return $this->displayEditTable($options);
 
-			case 'js':
+			case 'assets':
 				$assetFiles = array();
 				foreach (self::$formObjects as $form) {
 					$assetFiles = array_merge($assetFiles, $form->getAssets());
@@ -321,7 +302,9 @@ class formBuilder extends formFields{
 							$cssAssetBlob .= minifyCSS($file);
 							break;
 						case 'js':
-							$jsAssetBlob .= minifyJS($file);
+//							$jsAssetBlob .= minifyJS($file);
+							var_dump($file);
+							$jsAssetBlob .= file_get_contents($file);
 							break;
 						default:
 							errorHandle::newError(__METHOD__."() Unknown asset file type '$ext'. Ignoring file!", errorHandle::DEBUG);
@@ -330,14 +313,32 @@ class formBuilder extends formFields{
 				}
 
 				$output = '';
-				if (!is_empty($jsAssetBlob))  $output .= "<script>".$jsAssetBlob."</script>";
+				if (!is_empty($jsAssetBlob))  $output .= "<!-- engine Instruction displayTemplateOff --><script>".$jsAssetBlob."</script><!-- engine Instruction displayTemplateOn -->";
 				if (!is_empty($cssAssetBlob)) $output .= "<style>".$cssAssetBlob."</style>";
 				return $output;
 
 			default:
-				errorHandle::newError(__METHOD__."() Unsupported display type '{$options['display']}' for form '$formName'", errorHandle::DEBUG);
+				errorHandle::newError(__METHOD__."() Unsupported display type '{$options['display']}' for form '{$this->formName}'", errorHandle::DEBUG);
 				return '';
 		}
+	}
+
+	private function generateFormID(){
+		return uniqid();
+	}
+
+	/**
+	 * Make sure rendered form is submittable by ensuring there is a submit field defined
+	 */
+	private function ensureFormSubmit(){
+		foreach($this->fields as $field){
+			if($field->type == 'submit') return;
+		}
+		$this->addField(array(
+			'type' => 'submit',
+			'name' => 'submit',
+			'value' => 'Submit'
+		));
 	}
 
 	/**
@@ -347,8 +348,17 @@ class formBuilder extends formFields{
 	 * @return string
 	 */
 	public function displayInsertForm($options = array()){
+		// Catch the use case of using insertForm when you mean updateForm
+		if(isset($options['id'])) return $this->displayUpdateForm($options);
+
+		// Create the savedForm record for this form
+		$formID = $this->generateFormID();
+		session::set(self::SESSION_SAVED_FORMS_KEY.".$formID.formBuilder", $this, TRUE);
+		session::set(self::SESSION_SAVED_FORMS_KEY.".$formID.formType", 'insertForm', TRUE);
+
 		// Create the template object
 		$template = $this->createFormTemplate();
+		$template->formID = $formID;
 
 		// Set the template
 		$templatePath = isset($options['template']) ? $options['template'] : $this->insertFormTemplate;
@@ -358,8 +368,39 @@ class formBuilder extends formFields{
 		$template->formAction = isset($options['formAction']) ? $options['formAction'] : NULL;
 
 		// Render time!
+		$this->ensureFormSubmit();
 		return $template->render();
 	}
+
+	public function displayUpdateForm($options = array()){
+		$primaryKeys          = array();
+		$primaryFields        = $this->listPrimaryFields();
+		$optionsPrimaryFields = array_intersect($primaryFields, array_keys($options));
+		foreach ($optionsPrimaryFields as $optionsPrimaryField) {
+			$primaryFields[$optionsPrimaryField] = $options[$optionsPrimaryField];
+		}
+
+		// Create the savedForm record for this form
+		$formID = $this->generateFormID();
+		session::set(self::SESSION_SAVED_FORMS_KEY.".$formID.formBuilder", $this, TRUE);
+		session::set(self::SESSION_SAVED_FORMS_KEY.".$formID.formType", 'updateForm', TRUE);
+
+		// Create the template object
+		$template = $this->createFormTemplate();
+		$template->formID = $formID;
+
+		// Set the template
+		$templatePath = isset($options['template']) ? $options['template'] : $this->insertFormTemplate;
+		$template->loadTemplate($templatePath, 'insert');
+
+		// Apply any options
+		$template->formAction = isset($options['formAction']) ? $options['formAction'] : NULL;
+
+		// Render time!
+		$this->ensureFormSubmit();
+		return $template->render();
+	}
+
 
 	/**
 	 * Displays an Edit Table using a given template
@@ -381,6 +422,7 @@ class formBuilder extends formFields{
 		$template->insertFormCallback = isset($options['insertFormCallback']) ? $options['insertFormCallback'] : NULL;
 
 		// Render time!
+		$this->ensureFormSubmit();
 		return $template->render();
 	}
 }
