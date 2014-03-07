@@ -300,7 +300,9 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'name' => 'foo',
 			'type' => 'password'
 		));
-		$this->assertIsInputTag($field->renderField(), 'password');
+		$renderedField = $field->renderField();
+		$this->assertIsInputTag($renderedField, 'password');
+		$this->assertSelectCount('input', 2, $renderedField, "There are exactly 2 password fields rendered");
 	}
 
 	function testType_range(){
@@ -613,9 +615,9 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 
 	function testSelectOptions_passedArray(){
 		$field = fieldBuilder::createField(array(
-			'name'         => 'foo',
-			'type'         => 'select',
-			'selectValues' => array(
+			'name'    => 'foo',
+			'type'    => 'select',
+			'options' => array(
 				'1' => 'a',
 				'2' => 'b',
 				'3' => 'c',
@@ -633,10 +635,10 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 
 	function testSelectOptions_selectedValue(){
 		$field = fieldBuilder::createField(array(
-			'name'         => 'foo',
-			'type'         => 'select',
-			'value'        => 1,
-			'selectValues' => array(
+			'name'    => 'foo',
+			'type'    => 'select',
+			'value'   => 1,
+			'options' => array(
 				'1' => 'a',
 				'2' => 'b',
 				'3' => 'c',
@@ -648,10 +650,10 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 
 	function testSelectOptions_selectedMultipleValues(){
 		$field = fieldBuilder::createField(array(
-			'name'         => 'foo',
-			'type'         => 'select',
-			'value'        => array(1, 2),
-			'selectValues' => array(
+			'name'    => 'foo',
+			'type'    => 'select',
+			'value'   => array(1, 2),
+			'options' => array(
 				'1' => 'a',
 				'2' => 'b',
 				'3' => 'c',
