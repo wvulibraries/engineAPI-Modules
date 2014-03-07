@@ -303,14 +303,6 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 		$this->assertIsInputTag($field->renderField(), 'password');
 	}
 
-	function testType_radio(){
-		$field = fieldBuilder::createField(array(
-			'name' => 'foo',
-			'type' => 'radio'
-		));
-		$this->assertIsInputTag($field->renderField(), 'radio');
-	}
-
 	function testType_range(){
 		$field = fieldBuilder::createField(array(
 			'name' => 'foo',
@@ -351,10 +343,20 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 		$this->assertIsInputTag($field->renderField(), 'week');
 	}
 
+	function testType_radio(){
+		$field = fieldBuilder::createField(array(
+			'name'    => 'foo',
+			'type'    => 'radio',
+			'options' => array('a', 'b', 'c')
+		));
+		$this->assertIsInputTag($field->renderField(), 'radio');
+	}
+
 	function testType_checkbox(){
 		$field = fieldBuilder::createField(array(
-			'name' => 'foo',
-			'type' => 'checkbox'
+			'name'    => 'foo',
+			'type'    => 'checkbox',
+			'options' => array('a', 'b', 'c')
 		));
 		$this->assertIsInputTag($field->renderField(), 'checkbox');
 	}
