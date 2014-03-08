@@ -25,7 +25,7 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 		// General asserts
 		$this->assertTrue(is_array($formData), 'Assert the savedForm data is an array');
 		$this->assertArrayHasKey('formbuilder', $formData, "formData contains 'formData' element");
-		$this->assertInstanceOf('formBuilder', $formData['formbuilder'], "formData contains valid formBuilder object");
+		$this->assertInstanceOf('formBuilder', unserialize($formData['formbuilder']), "formData contains valid formBuilder object");
 		$this->assertArrayHasKey('formtype', $formData, "formData contains 'formType' element");
 		$this->assertTrue(in_array($formData['formtype'], $validFormTypes), "formData contains valid formType");
 
