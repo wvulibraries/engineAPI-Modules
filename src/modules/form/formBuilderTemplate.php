@@ -87,12 +87,21 @@ class formBuilderTemplate {
 		$this->template = is_empty($output) ? $path : $output;
 	}
 
+	/**
+	 * Render the form template
+	 * @param string $templateText
+	 * @return string
+	 */
 	public function render($templateText=NULL){
 		// Reset the list of rendered fields
 		$this->fieldsRendered = array();
 
 		// Make a local copy of the template's source to work with
 		if(isnull($templateText)) $templateText = $this->template;
+
+		// Process {ifFormErrors} and {formErrors}
+		$patterns = array('|{ifFormErrors}(.+?){/ifFormErrors}|ism', '|{formErrors}|i');
+		$templateText = preg_replace_callback($patterns, array($this, '__renderFormErrors'), $templateText);
 
 		// Process {fieldsLoop}
 		$templateText = preg_replace_callback('|{fieldsLoop(.*?)}(.+?){/fieldsLoop}|ism', array($this, '__renderFieldLoop'), $templateText);
@@ -216,6 +225,28 @@ class formBuilderTemplate {
 
 		// Return the compiled block
 		return $output;
+	}
+
+	/**
+	 * [PREG Callback] Process all {ifFormErrors} and {formErrors}
+	 * @param $matches
+	 * @return string
+	 */
+	private function __renderFormErrors($matches){
+		$block = $matches[0];
+
+		// Build formErrors HTML and if there's none, return an empty string
+		$formErrorHTML = errorHandle::prettyPrint();
+		if(!$formErrorHTML) return '';
+
+		// If there's a block move into it, and replace {formErrors} with the formErrorsHTML from above
+		if(sizeof($matches) > 1){
+			$block = $matches[1];
+			$block = str_replace('{formErrors}', $block, $formErrorHTML);
+		}
+
+		// Return the final HTML
+		return $block;
 	}
 
 	/**

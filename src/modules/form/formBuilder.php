@@ -2,6 +2,7 @@
 
 class formBuilder extends formFields{
 	const DEFAULT_FORM_NAME       = '';
+	const DEFAULT_FORM_TIMEOUT    = 300;
 	const SESSION_SAVED_FORMS_KEY = 'formBuilderForms';
 
 	/**
@@ -66,7 +67,7 @@ class formBuilder extends formFields{
 		$engineVars = enginevars::getInstance();
 		$this->formAssetsURL = $engineVars->get('formAssetsURL', $engineVars->get('engineInc').DIRECTORY_SEPARATOR.'formBuilderAssets');
 
-
+		errorHandle::registerPrettyPrintCallback(array($this,'prettyPrintFormErrors'));
 		templates::defTempPatterns('/\{form\s+(.+?)\}/', __CLASS__.'::templateMatches', $this);
 	}
 
@@ -86,6 +87,88 @@ class formBuilder extends formFields{
 		return isset($this->$name)
 			? $this->$name
 			: NULL;
+	}
+
+	/**
+	 * [Callback] Our custom callback for prettyPrint()
+	 * @see errorHandle::prettyPrint()
+	 * @param array $errorStack
+	 * @param string $type
+	 * @return string
+	 */
+	public function prettyPrintFormErrors($errorStack, $type){
+		// If there's no errorStack, return
+		if(!sizeof($errorStack) || !isset($errorStack[$type])) return '';
+
+		// Setup vars
+		$engineErrors = array();
+		$formErrors   = array();
+		$errorStack   = (array)$errorStack[$type];
+
+		// Loop through each error
+		foreach ($errorStack as $v) {
+			// If $v is a string, then it's a regular engine error
+			if (is_string($v)) {
+				$engineErrors[] = array(
+					'msg'  => $v,
+					'type' => $type,
+				);
+				continue;
+			}
+
+			// If $type is 'all' then this is a nested engine error
+			if($type == 'all'){
+				$engineErrors[] = $v;
+				continue;
+			}
+
+			// If $v is an array, and it has a key with our form name, then it's our form errors
+			if(is_array($v) && isset($v[ $this->formName ])){
+				$formErrors = $v[ $this->formName ];
+			}
+		}
+
+		$output = '';
+		if(sizeof($engineErrors) || sizeof($formErrors)){
+			// Start building the errors <ul>
+			$output .= '<ul class="errorPrettyPrint">';
+
+			// Loop through all the engine errors
+			foreach($engineErrors as $engineError){
+				// Pull out the msg and type
+				$msg  = $engineError['message'];
+				$type = $engineError['type'];
+
+				// Map the type to it's CSS class
+				switch ($type) {
+					case errorHandle::ERROR:
+						$class = errorHandle::$uiClassError;
+						break;
+					case errorHandle::SUCCESS:
+						$class = errorHandle::$uiClassSuccess;
+						break;
+					case errorHandle::WARNING:
+						$class = errorHandle::$uiClassWarning;
+						break;
+					default:
+						$class = '';
+						break;
+				}
+
+				// Generate <li> HTML
+				$output .= sprintf('<li><span class="%s">%s</span>', $class, htmlentities($msg));
+			}
+
+			// Loop through all the form errors and generate their <li> HTML
+			foreach($formErrors as $formError){
+				$output .= sprintf('<li><span class="%s">%s</span>', errorHandle::$uiClassError, htmlentities($formError));
+			}
+
+			// Finish the <ul> and return
+			$output .= '</ul>';
+		}
+
+		return $output;
 	}
 
 	public function addField($field){
@@ -121,31 +204,41 @@ class formBuilder extends formFields{
 	 * @return formProcessor|int formProcessor object or formProcessor error code
 	 */
 	public static function createProcessor($formID=NULL){
-		// If no formName was passed, try and find it in the POST
+		// If no formID was passed, try and find it
 		if (!isset($formID)) {
-			if (!isset($_POST['MYSQL']['__formID'])) return formProcessor::ERR_NO_ID;
-			$formID = $_POST['MYSQL']['__formID'];
+			$sessionPost = session::get('POST');
+			if (isset($sessionPost['MYSQL']) && isset($sessionPost['MYSQL']['__formID'])) {
+				$formID = $sessionPost['MYSQL']['__formID'];
+			} elseif (isset($_POST['MYSQL']['__formID'])) {
+				$formID = $_POST['MYSQL']['__formID'];
+			} else {
+				return formProcessor::ERR_NO_ID;
+			}
 		}
 
 		if(!isset(self::$formProcessorObjects[$formID])){
 			// Make sure the formID is valid and retrieve the saved form
-			$savedForm = session::get(self::SESSION_SAVED_FORMS_KEY.".$formID.formBuilder");
+			$savedForm = session::get(self::SESSION_SAVED_FORMS_KEY.".$formID");
 			if(!$savedForm) return formProcessor::ERR_INVALID_ID;
 
+			// Extract the formBuilder and formType
+			$savedFormBuilder = unserialize($savedForm['formBuilder']);
+			$savedFormType    = $savedForm['formType'];
+
 			// Make sure we are linked to a backend db
-			if(!sizeof($savedForm->dbOptions)){
+			if(!sizeof($savedFormBuilder->dbOptions)){
 				errorHandle::newError(__METHOD__."() No database link defined for this form! (must process manually)", errorHandle::DEBUG);
 				return FALSE;
 			}
 
 			// Create the form processor
-			$formProcessor = new formProcessor($savedForm->dbOptions['table'], $savedForm->dbOptions['connection']);
+			$formProcessor = new formProcessor($savedFormBuilder->dbOptions['table'], $savedFormBuilder->dbOptions['connection']);
 
 			// Set the processorType
-			$formProcessor->setProcessorType(session::get(self::SESSION_SAVED_FORMS_KEY.".$formID.formType"));
+			$formProcessor->setProcessorType($savedFormType);
 
 			// Add our fields to the form processor
-			foreach ($savedForm->fields as $field) {
+			foreach ($savedFormBuilder->fields as $field) {
 				$formProcessor->addField($field);
 			}
 
@@ -303,7 +396,6 @@ class formBuilder extends formFields{
 							break;
 						case 'js':
 //							$jsAssetBlob .= minifyJS($file);
-							var_dump($file);
 							$jsAssetBlob .= file_get_contents($file);
 							break;
 						default:
@@ -317,14 +409,13 @@ class formBuilder extends formFields{
 				if (!is_empty($cssAssetBlob)) $output .= "<style>".$cssAssetBlob."</style>";
 				return $output;
 
+			case 'errors':
+				return errorHandle::prettyPrint();
+
 			default:
 				errorHandle::newError(__METHOD__."() Unsupported display type '{$options['display']}' for form '{$this->formName}'", errorHandle::DEBUG);
 				return '';
 		}
-	}
-
-	private function generateFormID(){
-		return uniqid();
 	}
 
 	/**
@@ -342,6 +433,22 @@ class formBuilder extends formFields{
 	}
 
 	/**
+	 * Save the current form in the session and return its formID
+	 * @param string $formType The type of form being saved
+	 * @return string
+	 */
+	private function saveForm($formType){
+		$formID         = md5(uniqid().mt_rand());
+		$sessionOptions = array('timeout' => enginevars::getInstance()->get('formBuilderTimeout', self::DEFAULT_FORM_TIMEOUT));
+		$sessionData    = array(
+			'formBuilder' => serialize($this),
+			'formType'    => $formType,
+		);
+		session::set(self::SESSION_SAVED_FORMS_KEY.".$formID", $sessionData, $sessionOptions);
+		return $formID;
+	}
+
+	/**
 	 * Displays an Insert Form using a given template
 	 *
 	 * @param array $options
@@ -352,9 +459,7 @@ class formBuilder extends formFields{
 		if(isset($options['id'])) return $this->displayUpdateForm($options);
 
 		// Create the savedForm record for this form
-		$formID = $this->generateFormID();
-		session::set(self::SESSION_SAVED_FORMS_KEY.".$formID.formBuilder", $this, TRUE);
-		session::set(self::SESSION_SAVED_FORMS_KEY.".$formID.formType", 'insertForm', TRUE);
+		$formID = $this->saveForm('insertForm');
 
 		// Create the template object
 		$template = $this->createFormTemplate();
@@ -381,9 +486,7 @@ class formBuilder extends formFields{
 		}
 
 		// Create the savedForm record for this form
-		$formID = $this->generateFormID();
-		session::set(self::SESSION_SAVED_FORMS_KEY.".$formID.formBuilder", $this, TRUE);
-		session::set(self::SESSION_SAVED_FORMS_KEY.".$formID.formType", 'updateForm', TRUE);
+		$formID = $this->saveForm('updateForm');
 
 		// Create the template object
 		$template = $this->createFormTemplate();
@@ -400,7 +503,6 @@ class formBuilder extends formFields{
 		$this->ensureFormSubmit();
 		return $template->render();
 	}
-
 
 	/**
 	 * Displays an Edit Table using a given template

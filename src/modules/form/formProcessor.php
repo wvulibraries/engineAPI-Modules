@@ -5,10 +5,9 @@ class formProcessor extends formFields{
 	const ERR_NO_POST    = 1;
 	const ERR_NO_ID      = 2;
 	const ERR_INVALID_ID = 3;
-	const ERR_CSRF_CHECK = 4;
-	const ERR_VALIDATION = 5;
-	const ERR_SYSTEM     = 6;
-	const ERR_TYPE       = 7;
+	const ERR_VALIDATION = 4;
+	const ERR_SYSTEM     = 5;
+	const ERR_TYPE       = 6;
 	const TYPE_INSERT    = 1;
 	const TYPE_UPDATE    = 2;
 	const TYPE_EDIT      = 3;
@@ -57,17 +56,15 @@ class formProcessor extends formFields{
 	public function processPost(){
 		if (!$this->processorType) return self::ERR_TYPE;
 
-		if(isset($_POST)){
-			// Save the POST in the session and redirect back to the same URL (this time w/o POST data)
-			session::set('POST', $_POST, TRUE);
-			session::reflash(formBuilder::SESSION_SAVED_FORMS_KEY);
-			http::redirect($_SERVER['REQUEST_URI'], NULL, TRUE);
-		}
-
-		// If we're here, then we need to restore POST
 		if(!session::has('POST')){
-			errorHandle::newError(__METHOD__."() Cannot find saved POST data!", errorHandle::DEBUG);
-			return self::ERR_SYSTEM;
+			if(sizeof($_POST)){
+				// Save the POST in the session and redirect back to the same URL (this time w/o POST data)
+				session::set('POST', $_POST, TRUE);
+				http::redirect($_SERVER['REQUEST_URI'], 303, TRUE);
+			}else{
+				errorHandle::newError(__METHOD__."() Cannot find saved POST data!", errorHandle::DEBUG);
+				return self::ERR_SYSTEM;
+			}
 		}
 
 		/*
@@ -78,7 +75,9 @@ class formProcessor extends formFields{
 		 * Since the database module uses prepared statements, manually escaping the POST data is not necessary
 		 */
 		$post = session::get('POST');
-		$this->process($post['RAW']);
+		session::destroy('POST');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+		return $this->process($post['RAW']);
 	}
 
 	public function process($data){
@@ -90,43 +89,41 @@ class formProcessor extends formFields{
 
 		switch($this->processorType){
 			case self::TYPE_INSERT:
-				return $this->__processInsert();
+				$result = $this->__processInsert();
+				break;
 			case self::TYPE_UPDATE:
-				return $this->__processUpdate();
+				$result = $this->__processUpdate();
+				break;
 			case self::TYPE_EDIT:
-				return $this->__processEdit();
+				$result = $this->__processEdit();
+				break;
 			default:
 				errorHandle::newError(__METHOD__."() Invalid formType! (engineAPI bug)", errorHandle::DEBUG);
 				return self::ERR_SYSTEM;
 		}
-
+		if($result === self::ERR_OK) errorHandle::successMsg('Form submission successful!');
+		return $result;
 	}
 
 	private function __processValidation(){
 		// Validation
 		$isValid   = TRUE;
 		$validator = validate::getInstance();
-		foreach($this->processData as $fieldName => $fieldData){
-			// Get the fieldBuilder object
-			$field = $this->getField($fieldName);
-
-			// If no field definition, ignore the field all together (throw it away)
-			if(!$field){
-				errorHandle::newError(__METHOD__."() No field definition found for field '$fieldName'! (ignoring)", errorHandle::DEBUG);
-				unset($this->processData[$fieldName]);
-				continue;
-			}
-
-			// If no validation set, continue
+		foreach($this->fields as $field){
+			// If no validation set, skip
 			if(!$field->validate) continue;
 
+			// If no data for this field, skip
+			if(!isset($this->processData[ $field->name ])) continue;
+
 			// Try and validate the data
+			$fieldData = $this->processData[ $field->name ];
 			$result = method_exists($validator, $field->validate)
 				? call_user_func(array($validator, $field->validate), $fieldData)
 				: $validator->regexp($field->validate, $fieldData);
 
 			// Did an error occur? (like a bad regex pattern)
-			if($result === NULL) errorHandle::newError(__METHOD__."() Error occurred during validation for field '$fieldName'! (possible regex error: ".preg_last_error().")", errorHandle::DEBUG);
+			if($result === NULL) errorHandle::newError(__METHOD__."() Error occurred during validation for field '{$field->name}'! (possible regex error: ".preg_last_error().")", errorHandle::DEBUG);
 
 			// Did validation fail?
 			if(!$result){
@@ -151,7 +148,7 @@ class formProcessor extends formFields{
 		}
 
 		// Build the SQL
-		print $sql = sprintf('INSERT INTO `%s` (`%s`) VALUES(%s)',
+		$sql = sprintf('INSERT INTO `%s` (`%s`) VALUES (%s)',
 			$this->dbTable,
 			implode('`,`',array_keys($sqlFields)),
 			implode(',',array_fill(0,sizeof($sqlFields),'?')));
