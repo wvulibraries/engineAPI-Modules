@@ -9,7 +9,7 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 
 	function setUp(){
 		$this->form = formBuilder::createForm();
-		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY, 'flash');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 	}
 
 	private function assertFormData($formType){
@@ -24,10 +24,10 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 
 		// General asserts
 		$this->assertTrue(is_array($formData), 'Assert the savedForm data is an array');
-		$this->assertArrayHasKey('formbuilder', $formData, "formData contains 'formData' element");
-		$this->assertInstanceOf('formBuilder', unserialize($formData['formbuilder']), "formData contains valid formBuilder object");
-		$this->assertArrayHasKey('formtype', $formData, "formData contains 'formType' element");
-		$this->assertTrue(in_array($formData['formtype'], $validFormTypes), "formData contains valid formType");
+		$this->assertArrayHasKey('formBuilder', $formData, "formData contains 'formData' element");
+		$this->assertInstanceOf('formBuilder', unserialize($formData['formBuilder']), "formData contains valid formBuilder object");
+		$this->assertArrayHasKey('formType', $formData, "formData contains 'formType' element");
+		$this->assertTrue(in_array($formData['formType'], $validFormTypes), "formData contains valid formType");
 
 		// Specific asserts
 		switch ($formType) {
