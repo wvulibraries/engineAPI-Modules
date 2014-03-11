@@ -22,6 +22,16 @@ class formProcessor extends formFields{
 	 */
 	private $processorType;
 
+	/**
+	 * @var dbDriver The database connection
+	 */
+	private $db;
+
+	/**
+	 * @var string The database table
+	 */
+	private $dbTable;
+
 	public function __construct($dbTableName, $dbConnection=NULL){
 		$this->db = ($dbConnection instanceof dbDriver)
 			? $dbConnection
@@ -172,19 +182,22 @@ class formProcessor extends formFields{
 			// Revert read-only fields to their original state
 			if($field->readonly) $this->processData[ $field->name ] = $field->renderedValue;
 			// Save the field for insertion
-			$sqlFields[ $field->name ] = $this->processData[ $field->name ];
+			$sqlFields[ $field->toSqlSnippet() ] = isset($this->processData[ $field->name ])
+				? $this->processData[ $field->name ]
+				: $field->value;
 		}
 
-		$where = '';
+		$primaryFieldsSQL = array();
+		foreach ($this->getPrimaryFields() as $primaryField) {
+			$primaryFieldsSQL[$primaryField->toSqlSnippet()] = $primaryField->value;
+		}
 
-
-		$sql = sprintf('UPDATE `%s` SET `%s`=? WHERE %s LIMIT 1',
+		$sql = sprintf('UPDATE `%s` SET %s WHERE %s LIMIT 1',
 			$this->dbTable,
-			implode('`=?,`', array_keys($sqlValues)),
-			$where
-		);
+			implode(',', array_keys($sqlFields)),
+			implode(' AND ', array_keys($primaryFieldsSQL)));
 
-		$stmt = $this->db->query($sql, $sqlValues);
+		$stmt = $this->db->query($sql, array_merge(array_values($sqlFields), array_values($primaryFieldsSQL)));
 		if($stmt->errorCode()){
 			errorHandle::newError(__METHOD__."() SQL Error! ({$stmt->errorCode()}:{$stmt->errorMsg()})", errorHandle::HIGH);
 			return self::ERR_SYSTEM;

@@ -36,55 +36,13 @@ class formBuilderTemplate {
 	private $counterFields = 0;
 
 	/**
+	 * Class constructor
 	 * @param formBuilder $formBuilder
+	 * @param string $templateText
 	 */
-	function __construct($formBuilder){
+	function __construct($formBuilder, $templateText=''){
 		$this->formBuilder = $formBuilder;
-	}
-
-
-	/**
-	 * Locate and return the file contents of the requested template
-	 *
-	 * If $path and $type point to a valid file on the file system, then load and return it
-	 * Else, assume $path contains the template text itself (it's a blob)
-	 *
-	 * @param string $path
-	 * @param string $type
-	 */
-	public function loadTemplate($path, $type=NULL){
-		// This anonymous function allows $path to accept a file or directory
-		$routeToFile = function ($path, $type){
-			// If path is a full filepath, just use what we got
-			if (is_file($path)) return file_get_contents($path);
-
-			// If path isn't a directory, then what the heck is it?
-			if (!is_dir($path)) return '';
-
-			/* Try and locate the file based on $type
-			 * $type may be the filename itself (ie foo.txt)
-			 * $type may be the basename of the file in which case we look for files with appropriate extensions (.txt .htm(l) .php)
-			 */
-			$basePath = $path.DIRECTORY_SEPARATOR.$type;
-			if (file_exists($basePath)) return file_get_contents($basePath);
-			foreach (array('txt', 'html', 'htm', 'php') as $ext) {
-				if (file_exists("$basePath.$ext")) return file_get_contents("$basePath.$ext");
-			}
-
-			// Well, we're out of ideas
-			return '';
-		};
-
-		//----------------------------
-
-		// Try to load $path and type directly
-		$output = $routeToFile($path, $type);
-
-		// If that failed, prefix $path with the templateDir
-		if(is_empty($output)) $output = $routeToFile($this->formBuilder->templateDir.$path, $type);
-
-		// If even that failed, just use $path as the template
-		$this->template = is_empty($output) ? $path : $output;
+		$this->template    = $templateText;
 	}
 
 	/**
@@ -95,6 +53,11 @@ class formBuilderTemplate {
 	public function render($templateText=NULL){
 		// Reset the list of rendered fields
 		$this->fieldsRendered = array();
+
+		// Set all primary fields as disabled for security
+		foreach($this->formBuilder->listPrimaryFields() as $primaryField){
+			$this->formBuilder->modifyField($primaryField,'disabled',TRUE);
+		}
 
 		// Make a local copy of the template's source to work with
 		if(isnull($templateText)) $templateText = $this->template;

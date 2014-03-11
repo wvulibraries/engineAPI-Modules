@@ -27,23 +27,20 @@ class formBuilder extends formFields{
 
 	/**
 	 * @var string Filepath to form templates
+	 *             This is used in formBuilderTemplate
+	 * @TODO Look into remove this tight coupling
 	 */
 	public $templateDir;
+
+	/**
+	 * @var string
+	 */
+	public $template;
 
 	/**
 	 * @var array Array containing metadata linking this form to an underlying database table
 	 */
 	public $dbOptions;
-
-	/**
-	 * @var string The template to use for insertForm
-	 */
-	public $insertFormTemplate = 'default';
-
-	/**
-	 * @var string The template to use for editTable
-	 */
-	public $editTableTemplate = 'default';
 
 	/**
 	 * @var string Location of insertForm Ajax Callback
@@ -61,13 +58,14 @@ class formBuilder extends formFields{
 	 * @param string $formName
 	 */
 	public function __construct($formName){
-		$this->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
+		$this->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates';
+		$this->template    = 'default';
 		$this->formName    = trim(strtolower($formName));
 
-		$engineVars = enginevars::getInstance();
+		$engineVars          = enginevars::getInstance();
 		$this->formAssetsURL = $engineVars->get('formAssetsURL', $engineVars->get('engineInc').DIRECTORY_SEPARATOR.'formBuilderAssets');
 
-		errorHandle::registerPrettyPrintCallback(array($this,'prettyPrintFormErrors'));
+		errorHandle::registerPrettyPrintCallback(array($this, 'prettyPrintFormErrors'));
 		templates::defTempPatterns('/\{form\s+(.+?)\}/', __CLASS__.'::templateMatches', $this);
 	}
 
@@ -80,6 +78,7 @@ class formBuilder extends formFields{
 
 	/**
 	 * [Magic Method] Read-only getter for our instance variables
+	 *
 	 * @param string $name
 	 * @return mixed
 	 */
@@ -91,14 +90,15 @@ class formBuilder extends formFields{
 
 	/**
 	 * [Callback] Our custom callback for prettyPrint()
+	 *
 	 * @see errorHandle::prettyPrint()
-	 * @param array $errorStack
+	 * @param array  $errorStack
 	 * @param string $type
 	 * @return string
 	 */
 	public function prettyPrintFormErrors($errorStack, $type){
 		// If there's no errorStack, return
-		if(!sizeof($errorStack) || !isset($errorStack[$type])) return '';
+		if (!sizeof($errorStack) || !isset($errorStack[$type])) return '';
 
 		// Setup vars
 		$engineErrors = array();
@@ -117,24 +117,24 @@ class formBuilder extends formFields{
 			}
 
 			// If $type is 'all' then this is a nested engine error
-			if($type == 'all'){
+			if ($type == 'all') {
 				$engineErrors[] = $v;
 				continue;
 			}
 
 			// If $v is an array, and it has a key with our form name, then it's our form errors
-			if(is_array($v) && isset($v[ $this->formName ])){
-				$formErrors = $v[ $this->formName ];
+			if (is_array($v) && isset($v[$this->formName])) {
+				$formErrors = $v[$this->formName];
 			}
 		}
 
 		$output = '';
-		if(sizeof($engineErrors) || sizeof($formErrors)){
+		if (sizeof($engineErrors) || sizeof($formErrors)) {
 			// Start building the errors <ul>
 			$output .= '<ul class="errorPrettyPrint">';
 
 			// Loop through all the engine errors
-			foreach($engineErrors as $engineError){
+			foreach ($engineErrors as $engineError) {
 				// Pull out the msg and type
 				$msg  = $engineError['message'];
 				$type = $engineError['type'];
@@ -160,7 +160,7 @@ class formBuilder extends formFields{
 			}
 
 			// Loop through all the form errors and generate their <li> HTML
-			foreach($formErrors as $formError){
+			foreach ($formErrors as $formError) {
 				$output .= sprintf('<li><span class="%s">%s</span>', errorHandle::$uiClassError, htmlentities($formError));
 			}
 
@@ -171,11 +171,17 @@ class formBuilder extends formFields{
 		return $output;
 	}
 
+	/**
+	 * @inheritdoc
+	 *
+	 * @param array|fieldBuilder $field
+	 * @return bool
+	 */
 	public function addField($field){
 		$result = parent::addField($field);
-		if($result){
-			$field = array_peak($this->fields,'end');
-			if($field->type == 'file'){
+		if ($result) {
+			$field = array_peak($this->fields, 'end');
+			if ($field->type == 'file') {
 				$this->formEncoding = '';
 			}
 		}
@@ -188,7 +194,7 @@ class formBuilder extends formFields{
 	 * @param string $formID
 	 * @return int Result code from formProcessor object
 	 */
-	public static function process($formID=NULL){
+	public static function process($formID = NULL){
 		$processor = self::createProcessor($formID);
 		return ($processor instanceof formProcessor)
 			? $processor->processPost()
@@ -203,7 +209,7 @@ class formBuilder extends formFields{
 	 * @param string $formID
 	 * @return formProcessor|int formProcessor object or formProcessor error code
 	 */
-	public static function createProcessor($formID=NULL){
+	public static function createProcessor($formID = NULL){
 		// If no formID was passed, try and find it
 		if (!isset($formID)) {
 			$sessionPost = session::get('POST');
@@ -216,17 +222,17 @@ class formBuilder extends formFields{
 			}
 		}
 
-		if(!isset(self::$formProcessorObjects[$formID])){
+		if (!isset(self::$formProcessorObjects[$formID])) {
 			// Make sure the formID is valid and retrieve the saved form
 			$savedForm = session::get(self::SESSION_SAVED_FORMS_KEY.".$formID");
-			if(!$savedForm) return formProcessor::ERR_INVALID_ID;
+			if (!$savedForm) return formProcessor::ERR_INVALID_ID;
 
 			// Extract the formBuilder and formType
 			$savedFormBuilder = unserialize($savedForm['formBuilder']);
 			$savedFormType    = $savedForm['formType'];
 
 			// Make sure we are linked to a backend db
-			if(!sizeof($savedFormBuilder->dbOptions)){
+			if (!sizeof($savedFormBuilder->dbOptions)) {
 				errorHandle::newError(__METHOD__."() No database link defined for this form! (must process manually)", errorHandle::DEBUG);
 				return FALSE;
 			}
@@ -236,6 +242,9 @@ class formBuilder extends formFields{
 
 			// Set the processorType
 			$formProcessor->setProcessorType($savedFormType);
+
+			// Set the primary fields
+			call_user_func_array(array($formProcessor, 'addPrimaryFields'), $savedFormBuilder->listPrimaryFields());
 
 			// Add our fields to the form processor
 			foreach ($savedFormBuilder->fields as $field) {
@@ -276,15 +285,6 @@ class formBuilder extends formFields{
 	}
 
 	/**
-	 * [Factory] Creates formBuilderTemplate instance and returns it
-	 * @return formBuilderTemplate
-	 */
-	private function createFormTemplate(){
-		$template = new formBuilderTemplate($this);
-		return $template;
-	}
-
-	/**
 	 * Link the form to a backend database table
 	 *
 	 * @param $dbOptions
@@ -321,9 +321,9 @@ class formBuilder extends formFields{
 		$formName = trim(strtolower($formName));
 
 		// Locate the form, and if it's not defined return empty string
-		if(isset(self::$formObjects[$formName])){
+		if (isset(self::$formObjects[$formName])) {
 			$form = self::$formObjects[$formName];
-		}else{
+		} else {
 			errorHandle::newError(__METHOD__."() Form '$formName' not defined", errorHandle::DEBUG);
 			return '';
 		}
@@ -331,7 +331,7 @@ class formBuilder extends formFields{
 		if (!isset($attrPairs['display'])) $attrPairs['display'] = '';
 		return $form->display($attrPairs['display'], $attrPairs);
 	}
-	
+
 	/**
 	 * Remove all fields, and reset back to initial state
 	 */
@@ -350,30 +350,44 @@ class formBuilder extends formFields{
 	 */
 	private function getAssets(){
 		$assets = array();
-		// Form assets
+
+		// Global assets
 		$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'formEvents.js';
+
+		// Template assets
+		$path = $this->templateDir.DIRECTORY_SEPARATOR.$this->template;
+		if(is_dir($path)){
+			if(is_readable($path.DIRECTORY_SEPARATOR.'style.css')) $assets[] = $path.DIRECTORY_SEPARATOR.'style.css';
+			if(is_readable($path.DIRECTORY_SEPARATOR.'script.js')) $assets[] = $path.DIRECTORY_SEPARATOR.'script.js';
+		}
+
 		// Get, and merge-in, all field assets
 		foreach ($this->fields as $field) {
 			$assets = array_merge($assets, (array)$field->getAssets());
 		}
+
 		// Return the final array
+//		echo '<pre>'.print_r($assets, true).'</pre>';
+//		echo '<pre>'.print_r(array_unique($assets), true).'</pre>';
 		return array_unique($assets);
 	}
 
 	/**
 	 * Main display method for the form
 	 *
-	 * @param string $formType
-	 * @param array $options
+	 * @param string $display
+	 * @param array  $options
 	 * @return string
 	 */
-	public function display($formType, $options){
-		switch (trim(strtolower($formType))) {
+	public function display($display, $options){
+		switch (trim(strtolower($display))) {
 			case 'insert':
 			case 'insertform':
+				return $this->displayInsertForm($options);
+
 			case 'update':
 			case 'updateform':
-				return $this->displayInsertForm($options);
+				return $this->displayUpdateForm($options);
 
 			case 'edittable':
 				return $this->displayEditTable($options);
@@ -390,7 +404,9 @@ class formBuilder extends formFields{
 					$ext = pathinfo($file, PATHINFO_EXTENSION);
 					switch ($ext) {
 						case 'less':
+							// TODO
 						case 'sass':
+							// TODO
 						case 'css':
 							$cssAssetBlob .= minifyCSS($file);
 							break;
@@ -404,10 +420,10 @@ class formBuilder extends formFields{
 					}
 				}
 
-				$output = '';
-				if (!is_empty($jsAssetBlob))  $output .= "<!-- engine Instruction displayTemplateOff --><script>".$jsAssetBlob."</script><!-- engine Instruction displayTemplateOn -->";
-				if (!is_empty($cssAssetBlob)) $output .= "<style>".$cssAssetBlob."</style>";
-				return $output;
+				$output = "<!-- engine Instruction displayTemplateOff -->\n";
+				if (!is_empty($jsAssetBlob)) $output .= "<script>".$jsAssetBlob."</script>";
+				if (!is_empty($cssAssetBlob)) $output .= "<style class='formBuilderAssets'>".$cssAssetBlob."</style>";
+				return $output."<!-- engine Instruction displayTemplateOn -->\n";
 
 			case 'errors':
 				return errorHandle::prettyPrint();
@@ -422,18 +438,19 @@ class formBuilder extends formFields{
 	 * Make sure rendered form is submittable by ensuring there is a submit field defined
 	 */
 	private function ensureFormSubmit(){
-		foreach($this->fields as $field){
-			if($field->type == 'submit') return;
+		foreach ($this->fields as $field) {
+			if ($field->type == 'submit') return;
 		}
 		$this->addField(array(
-			'type' => 'submit',
-			'name' => 'submit',
+			'type'  => 'submit',
+			'name'  => 'submit',
 			'value' => 'Submit'
 		));
 	}
 
 	/**
 	 * Save the current form in the session and return its formID
+	 *
 	 * @param string $formType The type of form being saved
 	 * @return string
 	 */
@@ -449,25 +466,61 @@ class formBuilder extends formFields{
 	}
 
 	/**
+	 * Returns the form template text to be used
+	 * @param string $templateFile
+	 * @return string
+	 */
+	private function getTemplateText($templateFile){
+		switch(true){
+			case is_file($this->template):
+				return file_get_contents($this->template);
+			case is_dir($this->template):
+				$templateFile = $this->template.DIRECTORY_SEPARATOR.$templateFile;
+				if(is_readable($templateFile)){
+					return file_get_contents($templateFile);
+				}else{
+					errorHandle::newError(__METHOD__."() No template file found at '".$templateFile."'", errorHandle::DEBUG);
+					return '';
+				}
+				break;
+			case is_dir($this->templateDir.DIRECTORY_SEPARATOR.$this->template):
+				$templateBase = $this->templateDir.DIRECTORY_SEPARATOR.$this->template.DIRECTORY_SEPARATOR;
+				if(is_readable($templateBase.$templateFile)){
+					return file_get_contents($templateBase.$templateFile);
+				}else{
+					errorHandle::newError(__METHOD__."() No template file found at '".$templateBase.$templateFile."'", errorHandle::DEBUG);
+					return '';
+				}
+				break;
+			default:
+				return $this->template;
+		}
+	}
+
+	/**
 	 * Displays an Insert Form using a given template
 	 *
 	 * @param array $options
 	 * @return string
 	 */
 	public function displayInsertForm($options = array()){
-		// Catch the use case of using insertForm when you mean updateForm
-		if(isset($options['id'])) return $this->displayUpdateForm($options);
-
 		// Create the savedForm record for this form
 		$formID = $this->saveForm('insertForm');
 
-		// Create the template object
-		$template = $this->createFormTemplate();
-		$template->formID = $formID;
+		// Get the template text (overriding the template if needed)
+		$templateFile = 'insertUpdate.html';
+		if(isset($options['template'])){
+			$oldTemplate = $this->template;
+			$this->template = $options['template'];
+			$templateText = $this->getTemplateText($templateFile);
+			$this->template = $oldTemplate;
+		}else{
+			$templateText = $this->getTemplateText($templateFile);
+		}
 
-		// Set the template
-		$templatePath = isset($options['template']) ? $options['template'] : $this->insertFormTemplate;
-		$template->loadTemplate($templatePath, 'insert');
+		// Create the template object
+		$template = new formBuilderTemplate($this, $templateText);
+		$template->formID = $formID;
 
 		// Apply any options
 		$template->formAction = isset($options['formAction']) ? $options['formAction'] : NULL;
@@ -477,24 +530,70 @@ class formBuilder extends formFields{
 		return $template->render();
 	}
 
+	/**
+	 * Displays an Update Form using a given template
+	 *
+	 * @param array $options
+	 * @return string
+	 */
 	public function displayUpdateForm($options = array()){
-		$primaryKeys          = array();
-		$primaryFields        = $this->listPrimaryFields();
-		$optionsPrimaryFields = array_intersect($primaryFields, array_keys($options));
-		foreach ($optionsPrimaryFields as $optionsPrimaryField) {
-			$primaryFields[$optionsPrimaryField] = $options[$optionsPrimaryField];
+		$primaryFields = $this->getPrimaryFields();
+		if(!sizeof($primaryFields)){
+			errorHandle::newError(__METHOD__."() No primary fields set! (see formBuilder::addPrimaryFields())", errorHandle::DEBUG);
+			return 'Misconfigured formBuilder!';
+		}
+
+		// Make sure we have dbOptions
+		if (!isset($this->dbOptions)) {
+			errorHandle::newError(__METHOD__."() No database link! (see formBuilder::linkToDatabase())", errorHandle::DEBUG);
+			return 'Misconfigured formBuilder!';
+		}
+
+		// Make sure each primary field has a value
+		$primaryFieldsSQL = array();
+		foreach ($primaryFields as $primaryField) {
+			if (is_empty($primaryField->value)) {
+				errorHandle::newError(__METHOD__."() No value for primary field '{$primaryField->name}' (unable to load current record)", errorHandle::DEBUG);
+				return 'Misconfigured formBuilder!';
+			}
+			$primaryFieldsSQL[$primaryField->toSqlSnippet()] = $primaryField->value;
+		}
+
+		$db  = $this->dbOptions['connection'];
+		$sql = sprintf('SELECT `%s` FROM `%s` WHERE %s LIMIT 1',
+			implode('`,`', $this->listFields()),
+			$db->escape($this->dbOptions['table']),
+			implode(' AND ', array_keys($primaryFieldsSQL)));
+		$stmt = $db->query($sql, array_values($primaryFieldsSQL));
+
+		// Make sure we actually got a record back
+		if (!$stmt->rowCount()) {
+			errorHandle::newError(__METHOD__."() No record found!)", errorHandle::DEBUG);
+			return 'No record found!';
+		}
+
+		$row = $stmt->fetch();
+		foreach ($row as $field => $value) {
+			$this->modifyField($field, 'value', $value);
 		}
 
 		// Create the savedForm record for this form
 		$formID = $this->saveForm('updateForm');
 
-		// Create the template object
-		$template = $this->createFormTemplate();
-		$template->formID = $formID;
+		// Get the template text (overriding the template if needed)
+		$templateFile = 'insertUpdate.html';
+		if(isset($options['template'])){
+			$oldTemplate = $this->template;
+			$this->template = $options['template'];
+			$templateText = $this->getTemplateText($templateFile);
+			$this->template = $oldTemplate;
+		}else{
+			$templateText = $this->getTemplateText($templateFile);
+		}
 
-		// Set the template
-		$templatePath = isset($options['template']) ? $options['template'] : $this->insertFormTemplate;
-		$template->loadTemplate($templatePath, 'insert');
+		// Create the template object
+		$template = new formBuilderTemplate($this, $templateText);
+		$template->formID = $formID;
 
 		// Apply any options
 		$template->formAction = isset($options['formAction']) ? $options['formAction'] : NULL;
@@ -519,8 +618,8 @@ class formBuilder extends formFields{
 		$template->loadTemplate($templatePath, 'edit');
 
 		// Apply any options
-		$template->formAction         = isset($options['formAction'])         ? $options['formAction']         : NULL;
-		$template->insertFormURL      = isset($options['insertFormURL'])      ? $options['insertFormURL']      : NULL;
+		$template->formAction         = isset($options['formAction']) ? $options['formAction'] : NULL;
+		$template->insertFormURL      = isset($options['insertFormURL']) ? $options['insertFormURL'] : NULL;
 		$template->insertFormCallback = isset($options['insertFormCallback']) ? $options['insertFormCallback'] : NULL;
 
 		// Render time!

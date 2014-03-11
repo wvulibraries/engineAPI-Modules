@@ -1,0 +1,30 @@
+.formBuilder ul{
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.formBuilder ul li{
+	margin-bottom: 15px;
+}
+.radioLabel{
+	display: block;
+	cursor: pointer;
+}
+.checkboxLabel{
+	display: block;
+	cursor: pointer;
+}
+label{
+	cursor: pointer;
+	display: inline-block;
+	min-width: 100px;
+	text-align: right;
+	margin-right: 10px;
+}
+
+.errorPrettyPrint .successMessage{
+	color: darkgreen;
+}
+.errorPrettyPrint .errorMessage{
+	color: red;
+}

@@ -49,6 +49,14 @@ class fieldBuilder{
 	}
 
 	/**
+	 * Return a SQL-ready string snippet for this field
+	 * @return string
+	 */
+	function toSqlSnippet(){
+		return "`{$this->name}`=?";
+	}
+
+	/**
 	 * [Factory] Create a fieldBuilder object. (Returns FALSE on error)
 	 *
 	 * @param array|string $field

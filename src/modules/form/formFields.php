@@ -59,6 +59,11 @@ abstract class formFields implements Countable{
 		// If there's a field ID, make sure it's unique
 		if (!is_empty($field->fieldID) && in_array($field->fieldID, $this->fieldIDs)) return FALSE;
 
+		if(in_array($field->name, $this->primaryFields)){
+			// Set the field to disabled since it's a primary field
+			$field->disabled = TRUE;
+		}
+
 		// If we're here, then all is well. Save the field and return
 		if (!is_empty($field->fieldID)) $this->fieldIDs[$field->name] = $field->fieldID;
 		if (!is_empty($field->label)) $this->fieldLabels[$field->name] = $field->label;
@@ -158,6 +163,17 @@ abstract class formFields implements Countable{
 	}
 
 	/**
+	 * Return TRUE if the field has been defined
+	 *
+	 * @param string $name
+	 * @return bool
+	 */
+	public function hasField($name){
+		if($name instanceof fieldBuilder) $name = $name->name;
+		return isset($this->fields[$name]);
+	}
+
+	/**
 	 * Returns an array of all defined field names
 	 *
 	 * @param bool $editStrip
@@ -212,43 +228,29 @@ abstract class formFields implements Countable{
 	}
 
 	/**
-	 * Sets the given fields as primary fields for this form
+	 * Add field(s) to the internal list of primary fields
+	 * Fields should be specified either as their name or as a fully instantiated fieldBuilder object
 	 *
-	 * This will reset the current list, taking any passed in for the new set
-	 * You can pass an unlimited number of fields in, so long as they're valid and have been added to the form
+	 * Example Usage:
+	 * `$formBuilder->addPrimaryFields('id');`
+	 * `$formBuilder->addPrimaryFields('id', 'username');`
 	 *
 	 * @param string|fieldBuilder ...
 	 * @return bool
 	 */
-	public function setPrimaryField(){
-		// Reset the primary fields
-		$this->primaryFields = array();
-
+	public function addPrimaryFields(){
 		// Get all the fields passed in and loop on each
-		$fields = func_get_args();
-		foreach ($fields as $field) {
-			// If it's a string, try and convert it to one of our fields
-			if (is_string($field)) {
-				if (isnull($field = $this->getField($field))) {
-					errorHandle::newError(__METHOD__."() Field not declared!", errorHandle::DEBUG);
-					return FALSE;
-				}
-			}
-
-			// Make sure we have a valid fieldBuilder object
-			if (!($field instanceof fieldBuilder)) {
-				errorHandle::newError(__METHOD__."() Not a valid fieldBuilder object!", errorHandle::DEBUG);
-				return FALSE;
-			}
-
-			// Make sure the field has been added to the form
-			if (!in_array($field, $this->fields)) {
-				errorHandle::newError(__METHOD__."() Field not added to this form!", errorHandle::DEBUG);
-				return FALSE;
+		foreach (func_get_args() as $field) {
+			// If we got a fieldBuilder, add it (if needed) and then use its name
+			if($field instanceof fieldBuilder){
+				$fieldName = $field->name;
+				if(!$this->hasField($fieldName)) $this->addField($field);
+				$field->disabled = TRUE;
+				$field = $field->name;
 			}
 
 			// Save the new field to the list
-			$this->primaryFields[] = $field->name;
+			$this->primaryFields[] = $field;
 		}
 		return TRUE;
 	}
