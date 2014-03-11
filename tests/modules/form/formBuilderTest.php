@@ -83,7 +83,7 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_displayInsertForm_absoluteTemplatePathFile(){
-		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test/insert.html');
+		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test/insertUpdate.html');
 		$formOutput = $this->form->displayInsertForm($options);
 		$this->assertFormData('insertForm');
 		$this->assertEquals('Test Insert Form', $formOutput);

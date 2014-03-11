@@ -21,12 +21,6 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 
 	// -------------------------------------------------
 
-	function test_templates_loadTemplate(){
-		$formTemplate = new formBuilderTemplate($this->form);
-		$formTemplate->loadTemplate('Some template test');
-		$this->assertEquals('Some template test', $formTemplate->render());
-	}
-
 	function test_templates_localOverrideTemplate(){
 		$formTemplate = new formBuilderTemplate($this->form);
 		$this->assertEquals('Some template test', $formTemplate->render('Some template test'));
