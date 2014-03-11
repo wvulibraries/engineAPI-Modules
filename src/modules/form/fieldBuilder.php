@@ -1,6 +1,37 @@
 <?php
 
-
+/**
+ * Class fieldBuilder
+ *
+ * For list of field options, see fieldBuilder::getDefaultField()
+ * Current list:
+ *  - disabled
+ *  - size
+ *  - duplicates
+ *  - optional
+ *  - type
+ *  - readonly
+ *  - value
+ *  - linkedTo
+ *  - validate
+ *  - placeholder
+ *  - help
+ *  - dragDrop
+ *  - label
+ *  - labelMetadata
+ *  - fieldMetadata
+ *  - required
+ *  - disableStyling
+ *  - fieldCSS
+ *  - fieldClass
+ *  - fieldID
+ *  - labelCSS
+ *  - labelClass
+ *  - labelID
+ *  - options
+ *  - multiple
+ *  - showInEditStrip
+ */
 class fieldBuilder{
 	/**
 	 * @var array The field definition
@@ -101,9 +132,7 @@ class fieldBuilder{
 	 * @param mixed  $val
 	 */
 	public function __set($name, $val){
-		$this->field[$name]  = $val;
-		$this->renderedField = NULL;
-		$this->renderedLabel = NULL;
+		$this->field[$name] = $val;
 	}
 
 	/**
@@ -286,23 +315,21 @@ class fieldBuilder{
 	 * @return string
 	 */
 	public function renderField($options = array()){
-		$this->setRenderedValue($this->field['value']);
 		$this->ensureFieldID();
-		if (is_empty($this->renderedField)) {
-			// Determine the internal type
-			$this->determineInternalFieldType();
+		// Determine the internal type
+		$this->determineInternalFieldType();
 
-			// Determine the rendering function
-			$func = array($this, '__render_'.$this->field['type']);
-			if (!is_callable($func)) $func = array($this, '__render_input');
+		// Determine the rendering function
+		$func = array($this, '__render_'.$this->field['type']);
+		if (!is_callable($func)) $func = array($this, '__render_input');
 
-			// Render time!
-			$this->renderOptions = $options;
-			$this->renderedField = call_user_func($func);
-			$this->renderOptions = NULL;
-		}
+		// Render time!
+		$this->renderOptions = $options;
+		$this->setRenderedValue($this->getFieldOption('value'));
+		$output = call_user_func($func);
+		$this->renderOptions = NULL;
 
-		return $this->renderedField;
+		return $output;
 	}
 
 	/**
@@ -318,17 +345,16 @@ class fieldBuilder{
 
 		// Continue for a normal field
 		$this->ensureFieldID();
-		if (is_empty($this->renderedLabel)) {
-			$this->renderOptions = $options;
-			$this->renderedLabel = sprintf('<label for="%s"%s>%s</label>',
+
+		$this->renderOptions = $options;
+		$output = sprintf('<label for="%s"%s>%s</label>',
 				$this->getFieldOption('fieldID'),
 				$this->buildLabelAttributes(),
 				(($label = $this->getFieldOption('label')) ? $label : $this->getFieldOption('name'))
 			);
-			$this->renderOptions = NULL;
-		}
+		$this->renderOptions = NULL;
 
-		return $this->renderedLabel;
+		return $output;
 	}
 
 	/**
@@ -551,7 +577,8 @@ class fieldBuilder{
 			'labelClass'     => '',
 			'labelID'        => '',
 			'options'        => array(),
-			'multiple'       => FALSE
+			'multiple'       => FALSE,
+			'showInEditStrip' => TRUE,
 		);
 	}
 
@@ -595,8 +622,8 @@ class fieldBuilder{
 	}
 
 	private function getFieldOption($name){
-		if (isset($this->renderOptions[$name]) && !is_empty($this->renderOptions[$name])) return $this->renderOptions[$name];
-		if (isset($this->field[$name]) && !is_empty($this->field[$name])) return $this->field[$name];
+		if (isset($this->renderOptions[$name])) return $this->renderOptions[$name];
+		if (isset($this->field[$name])) return $this->field[$name];
 		return NULL;
 	}
 

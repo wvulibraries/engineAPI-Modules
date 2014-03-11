@@ -4,7 +4,7 @@
 	</header>
 
 	{form}
-	<table>
+	<table border="1">
 		<thead>
 		<tr>
 			{fieldsLoop editStrip="true"}
@@ -27,14 +27,7 @@
 		{/rowLoop}
 		</tbody>
 	</table>
+	<br><br>
+	{field name="submit"}
 	{/form}
 </section>
-
-
-{formBuilder display="editTable" template="foo" insertFormURL="/foo/bar.php" insertFormCallback="function()"}
-
-{formBuilder display="js"} <!-- Load assets for ALL registered forms (effectively, ignores name) -->
-
-
-
-{formBuilder display="js"}

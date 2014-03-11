@@ -24,6 +24,11 @@ abstract class formFields implements Countable{
 	protected $fieldOrdering = array();
 
 	/**
+	 * @var array[] Array of field names in sorted order
+	 */
+	private $orderedFields = array();
+
+	/**
 	 * @var fieldBuilder[] Array of all primary fields
 	 */
 	protected $primaryFields = array();
@@ -71,7 +76,10 @@ abstract class formFields implements Countable{
 
 		// Record the sort-order for this field
 		$order                         = !is_empty($field->order) ? $field->order : self::DEFAULT_ORDER;
-		$this->fieldOrdering[$order][] = $field;
+		$this->fieldOrdering[$order][] = $field->name;
+
+		// Clear any orderedFields cache
+		$this->orderedFields = array();
 
 		return TRUE;
 	}
@@ -103,6 +111,9 @@ abstract class formFields implements Countable{
 	 * @return bool
 	 */
 	public function modifyField($fieldName, $option, $value){
+		// If we're changing the order, clear the orderedFields cache
+		if($option == 'order') $this->orderedFields = array();
+
 		if ($fieldName instanceof fieldBuilder) {
 			$fieldName->$option = $value;
 
@@ -180,51 +191,55 @@ abstract class formFields implements Countable{
 	 * @return array
 	 */
 	public function listFields($editStrip = NULL){
-		// We need to map the keys to string for consistency
-		$keys = array_keys($this->getSortedFields($editStrip));
-		$keys = array_map(function ($n){
-			return (string)$n;
-		}, $keys);
-
-		return $keys;
+		if(is_null($editStrip)) $editStrip = 'NULL';
+		if(!isset($this->orderedFields[$editStrip])) $this->getSortedFields($editStrip);
+		return $this->orderedFields[$editStrip];
 	}
 
 	/**
 	 * Returns a clean, and fully sorted, array of fields in the order they should appear
 	 *
 	 * @param bool $editStrip
-	 * @return array
+	 * @return fieldBuilder[]
 	 */
 	public function getSortedFields($editStrip = NULL){
-		// Get local copied of the fieldOrderings
-		$fieldOrdering = $this->fieldOrdering;
+		if (isnull($editStrip)) $editStrip = 'NULL';
 
-		// Pull out the unordered fields
-		$unorderedFields = isset($fieldOrdering[self::DEFAULT_ORDER]) ? $fieldOrdering[self::DEFAULT_ORDER] : array();
-		unset($fieldOrdering[self::DEFAULT_ORDER]);
+		if(!isset($this->orderedFields[$editStrip])){
+			// Get local copied of the fieldOrderings
+			$fieldOrdering = $this->fieldOrdering;
 
-		// Sort the ordered fields by their keys
-		ksort($fieldOrdering);
+			// Pull out the unordered fields
+			$unorderedFields = isset($fieldOrdering[self::DEFAULT_ORDER]) ? $fieldOrdering[self::DEFAULT_ORDER] : array();
+			unset($fieldOrdering[self::DEFAULT_ORDER]);
 
-		// Re-add the unordered fields to the end
-		$fieldOrdering[self::DEFAULT_ORDER] = $unorderedFields;
+			// Sort the ordered fields by their keys
+			ksort($fieldOrdering);
 
-		// Build up the master fields array
-		$sortedFields = array();
-		foreach ($fieldOrdering as $fieldGroup) {
-			foreach ($fieldGroup as $field) {
-				// Skip fields if they don't match $editStrip (null shows all)
-				if (!isnull($editStrip)) {
-					if ($editStrip && !$field->showInEditStrip) continue;
-					if (!$editStrip && $field->showInEditStrip) continue;
+			// Re-add the unordered fields to the end
+			$fieldOrdering[self::DEFAULT_ORDER] = $unorderedFields;
+
+			// Build up the master fields array
+			foreach ($fieldOrdering as $fieldGroup) {
+				foreach ($fieldGroup as $fieldName) {
+					$field = $this->getField($fieldName);
+					// Skip fields if they don't match $editStrip (null shows all)
+					if (!isnull($editStrip)) {
+						if ($editStrip && !$field->showInEditStrip) continue;
+						if (!$editStrip && $field->showInEditStrip) continue;
+					}
+
+					$this->orderedFields[$editStrip][] = $fieldName;
 				}
-
-				$sortedFields[$field->name] = $field;
 			}
 		}
 
 		// Return the final, sorted, array of fields
-		return $sortedFields;
+		$returnArray = array();
+		foreach($this->orderedFields[$editStrip] as $fieldName){
+			$returnArray[] = $this->getField($fieldName);
+		}
+		return $returnArray;
 	}
 
 	/**

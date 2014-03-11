@@ -1,19 +1,4 @@
-.formBuilder ul{
-	list-style: none;
-	margin: 0;
-	padding: 0;
-}
-.formBuilder ul li{
-	margin-bottom: 15px;
-}
-.radioLabel{
-	display: block;
-	cursor: pointer;
-}
-.checkboxLabel{
-	display: block;
-	cursor: pointer;
-}
+/* Global CSS */
 label{
 	cursor: pointer;
 	display: inline-block;
@@ -21,10 +6,32 @@ label{
 	text-align: right;
 	margin-right: 10px;
 }
-
 .errorPrettyPrint .successMessage{
 	color: darkgreen;
 }
 .errorPrettyPrint .errorMessage{
 	color: red;
+}
+
+/* insertUpdateForm CSS */
+.formBuilder.insertUpdateForm ul{
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.formBuilder.insertUpdateForm ul li{
+	margin-bottom: 15px;
+}
+.formBuilder.insertUpdateForm .radioLabel{
+	display: block;
+	cursor: pointer;
+}
+.formBuilder.insertUpdateForm.checkboxLabel{
+	display: block;
+	cursor: pointer;
+}
+
+/* editTable CSS */
+.formBuilder.editTable .expandable{
+	display: none;
 }

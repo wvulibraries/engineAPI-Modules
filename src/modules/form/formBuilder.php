@@ -389,6 +389,7 @@ class formBuilder extends formFields{
 			case 'updateform':
 				return $this->displayUpdateForm($options);
 
+			case 'edit':
 			case 'edittable':
 				return $this->displayEditTable($options);
 
@@ -444,7 +445,8 @@ class formBuilder extends formFields{
 		$this->addField(array(
 			'type'  => 'submit',
 			'name'  => 'submit',
-			'value' => 'Submit'
+			'value' => 'Submit',
+			'showInEditStrip' => FALSE,
 		));
 	}
 
@@ -468,33 +470,38 @@ class formBuilder extends formFields{
 	/**
 	 * Returns the form template text to be used
 	 * @param string $templateFile
+	 * @param string $templateOverride
 	 * @return string
 	 */
-	private function getTemplateText($templateFile){
-		switch(true){
-			case is_file($this->template):
-				return file_get_contents($this->template);
-			case is_dir($this->template):
-				$templateFile = $this->template.DIRECTORY_SEPARATOR.$templateFile;
-				if(is_readable($templateFile)){
-					return file_get_contents($templateFile);
-				}else{
-					errorHandle::newError(__METHOD__."() No template file found at '".$templateFile."'", errorHandle::DEBUG);
-					return '';
-				}
-				break;
-			case is_dir($this->templateDir.DIRECTORY_SEPARATOR.$this->template):
-				$templateBase = $this->templateDir.DIRECTORY_SEPARATOR.$this->template.DIRECTORY_SEPARATOR;
-				if(is_readable($templateBase.$templateFile)){
-					return file_get_contents($templateBase.$templateFile);
-				}else{
-					errorHandle::newError(__METHOD__."() No template file found at '".$templateBase.$templateFile."'", errorHandle::DEBUG);
-					return '';
-				}
-				break;
-			default:
-				return $this->template;
+	private function getTemplateText($templateFile, $templateOverride = NULL){
+		// Get the current template
+		$template = isset($templateOverride)
+			? $templateOverride
+			: $this->template;
+
+		// If template is a file, use it
+		if (is_file($template)) return file_get_contents($template);
+
+		// If template is a dir, look inside it
+		if (is_dir($template)) {
+			$templateFile = $template.DIRECTORY_SEPARATOR.$templateFile;
+			if (is_readable($templateFile)) return file_get_contents($templateFile);
+
+			errorHandle::newError(__METHOD__."() No template file found at '".$templateFile."'", errorHandle::DEBUG);
+			return '';
 		}
+
+		// Try appending the templateDir to tempalte and looking inside it
+		if (is_dir($this->templateDir.DIRECTORY_SEPARATOR.$template)) {
+			$templateBase = $this->templateDir.DIRECTORY_SEPARATOR.$template.DIRECTORY_SEPARATOR;
+			if (is_readable($templateBase.$templateFile)) return file_get_contents($templateBase.$templateFile);
+
+			errorHandle::newError(__METHOD__."() No template file found at '".$templateBase.$templateFile."'", errorHandle::DEBUG);
+			return '';
+		}
+
+		// All else fails, assume template is a blob
+		return $template;
 	}
 
 	/**
@@ -509,15 +516,10 @@ class formBuilder extends formFields{
 
 		// Get the template text (overriding the template if needed)
 		$templateFile = 'insertUpdate.html';
-		if(isset($options['template'])){
-			$oldTemplate = $this->template;
-			$this->template = $options['template'];
-			$templateText = $this->getTemplateText($templateFile);
-			$this->template = $oldTemplate;
-		}else{
-			$templateText = $this->getTemplateText($templateFile);
-		}
-
+		$templateText = isset($options['template'])
+			? $this->getTemplateText($templateFile, $options['template'])
+			: $this->getTemplateText($templateFile);
+		
 		// Create the template object
 		$template = new formBuilderTemplate($this, $templateText);
 		$template->formID = $formID;
@@ -582,14 +584,9 @@ class formBuilder extends formFields{
 
 		// Get the template text (overriding the template if needed)
 		$templateFile = 'insertUpdate.html';
-		if(isset($options['template'])){
-			$oldTemplate = $this->template;
-			$this->template = $options['template'];
-			$templateText = $this->getTemplateText($templateFile);
-			$this->template = $oldTemplate;
-		}else{
-			$templateText = $this->getTemplateText($templateFile);
-		}
+		$templateText = isset($options['template'])
+			? $this->getTemplateText($templateFile, $options['template'])
+			: $this->getTemplateText($templateFile);
 
 		// Create the template object
 		$template = new formBuilderTemplate($this, $templateText);
@@ -610,12 +607,18 @@ class formBuilder extends formFields{
 	 * @return string
 	 */
 	public function displayEditTable($options = array()){
-		// Create the template object
-		$template = $this->createFormTemplate();
+		// Create the savedForm record for this form
+		$formID = $this->saveForm('editTable');
 
-		// Set the template
-		$templatePath = isset($options['template']) ? $options['template'] : $this->editTableTemplate;
-		$template->loadTemplate($templatePath, 'edit');
+		// Get the template text (overriding the template if needed)
+		$templateFile = 'edit.html';
+		$templateText = isset($options['template'])
+			? $this->getTemplateText($templateFile, $options['template'])
+			: $this->getTemplateText($templateFile);
+
+		// Create the template object
+		$template = new formBuilderTemplate($this, $templateText);
+		$template->formID = $formID;
 
 		// Apply any options
 		$template->formAction         = isset($options['formAction']) ? $options['formAction'] : NULL;

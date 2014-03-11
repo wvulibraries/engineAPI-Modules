@@ -117,7 +117,7 @@ class formBuilderTemplate {
 			if (!in_array($field->name, $list)) continue;
 
 			// Replace any unnamed field with a named version for this field
-			$output .= preg_replace('/{field(?!.*name=".+".*).*}/', '{field $1 name="'.$field->name.'"}', $block);
+			$output .= preg_replace('/{field(?!.*name=".+".*)(.*)}/', '{field $1 name="'.$field->name.'"}', $block);
 		}
 
 		return $output;
@@ -176,8 +176,8 @@ class formBuilderTemplate {
 			$rowBlock = $block;
 			foreach ($row as $field => $value) {
 				if (!in_array($field, $templateFields)) continue;
-				$rowBlock = preg_replace('/{field\s+((?=.*name="'.preg_quote($field).'".*)(?!.*value=".+".*).*)}/', '{field $1 value="'.$value.'"}', $rowBlock);
-				$rowBlock = preg_replace('/{field\s+((?=.*name="'.preg_quote($field).'".*)(?=.*display="value".*).*)}/', $value, $rowBlock);
+				$rowBlock = preg_replace('/{field\s+((?=.*name="'.preg_quote($field).'".*)(?!.*value=".+".*).*?)}/', '{field $1 value="'.$value.'"}', $rowBlock, -1, $count);
+				//$rowBlock = preg_replace('/{field\s+((?=.*name="'.preg_quote($field).'".*)(?=.*display="value".*).*?)}/', $value, $rowBlock);
 			}
 			$output .= $rowBlock;
 		}
@@ -324,11 +324,11 @@ class formBuilderTemplate {
 
 				switch ($display) {
 					case 'full':
-						return $field->render($template);
+						return $field->render($template, $attrPairs);
 					case 'field':
-						return $field->renderField();
+						return $field->renderField($attrPairs);
 					case 'label':
-						return $field->renderLabel();
+						return $field->renderLabel($attrPairs);
 					default:
 						errorHandle::newError(__METHOD__."() Invalid 'display' for field '{$attrPairs['name']}'! (only full|field|label valid)", errorHandle::DEBUG);
 						return '';
