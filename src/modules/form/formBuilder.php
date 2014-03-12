@@ -26,6 +26,11 @@ class formBuilder extends formFields{
 	private $formName;
 
 	/**
+	 * @var string The public label/name to apply to the form
+	 */
+	public $formLabel;
+
+	/**
 	 * @var string Filepath to form templates
 	 *             This is used in formBuilderTemplate
 	 * @TODO Look into remove this tight coupling
@@ -52,16 +57,18 @@ class formBuilder extends formFields{
 	 */
 	public $insertFormCallback;
 
+	public $editTableRowData = array();
+
 	/**
 	 * Class constructor
 	 *
 	 * @param string $formName
 	 */
 	public function __construct($formName){
-		$this->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates';
-		$this->template    = 'default';
-		$this->formName    = trim(strtolower($formName));
-
+		$this->templateDir   = __DIR__.DIRECTORY_SEPARATOR.'formTemplates';
+		$this->template      = 'default';
+		$this->formLabel     = $formName;
+		$this->formName      = trim(strtolower($formName));
 		$engineVars          = enginevars::getInstance();
 		$this->formAssetsURL = $engineVars->get('formAssetsURL', $engineVars->get('engineInc').DIRECTORY_SEPARATOR.'formBuilderAssets');
 
@@ -189,6 +196,81 @@ class formBuilder extends formFields{
 	}
 
 	/**
+	 * AJAX handler
+	 * @return null
+	 */
+	public static function ajaxHandler(){
+		try {
+			// If this isn't an AJAX request, we don't care
+			if (!isAJAX()) return NULL;
+			if (isset($_GET['MYSQL']) && sizeof($_GET['MYSQL'])) {
+				// If there's no formID, we don't care
+				if (!isset($_GET['MYSQL']['formID'])) return NULL;
+
+				// Figure out what action to perform
+				$action = isset($_GET['MYSQL']['action']) ? $_GET['MYSQL']['action'] : 'getForm';
+				switch (trim(strtolower($action))) {
+					default:
+					case 'getform':
+						$savedForm = self::getSavedForm($_GET['MYSQL']['formID']);
+						if (!is_array($savedForm)) throw new Exception('Invalid formID!', $savedForm);
+
+						$savedForm = $savedForm['formBuilder'];
+						$formType  = isset($_GET['MYSQL']['formType']) ? $_GET['MYSQL']['formType'] : 'updateForm';
+						$rowData   = $savedForm->editTableRowData[$_GET['MYSQL']['rowID']];
+						foreach ($rowData as $field => $value) {
+							$savedForm->modifyField($field,'value',$value);
+						}
+						die(json_encode(array(
+							'success' => TRUE,
+							'form'    => $savedForm->display('assets').$savedForm->display($formType, array('formAction'=>strtok($_SERVER["REQUEST_URI"],'?')))
+						)));
+						break;
+				}
+			} elseif (isset($_POST['MYSQL']) && sizeof($_POST['MYSQL'])) {
+				if (!isset($_POST['MYSQL']['__formID'])) return NULL;
+				self::process();
+			}
+			return NULL;
+
+		} catch (Exception $e) {
+			die(json_encode(array(
+				'success'   => FALSE,
+				'errorMsg'  => $e->getMessage(),
+				'errorCode' => $e->getCode(),
+			)));
+		}
+	}
+
+	/**
+	 * Retrieves the requested saved form from the session based on $formID
+	 * @param string $formID
+	 * @return array|int
+	 */
+	private static function getSavedForm($formID=NULL){
+		if (!isset($formID)) return formProcessor::ERR_NO_ID;
+		/*
+		if (!isset($formID)) {
+			$sessionPost = session::get('POST');
+			if (isset($sessionPost['MYSQL']) && isset($sessionPost['MYSQL']['__formID'])) {
+				$formID = $sessionPost['MYSQL']['__formID'];
+			} elseif (isset($_POST['MYSQL']['__formID'])) {
+				$formID = $_POST['MYSQL']['__formID'];
+			} else {
+				return formProcessor::ERR_NO_ID;
+			}
+		}
+		*/
+
+		$savedForm = session::get(self::SESSION_SAVED_FORMS_KEY.".$formID");
+		if (!$savedForm) return formProcessor::ERR_INVALID_ID;
+		return array(
+			'formBuilder' => unserialize($savedForm['formBuilder']),
+			'formType'    => $savedForm['formType'],
+		);
+	}
+
+	/**
 	 * Process a form submission
 	 *
 	 * @param string $formID
@@ -223,12 +305,12 @@ class formBuilder extends formFields{
 		}
 
 		if (!isset(self::$formProcessorObjects[$formID])) {
-			// Make sure the formID is valid and retrieve the saved form
-			$savedForm = session::get(self::SESSION_SAVED_FORMS_KEY.".$formID");
-			if (!$savedForm) return formProcessor::ERR_INVALID_ID;
+			// Get the saved form
+			$savedForm = self::getSavedForm($formID);
+			if(!is_array($savedForm)) return $savedForm;
 
-			// Extract the formBuilder and formType
-			$savedFormBuilder = unserialize($savedForm['formBuilder']);
+			// Save formBuilder and formType for east access
+			$savedFormBuilder = $savedForm['formBuilder'];
 			$savedFormType    = $savedForm['formType'];
 
 			// Make sure we are linked to a backend db
@@ -267,21 +349,21 @@ class formBuilder extends formFields{
 	 */
 	public static function createForm($formName = NULL, $dbOptions = NULL){
 		if (isnull($formName)) $formName = self::DEFAULT_FORM_NAME;
-		$formName = trim(strtolower($formName));
+		$formNameCheck = trim(strtolower($formName));
 
 		// Dupe checking
-		if (in_array($formName, self::$formObjects)) {
+		if (in_array($formNameCheck, self::$formObjects)) {
 			errorHandle::newError(__METHOD__."() Form already created with given name!", errorHandle::DEBUG);
 			return FALSE;
 		}
 
 		// Create the form!
-		self::$formObjects[$formName] = new self($formName);
+		self::$formObjects[$formNameCheck] = new self($formName);
 
 		// link dbTableOptions if it's passed in
 		if (!isnull($dbOptions) && !self::$formObjects[$formName]->linkToDatabase($dbOptions)) return FALSE;
 
-		return self::$formObjects[$formName];
+		return self::$formObjects[$formNameCheck];
 	}
 
 	/**
@@ -352,6 +434,7 @@ class formBuilder extends formFields{
 		$assets = array();
 
 		// Global assets
+		$assets[] = 'http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js';
 		$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'formEvents.js';
 
 		// Template assets
@@ -367,72 +450,7 @@ class formBuilder extends formFields{
 		}
 
 		// Return the final array
-//		echo '<pre>'.print_r($assets, true).'</pre>';
-//		echo '<pre>'.print_r(array_unique($assets), true).'</pre>';
 		return array_unique($assets);
-	}
-
-	/**
-	 * Main display method for the form
-	 *
-	 * @param string $display
-	 * @param array  $options
-	 * @return string
-	 */
-	public function display($display, $options){
-		switch (trim(strtolower($display))) {
-			case 'insert':
-			case 'insertform':
-				return $this->displayInsertForm($options);
-
-			case 'update':
-			case 'updateform':
-				return $this->displayUpdateForm($options);
-
-			case 'edit':
-			case 'edittable':
-				return $this->displayEditTable($options);
-
-			case 'assets':
-				$assetFiles = array();
-				foreach (self::$formObjects as $form) {
-					$assetFiles = array_merge($assetFiles, $form->getAssets());
-				}
-
-				$jsAssetBlob  = '';
-				$cssAssetBlob = '';
-				foreach ($assetFiles as $file) {
-					$ext = pathinfo($file, PATHINFO_EXTENSION);
-					switch ($ext) {
-						case 'less':
-							// TODO
-						case 'sass':
-							// TODO
-						case 'css':
-							$cssAssetBlob .= minifyCSS($file);
-							break;
-						case 'js':
-//							$jsAssetBlob .= minifyJS($file);
-							$jsAssetBlob .= file_get_contents($file);
-							break;
-						default:
-							errorHandle::newError(__METHOD__."() Unknown asset file type '$ext'. Ignoring file!", errorHandle::DEBUG);
-							break;
-					}
-				}
-
-				$output = "<!-- engine Instruction displayTemplateOff -->\n";
-				if (!is_empty($jsAssetBlob)) $output .= "<script>".$jsAssetBlob."</script>";
-				if (!is_empty($cssAssetBlob)) $output .= "<style class='formBuilderAssets'>".$cssAssetBlob."</style>";
-				return $output."<!-- engine Instruction displayTemplateOn -->\n";
-
-			case 'errors':
-				return errorHandle::prettyPrint();
-
-			default:
-				errorHandle::newError(__METHOD__."() Unsupported display type '{$options['display']}' for form '{$this->formName}'", errorHandle::DEBUG);
-				return '';
-		}
 	}
 
 	/**
@@ -450,21 +468,44 @@ class formBuilder extends formFields{
 		));
 	}
 
+	private function ensurePrimaryFieldsSet(){
+		// Make sure there is at least 1 primary field set
+		if(!sizeof($this->primaryFields)){
+			errorHandle::newError(__METHOD__."() No primary fields set! (see formBuilder::addPrimaryFields())", errorHandle::DEBUG);
+			return FALSE;
+		}
+
+		// Make sure that all primary fields have a full field definition
+		$missingFieldDefinitions = array_diff($this->primaryFields, array_keys($this->fields));
+		if(sizeof($missingFieldDefinitions)){
+			errorHandle::newError(__METHOD__."() Primary field(s) ".implode(',', $missingFieldDefinitions)." missing their definitions!", errorHandle::DEBUG);
+			return FALSE;
+		}
+
+		return TRUE;
+	}
+
 	/**
-	 * Save the current form in the session and return its formID
-	 *
-	 * @param string $formType The type of form being saved
+	 * Generate a random formID for this form
 	 * @return string
 	 */
-	private function saveForm($formType){
-		$formID         = md5(uniqid().mt_rand());
+	private function generateFormID(){
+		return md5(mt_rand());
+	}
+
+	/**
+	 * Save the current form in the session
+	 *
+	 * @param string $formID The formID for this form
+	 * @param string $formType The type of form being saved
+	 */
+	private function saveForm($formID, $formType){
 		$sessionOptions = array('timeout' => enginevars::getInstance()->get('formBuilderTimeout', self::DEFAULT_FORM_TIMEOUT));
 		$sessionData    = array(
 			'formBuilder' => serialize($this),
 			'formType'    => $formType,
 		);
 		session::set(self::SESSION_SAVED_FORMS_KEY.".$formID", $sessionData, $sessionOptions);
-		return $formID;
 	}
 
 	/**
@@ -505,15 +546,80 @@ class formBuilder extends formFields{
 	}
 
 	/**
+	 * Main display method for the form
+	 *
+	 * @param string $display
+	 * @param array  $options
+	 * @return string
+	 */
+	public function display($display, $options=array()){
+		switch (trim(strtolower($display))) {
+			case 'insert':
+			case 'insertform':
+				$this->ensureFormSubmit();
+				return $this->displayInsertForm($options);
+
+			case 'update':
+			case 'updateform':
+				$this->ensureFormSubmit();
+				if(!$this->ensurePrimaryFieldsSet()) return 'Misconfigured formBuilder!';
+				return $this->displayUpdateForm($options);
+
+			case 'edit':
+			case 'edittable':
+				$this->ensureFormSubmit();
+				if(!$this->ensurePrimaryFieldsSet()) return 'Misconfigured formBuilder!';
+				return $this->displayEditTable($options);
+
+			case 'assets':
+				$assetFiles = $this->getAssets();
+				foreach (self::$formObjects as $form) {
+					$assetFiles = array_merge($assetFiles, $form->getAssets());
+				}
+
+				$jsAssetBlob  = '';
+				$cssAssetBlob = '';
+				foreach ($assetFiles as $file) {
+					$ext = pathinfo($file, PATHINFO_EXTENSION);
+					switch ($ext) {
+						case 'less':
+							// TODO
+						case 'sass':
+							// TODO
+						case 'css':
+							$cssAssetBlob .= minifyCSS($file);
+							break;
+						case 'js':
+//							$jsAssetBlob .= minifyJS($file);
+							$jsAssetBlob .= file_get_contents($file);
+							break;
+						default:
+							errorHandle::newError(__METHOD__."() Unknown asset file type '$ext'. Ignoring file!", errorHandle::DEBUG);
+							break;
+					}
+				}
+
+				$output = "<!-- engine Instruction displayTemplateOff -->\n";
+				if (!is_empty($jsAssetBlob)) $output .= "<script class='formBuilderScriptAssets'>".$jsAssetBlob."</script>";
+				if (!is_empty($cssAssetBlob)) $output .= "<style class='formBuilderStyleAssets'>".$cssAssetBlob."</style>";
+				return $output."<!-- engine Instruction displayTemplateOn -->\n";
+
+			case 'errors':
+				return errorHandle::prettyPrint();
+
+			default:
+				errorHandle::newError(__METHOD__."() Unsupported display type '{$options['display']}' for form '{$this->formName}'", errorHandle::DEBUG);
+				return '';
+		}
+	}
+
+	/**
 	 * Displays an Insert Form using a given template
 	 *
 	 * @param array $options
 	 * @return string
 	 */
 	public function displayInsertForm($options = array()){
-		// Create the savedForm record for this form
-		$formID = $this->saveForm('insertForm');
-
 		// Get the template text (overriding the template if needed)
 		$templateFile = 'insertUpdate.html';
 		$templateText = isset($options['template'])
@@ -522,14 +628,20 @@ class formBuilder extends formFields{
 		
 		// Create the template object
 		$template = new formBuilderTemplate($this, $templateText);
-		$template->formID = $formID;
+		$template->formID = $this->generateFormID();
 
 		// Apply any options
 		$template->formAction = isset($options['formAction']) ? $options['formAction'] : NULL;
 
 		// Render time!
 		$this->ensureFormSubmit();
-		return $template->render();
+		$output = $template->render();
+
+		// Save the form to the session
+		$this->saveForm($template->formID, 'insertForm');
+
+		// Return the final output
+		return $output;
 	}
 
 	/**
@@ -540,10 +652,6 @@ class formBuilder extends formFields{
 	 */
 	public function displayUpdateForm($options = array()){
 		$primaryFields = $this->getPrimaryFields();
-		if(!sizeof($primaryFields)){
-			errorHandle::newError(__METHOD__."() No primary fields set! (see formBuilder::addPrimaryFields())", errorHandle::DEBUG);
-			return 'Misconfigured formBuilder!';
-		}
 
 		// Make sure we have dbOptions
 		if (!isset($this->dbOptions)) {
@@ -570,7 +678,7 @@ class formBuilder extends formFields{
 
 		// Make sure we actually got a record back
 		if (!$stmt->rowCount()) {
-			errorHandle::newError(__METHOD__."() No record found!)", errorHandle::DEBUG);
+			errorHandle::newError(__METHOD__."() No record found! (SQL: $sql)", errorHandle::DEBUG);
 			return 'No record found!';
 		}
 
@@ -578,9 +686,6 @@ class formBuilder extends formFields{
 		foreach ($row as $field => $value) {
 			$this->modifyField($field, 'value', $value);
 		}
-
-		// Create the savedForm record for this form
-		$formID = $this->saveForm('updateForm');
 
 		// Get the template text (overriding the template if needed)
 		$templateFile = 'insertUpdate.html';
@@ -590,14 +695,19 @@ class formBuilder extends formFields{
 
 		// Create the template object
 		$template = new formBuilderTemplate($this, $templateText);
-		$template->formID = $formID;
+		$template->formID = $this->generateFormID();
 
 		// Apply any options
-		$template->formAction = isset($options['formAction']) ? $options['formAction'] : NULL;
+		if (isset($options['formAction'])) $template->formAttributes['action'] = $options['formAction'];
 
 		// Render time!
-		$this->ensureFormSubmit();
-		return $template->render();
+		$output = $template->render();
+
+		// Save the form to the session
+		$this->saveForm($template->formID, 'updateForm');
+
+		// Return the final output
+		return $output;
 	}
 
 	/**
@@ -607,9 +717,6 @@ class formBuilder extends formFields{
 	 * @return string
 	 */
 	public function displayEditTable($options = array()){
-		// Create the savedForm record for this form
-		$formID = $this->saveForm('editTable');
-
 		// Get the template text (overriding the template if needed)
 		$templateFile = 'edit.html';
 		$templateText = isset($options['template'])
@@ -618,15 +725,24 @@ class formBuilder extends formFields{
 
 		// Create the template object
 		$template = new formBuilderTemplate($this, $templateText);
-		$template->formID = $formID;
+		$template->formID = $this->generateFormID();
 
-		// Apply any options
-		$template->formAction         = isset($options['formAction']) ? $options['formAction'] : NULL;
-		$template->insertFormURL      = isset($options['insertFormURL']) ? $options['insertFormURL'] : NULL;
-		$template->insertFormCallback = isset($options['insertFormCallback']) ? $options['insertFormCallback'] : NULL;
+		// Apply any form attributes
+		if (isset($options['formAction'])) $template->formAttributes['action'] = $options['formAction'];
+
+		$insertFormURL = isset($options['insertFormURL']) ? $options['insertFormURL'] : $this->insertFormURL;
+		if (!isnull($insertFormURL)) $template->formDataAttributes['insert_form_url'] = $insertFormURL;
+
+		$insertFormCallback = isset($options['insertFormCallback']) ? $options['insertFormCallback'] : $this->insertFormCallback;
+		if (!isnull($insertFormCallback)) $template->formDataAttributes['insert_form_callback'] = $insertFormCallback;
 
 		// Render time!
-		$this->ensureFormSubmit();
-		return $template->render();
+		$output = $template->render();
+
+		// Save the form to the session
+		$this->saveForm($template->formID, 'editTable');
+
+		// Return the final output
+		return $output;
 	}
 }

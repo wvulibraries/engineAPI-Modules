@@ -223,6 +223,7 @@ abstract class formFields implements Countable{
 			foreach ($fieldOrdering as $fieldGroup) {
 				foreach ($fieldGroup as $fieldName) {
 					$field = $this->getField($fieldName);
+					if (in_array($field->type, array('submit','reset','button'))) continue;
 					// Skip fields if they don't match $editStrip (null shows all)
 					if (!isnull($editStrip)) {
 						if ($editStrip && !$field->showInEditStrip) continue;

@@ -39,16 +39,6 @@ class fieldBuilder{
 	private $field;
 
 	/**
-	 * @var string The rendered field HTML cache
-	 */
-	private $renderedField;
-
-	/**
-	 * @var string The rendered field label HTML cache
-	 */
-	private $renderedLabel;
-
-	/**
 	 * @var string Filepath to form templates
 	 */
 	public $templateDir;

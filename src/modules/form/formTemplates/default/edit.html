@@ -4,25 +4,26 @@
 	</header>
 
 	{form}
-	<table border="1">
+	<table>
 		<thead>
 		<tr>
+			<th></th>
 			{fieldsLoop editStrip="true"}
 			<th>{field display="label"}</th>
 			{/fieldsLoop}
 		</tr>
 		</thead>
-		<tbody>
+		<tbody class="editStripFields">
 		{rowLoop}
-		<tr class="editStripFields">
-			<i class="some-icon" data-insertFormPath="$(this).parent().next('.expandable').children('td:first')"></i>
+		<tr data-row_id="{rowLoopID}">
+			<td><i class="icon-collapse" data-target_iframe="#iFrame_{rowLoopID}"></i></td>
 			{fieldsLoop editStrip="true" showHidden="true"}
 			<td>{field display="field"}</td>
 			{/fieldsLoop}
 		</tr>
-		<tr class="expandable">
-			<td colspan="{fieldCount}">
-			</td>
+		<tr>
+			<td></td>
+			<td colspan="{fieldCount}"><iframe class="expandable" id="iFrame_{rowLoopID}" seamless></iframe></td>
 		</tr>
 		{/rowLoop}
 		</tbody>

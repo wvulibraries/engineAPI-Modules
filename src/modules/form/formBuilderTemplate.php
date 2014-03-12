@@ -11,9 +11,16 @@ class formBuilderTemplate {
 	private $template;
 
 	/**
-	 * @var string The action for the generated <form> tag
+	 * Array of 'data-' attributes to be included on the <form> tag at render time
+	 * @var array
 	 */
-	public $formAction;
+	public $formDataAttributes = array();
+
+	/**
+	 * Array of attributes to be included on the <form> tag at render time
+	 * @var array
+	 */
+	public $formAttributes = array();
 
 	/**
 	 * @var string The generated formID for this form
@@ -174,10 +181,20 @@ class formBuilderTemplate {
 		// Loop over each row, transforming the block into a compiled block
 		while ($row = $sqlResult->fetch()) {
 			$rowBlock = $block;
+
+			// Perform global replacements
+			$rowID    = uniqid();
+			$rowBlock = str_replace('{rowLoopID}', $rowID, $rowBlock);
+			$rowData = array();
+			foreach($this->formBuilder->listPrimaryFields() as $field){
+				$rowData[$field] = $row[$field];
+			}
+			$this->formBuilder->editTableRowData[$rowID] = $rowData;
+
+			// Perform field replacements
 			foreach ($row as $field => $value) {
 				if (!in_array($field, $templateFields)) continue;
 				$rowBlock = preg_replace('/{field\s+((?=.*name="'.preg_quote($field).'".*)(?!.*value=".+".*).*?)}/', '{field $1 value="'.$value.'"}', $rowBlock, -1, $count);
-				//$rowBlock = preg_replace('/{field\s+((?=.*name="'.preg_quote($field).'".*)(?=.*display="value".*).*?)}/', $value, $rowBlock);
 			}
 			$output .= $rowBlock;
 		}
@@ -223,24 +240,26 @@ class formBuilderTemplate {
 		$attrPairs = attPairs($matches[2]);
 		switch (strtolower($tmplTag)) {
 			case 'formtitle':
-				return $this->formBuilder->formName;
+				return $this->formBuilder->formLabel;
 
 			case 'form':
 				$output = '';
 				$showHidden = isset($attrPairs['hidden']) ? str2bool($attrPairs['hidden']) : FALSE;
 				unset($attrPairs['hidden']);
 
-				// Build any extra attributes for the <form> tag
+				// Compile form attributes
 				$attrs = array();
-				foreach ($attrPairs as $key => $value) {
-					$attrs[] = $key.'="'.$value.'"';
+				foreach(array_merge($this->formAttributes, $attrPairs) as $attr => $value){
+					$attrs[] = $attr.'="'.addslashes($value).'"';
 				}
-				$attrs = sizeof($attrs) ? ' '.implode(' ', $attrs): '';
+
+				// Compile form data attributes
+				foreach($this->formDataAttributes as $attr => $value){
+					$attrs[] = 'data-'.$attr.'="'.addslashes($value).'"';
+				}
 
 				// Build the <form> tag
-				$output .= sprintf('<form method="post"%s%s>',
-					(isnull($this->formAction) ? '' : ' action="'.$this->formAction.'"'),
-					$attrs);
+				$output .= sprintf('<form method="post"%s>', (sizeof($attrs) ? ' '.implode(' ', $attrs): ''));
 
 				// Include the formName
 				$output .= sprintf('<input type="hidden" name="__formID" value="%s">', $this->formID);
