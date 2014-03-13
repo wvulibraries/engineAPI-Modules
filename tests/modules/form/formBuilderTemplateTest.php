@@ -159,6 +159,11 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertEquals($foo->renderField(), $this->formTemplate->render('{field name="foo" display="field"}'));
 	}
 
+	function test_templates_field_noFieldName(){
+		$this->form->addField($foo = fieldBuilder::createField('foo'));
+		$this->assertEquals('', $this->formTemplate->render('{field}'));
+	}
+
 	function test_templates_field_invalidFieldName(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->assertEquals('', $this->formTemplate->render('{field name="invalid"}'));
@@ -167,6 +172,13 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 	function test_templates_field_invalidDisplay(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->assertEquals('', $this->formTemplate->render('{field name="foo" display="invalid"}'));
+	}
+
+	function test_templates_field_disabledPrimaryField(){
+		$this->form->addField($foo = fieldBuilder::createField('foo'));
+		$this->form->addPrimaryFields('foo');
+		$rendered = $this->formTemplate->render('{field name="foo"}');
+		$this->assertTag(array('attributes' => 'disabled'), $rendered);
 	}
 
 	function test_templates_fieldsetBeginNoLegend(){

@@ -40,6 +40,13 @@ class formFieldsTest extends PHPUnit_Framework_TestCase{
 		$this->assertCount(1, $this->formFields);
 	}
 
+	function test_addFieldThatIsPrimaryField(){
+		$this->assertCount(0, $this->formFields);
+		$this->formFields->addPrimaryFields('foo');
+		$this->assertTrue($this->formFields->addField(fieldBuilder::createField('foo')));
+		$this->assertCount(1, $this->formFields);
+	}
+
 	function test_addFieldReturnsFalseOnError_noName(){
 		$test = $this->formFields->addField(array());
 		$this->assertFalse($test);
@@ -260,4 +267,4 @@ class formFieldsTest extends PHPUnit_Framework_TestCase{
 		$this->assertContains($cat, $priFields);
 	}
 }
- 
+
