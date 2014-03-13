@@ -48,15 +48,18 @@ class formBuilder extends formFields{
 	public $dbOptions;
 
 	/**
-	 * @var string Location of insertForm Ajax Callback
+	 * @var string Location of Ajax Handler
 	 */
-	public $insertFormURL;
+	public $ajaxHandlerURL;
 
 	/**
 	 * @var string Javascript function to process Ajax call
 	 */
 	public $insertFormCallback;
 
+	/**
+	 * @var array An array to store primary field data for the edit table to facilitate the linking of the editStrip to the updateForm
+	 */
 	public $editTableRowData = array();
 
 	/**
@@ -210,26 +213,53 @@ class formBuilder extends formFields{
 				// Figure out what action to perform
 				$action = isset($_GET['MYSQL']['action']) ? $_GET['MYSQL']['action'] : 'getForm';
 				switch (trim(strtolower($action))) {
-					default:
 					case 'getform':
+					default:
 						$savedForm = self::getSavedForm($_GET['MYSQL']['formID']);
 						if (!is_array($savedForm)) throw new Exception('Invalid formID!', $savedForm);
 
-						$savedForm = $savedForm['formBuilder'];
-						$formType  = isset($_GET['MYSQL']['formType']) ? $_GET['MYSQL']['formType'] : 'updateForm';
-						$rowData   = $savedForm->editTableRowData[$_GET['MYSQL']['rowID']];
+						$savedForm      = $savedForm['formBuilder'];
+						$formType       = isset($_GET['MYSQL']['formType']) ? $_GET['MYSQL']['formType'] : 'updateForm';
+						$rowData        = $savedForm->editTableRowData[$_GET['MYSQL']['rowID']];
+						$displayOptions = array('noFormTag' => TRUE);
+
+						// Set field values
 						foreach ($rowData as $field => $value) {
 							$savedForm->modifyField($field,'value',$value);
 						}
+
+						// Return the form
 						die(json_encode(array(
 							'success' => TRUE,
-							'form'    => $savedForm->display('assets').$savedForm->display($formType, array('formAction'=>strtok($_SERVER["REQUEST_URI"],'?')))
+							'form'    => $savedForm->display($formType, $displayOptions)
 						)));
-						break;
 				}
 			} elseif (isset($_POST['MYSQL']) && sizeof($_POST['MYSQL'])) {
+				// If there's no formID, we don't care
 				if (!isset($_POST['MYSQL']['__formID'])) return NULL;
-				self::process();
+
+				/*
+				 * Extract the RAW data from _POST and pass it to process() for processing
+				 *
+				 * We use RAW here to avoid double-escaping when we process the data in process()
+				 * This may happen because the developer will use process() to handle his own raw data
+				 * Since the database module uses prepared statements, manually escaping the POST data is not necessary
+				 */
+				$errorCode = self::process($_POST['RAW']);
+
+				// Handle the results of process()
+				if($errorCode == formProcessor::ERR_OK){
+					die(json_encode(array(
+						'success'     => TRUE,
+						'prettyPrint' => errorHandle::prettyPrint(),
+					)));
+				}else{
+					die(json_encode(array(
+						'success'     => FALSE,
+						'errorMsg'    => formProcessor::$errorMessages[$errorCode],
+						'prettyPrint' => errorHandle::prettyPrint(),
+					)));
+				}
 			}
 			return NULL;
 
@@ -273,13 +303,18 @@ class formBuilder extends formFields{
 	/**
 	 * Process a form submission
 	 *
-	 * @param string $formID
+	 * @param string|array $formID Either the formID to process or a POST-like array of data
 	 * @return int Result code from formProcessor object
 	 */
 	public static function process($formID = NULL){
+		if (is_array($formID)) {
+			$formData = $formID;
+			$formID   = NULL;
+		}
+
 		$processor = self::createProcessor($formID);
 		return ($processor instanceof formProcessor)
-			? $processor->processPost()
+			? isset($formData) ? $processor->process($formData) : $processor->processPost()
 			: $processor;
 	}
 
@@ -327,6 +362,7 @@ class formBuilder extends formFields{
 
 			// Set the primary fields
 			call_user_func_array(array($formProcessor, 'addPrimaryFields'), $savedFormBuilder->listPrimaryFields());
+			if($savedFormType == 'editTable') $formProcessor->primaryFieldsValues = $savedFormBuilder->editTableRowData;
 
 			// Add our fields to the form processor
 			foreach ($savedFormBuilder->fields as $field) {
@@ -629,6 +665,7 @@ class formBuilder extends formFields{
 		// Create the template object
 		$template = new formBuilderTemplate($this, $templateText);
 		$template->formID = $this->generateFormID();
+		$template->renderOptions = $options;
 
 		// Apply any options
 		$template->formAction = isset($options['formAction']) ? $options['formAction'] : NULL;
@@ -696,6 +733,7 @@ class formBuilder extends formFields{
 		// Create the template object
 		$template = new formBuilderTemplate($this, $templateText);
 		$template->formID = $this->generateFormID();
+		$template->renderOptions = $options;
 
 		// Apply any options
 		if (isset($options['formAction'])) $template->formAttributes['action'] = $options['formAction'];
@@ -726,12 +764,13 @@ class formBuilder extends formFields{
 		// Create the template object
 		$template = new formBuilderTemplate($this, $templateText);
 		$template->formID = $this->generateFormID();
+		$template->renderOptions = $options;
 
 		// Apply any form attributes
 		if (isset($options['formAction'])) $template->formAttributes['action'] = $options['formAction'];
 
-		$insertFormURL = isset($options['insertFormURL']) ? $options['insertFormURL'] : $this->insertFormURL;
-		if (!isnull($insertFormURL)) $template->formDataAttributes['insert_form_url'] = $insertFormURL;
+		$ajaxURL = isset($options['ajaxHandlerURL']) ? $options['ajaxHandlerURL'] : $this->ajaxHandlerURL;
+		if (!isnull($ajaxURL)) $template->formDataAttributes['ajax_url'] = $ajaxURL;
 
 		$insertFormCallback = isset($options['insertFormCallback']) ? $options['insertFormCallback'] : $this->insertFormCallback;
 		if (!isnull($insertFormCallback)) $template->formDataAttributes['insert_form_callback'] = $insertFormCallback;

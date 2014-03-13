@@ -6,6 +6,11 @@ class formBuilderTemplate {
 	private $formBuilder;
 
 	/**
+	 * @var array Render options set from formBuilder
+	 */
+	public $renderOptions=array();
+
+	/**
 	 * @var string The template text to use when rendering
 	 */
 	private $template;
@@ -194,7 +199,7 @@ class formBuilderTemplate {
 			// Perform field replacements
 			foreach ($row as $field => $value) {
 				if (!in_array($field, $templateFields)) continue;
-				$rowBlock = preg_replace('/{field\s+((?=.*name="'.preg_quote($field).'".*)(?!.*value=".+".*).*?)}/', '{field $1 value="'.$value.'"}', $rowBlock, -1, $count);
+				$rowBlock = preg_replace('/{field\s+((?=.*name="'.preg_quote($field).'".*)(?!.*value=".+".*).*?)}/', '{field $1 value="'.$value.'" rowID="'.$rowID.'"}', $rowBlock, -1, $count);
 			}
 			$output .= $rowBlock;
 		}
@@ -243,23 +248,26 @@ class formBuilderTemplate {
 				return $this->formBuilder->formLabel;
 
 			case 'form':
+
 				$output = '';
 				$showHidden = isset($attrPairs['hidden']) ? str2bool($attrPairs['hidden']) : FALSE;
 				unset($attrPairs['hidden']);
 
-				// Compile form attributes
-				$attrs = array();
-				foreach(array_merge($this->formAttributes, $attrPairs) as $attr => $value){
-					$attrs[] = $attr.'="'.addslashes($value).'"';
-				}
-
-				// Compile form data attributes
-				foreach($this->formDataAttributes as $attr => $value){
-					$attrs[] = 'data-'.$attr.'="'.addslashes($value).'"';
-				}
-
 				// Build the <form> tag
-				$output .= sprintf('<form method="post"%s>', (sizeof($attrs) ? ' '.implode(' ', $attrs): ''));
+				if(!isset($this->renderOptions['noFormTag']) || !$this->renderOptions['noFormTag']){
+					// Compile form attributes
+					$attrs = array();
+					foreach(array_merge($this->formAttributes, $attrPairs) as $attr => $value){
+						$attrs[] = $attr.'="'.addslashes($value).'"';
+					}
+
+					// Compile form data attributes
+					foreach($this->formDataAttributes as $attr => $value){
+						$attrs[] = 'data-'.$attr.'="'.addslashes($value).'"';
+					}
+
+					$output .= sprintf('<form method="post"%s>', (sizeof($attrs) ? ' '.implode(' ', $attrs): ''));
+				}
 
 				// Include the formName
 				$output .= sprintf('<input type="hidden" name="__formID" value="%s">', $this->formID);
@@ -284,7 +292,9 @@ class formBuilderTemplate {
 				return $output;
 
 			case '/form':
-				return '</form>';
+				return (isset($this->renderOptions['noFormTag']) && $this->renderOptions['noFormTag'])
+					? ''
+					: '</form>';
 
 			case 'fields':
 				$output  = '';
@@ -332,6 +342,11 @@ class formBuilderTemplate {
 				if (isnull($field)) {
 					errorHandle::newError(__METHOD__."() No field defined for '{$attrPairs['name']}'!", errorHandle::DEBUG);
 					return '';
+				}
+
+				if(isset($attrPairs['rowID'])) {
+					$attrPairs['name'] .= "[{$attrPairs['rowID']}]";
+					unset($attrPairs['rowID']);
 				}
 
 				$display  = isset($attrPairs['display'])

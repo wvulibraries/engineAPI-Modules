@@ -16,14 +16,14 @@
 		<tbody class="editStripFields">
 		{rowLoop}
 		<tr data-row_id="{rowLoopID}">
-			<td><i class="icon-collapse" data-target_iframe="#iFrame_{rowLoopID}"></i></td>
+			<td><i class="icon-collapse" data-target="#updateForm_{rowLoopID}"></i></td>
 			{fieldsLoop editStrip="true" showHidden="true"}
 			<td>{field display="field"}</td>
 			{/fieldsLoop}
 		</tr>
 		<tr>
 			<td></td>
-			<td colspan="{fieldCount}"><iframe class="expandable" id="iFrame_{rowLoopID}" seamless></iframe></td>
+			<td colspan="{fieldCount}"><div class="expandable" id="updateForm_{rowLoopID}"></div></td>
 		</tr>
 		{/rowLoop}
 		</tbody>

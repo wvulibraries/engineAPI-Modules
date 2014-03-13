@@ -1,38 +1,36 @@
 <?php
 
-/**
- * Class fieldBuilder
- *
- * For list of field options, see fieldBuilder::getDefaultField()
- * Current list:
- *  - disabled
- *  - size
- *  - duplicates
- *  - optional
- *  - type
- *  - readonly
- *  - value
- *  - linkedTo
- *  - validate
- *  - placeholder
- *  - help
- *  - dragDrop
- *  - label
- *  - labelMetadata
- *  - fieldMetadata
- *  - required
- *  - disableStyling
- *  - fieldCSS
- *  - fieldClass
- *  - fieldID
- *  - labelCSS
- *  - labelClass
- *  - labelID
- *  - options
- *  - multiple
- *  - showInEditStrip
- */
 class fieldBuilder{
+	/** @var array An array with all default field options */
+	private static $fieldDefaults = array(
+		'disabled'       => FALSE,
+		'size'           => 40,
+		'duplicates'     => FALSE,
+		'optional'       => FALSE,
+		'type'           => 'text',
+		'readonly'       => FALSE,
+		'value'          => '',
+		'linkedTo'       => array(),
+		'validate'       => NULL,
+		'placeholder'    => '',
+		'help'           => array(),
+		'dragDrop'       => FALSE,
+		'label'          => '',
+		'labelMetadata'  => array(),
+		'fieldMetadata'  => array(),
+		'required'       => FALSE,
+		'disableStyling' => FALSE,
+		'fieldCSS'       => '',
+		'fieldClass'     => '',
+		'fieldID'        => '',
+		'labelCSS'       => '',
+		'labelClass'     => '',
+		'labelID'        => '',
+		'options'        => array(),
+		'multiple'       => FALSE,
+		'showInEditStrip' => TRUE,
+	);
+
 	/**
 	 * @var array The field definition
 	 */
@@ -60,7 +58,7 @@ class fieldBuilder{
 	 */
 	public function __construct($field){
 		// Make sure we get a sane array
-		$this->field = array_merge($this->getDefaultField(), (array)$field);
+		$this->field = array_merge(self::$fieldDefaults, (array)$field);
 
 		// Normalize field definitions
 		if(isset($this->field['type'])) $this->field['type'] = trim(strtolower($this->field['type']));
@@ -538,41 +536,6 @@ class fieldBuilder{
 	}
 
 	/**
-	 * Returns an array with all default field options
-	 * @return array
-	 */
-	private function getDefaultField(){
-		return array(
-			'disabled'       => FALSE,
-			'size'           => 40,
-			'duplicates'     => FALSE,
-			'optional'       => FALSE,
-			'type'           => 'text',
-			'readonly'       => FALSE,
-			'value'          => '',
-			'linkedTo'       => array(),
-			'validate'       => NULL,
-			'placeholder'    => '',
-			'help'           => array(),
-			'dragDrop'       => FALSE,
-			'label'          => '',
-			'labelMetadata'  => array(),
-			'fieldMetadata'  => array(),
-			'required'       => FALSE,
-			'disableStyling' => FALSE,
-			'fieldCSS'       => '',
-			'fieldClass'     => '',
-			'fieldID'        => '',
-			'labelCSS'       => '',
-			'labelClass'     => '',
-			'labelID'        => '',
-			'options'        => array(),
-			'multiple'       => FALSE,
-			'showInEditStrip' => TRUE,
-		);
-	}
-
-	/**
 	 * Build the attribute pairs for the label element
 	 *
 	 * @return string
@@ -625,7 +588,7 @@ class fieldBuilder{
 	 */
 	private function __buildAttributes($attributes){
 		if (isset($this->renderOptions)) {
-			$addlMetadata = array_diff(array_keys($this->renderOptions), array_keys($this->getDefaultField()));
+			$addlMetadata = array_diff(array_keys($this->renderOptions), array_keys(self::$fieldDefaults));
 			foreach ($addlMetadata as $key) {
 				$attributes[$key] = $this->renderOptions[$key];
 			}

@@ -8,9 +8,19 @@ class formProcessor extends formFields{
 	const ERR_VALIDATION = 4;
 	const ERR_SYSTEM     = 5;
 	const ERR_TYPE       = 6;
+
 	const TYPE_INSERT    = 1;
 	const TYPE_UPDATE    = 2;
 	const TYPE_EDIT      = 3;
+
+	public static $errorMessages = array(
+		self::ERR_NO_POST    => 'No data received',
+		self::ERR_NO_ID      => 'No formID received',
+		self::ERR_INVALID_ID => 'Invalid ID received',
+		self::ERR_VALIDATION => 'Validation error',
+		self::ERR_SYSTEM     => 'Internal system error',
+		self::ERR_TYPE       => 'Invalid formType',
+	);
 
 	/**
 	 * @var array The data to process
@@ -31,6 +41,11 @@ class formProcessor extends formFields{
 	 * @var string The database table
 	 */
 	private $dbTable;
+
+	/**
+	 * @var array Array of primary key values (used in self::__processEdit())
+	 */
+	public $primaryFieldsValues;
 
 	public function __construct($dbTableName, $dbConnection=NULL){
 		$this->db = ($dbConnection instanceof dbDriver)
@@ -94,9 +109,6 @@ class formProcessor extends formFields{
 		// Save the data to our processData var
 		$this->processData = $data;
 
-		// Process field validation rules
-		if(!$this->__processValidation()) return self::ERR_VALIDATION;
-
 		switch($this->processorType){
 			case self::TYPE_INSERT:
 				$result = $this->__processInsert();
@@ -115,19 +127,19 @@ class formProcessor extends formFields{
 		return $result;
 	}
 
-	private function __processValidation(){
+	private function __processValidation($data){
 		// Validation
 		$isValid   = TRUE;
 		$validator = validate::getInstance();
 		foreach($this->fields as $field){
 			// If no validation set, skip
-			if(!$field->validate) continue;
+			if(isnull($field->validate)) continue;
 
 			// If no data for this field, skip
-			if(!isset($this->processData[ $field->name ])) continue;
+			if(!isset($data[ $field->name ])) continue;
 
 			// Try and validate the data
-			$fieldData = $this->processData[ $field->name ];
+			$fieldData = $data[ $field->name ];
 			$result = method_exists($validator, $field->validate)
 				? call_user_func(array($validator, $field->validate), $fieldData)
 				: $validator->regexp($field->validate, $fieldData);
@@ -145,6 +157,9 @@ class formProcessor extends formFields{
 	}
 
 	private function __processInsert(){
+		// Process field validation rules
+		if(!$this->__processValidation($this->processData)) return self::ERR_VALIDATION;
+
 		$sqlFields = array();
 		foreach($this->fields as $field){
 			// Skip disabled fields
@@ -174,16 +189,23 @@ class formProcessor extends formFields{
 		return self::ERR_OK;
 	}
 
-	private function __processUpdate(){
+	private function __processUpdate($data=NULL){
+		if(isnull($data)) $data = $this->processData;
+
+		// Process field validation rules
+		if(!$this->__processValidation($data)) return self::ERR_VALIDATION;
+
 		$sqlFields = array();
 		foreach($this->fields as $field){
+			// Skip special fields
+			if(in_array($field->type, array('submit','reset','button'))) continue;
 			// Skip disabled fields
 			if($field->disabled) continue;
 			// Revert read-only fields to their original state
-			if($field->readonly) $this->processData[ $field->name ] = $field->renderedValue;
+			if($field->readonly) $data[ $field->name ] = $field->renderedValue;
 			// Save the field for insertion
-			$sqlFields[ $field->toSqlSnippet() ] = isset($this->processData[ $field->name ])
-				? $this->processData[ $field->name ]
+			$sqlFields[ $field->toSqlSnippet() ] = isset($data[ $field->name ])
+				? $data[ $field->name ]
 				: $field->value;
 		}
 
@@ -207,6 +229,38 @@ class formProcessor extends formFields{
 	}
 
 	private function __processEdit(){
-		return self::ERR_OK;
+		$errorCode = self::ERR_OK;
+
+		// Convert field-loop to row-loop
+		$rows = array();
+		foreach($this->processData as $fieldName => $fieldRows){
+			foreach((array)$fieldRows as $rowID => $rowData){
+				$rows[$rowID][$fieldName] = $rowData;
+			}
+		}
+
+		// Validate the row
+		foreach($rows as $rowID => $fields){
+			// Skip system fields
+			if($rowID == 0) continue;
+
+			// Add value to primary fields
+			foreach($this->listPrimaryFields() as $field){
+				$this->modifyField($field,'value',$this->primaryFieldsValues[$rowID][ $field ]);
+			}
+
+			// Update the row and handle the result
+			switch($this->__processUpdate($fields)){
+				// Skip this row if it fails validation
+				case self::ERR_VALIDATION:
+					$errorCode = self::ERR_VALIDATION;
+					continue;
+				// Return if we have a system error
+				case self::ERR_SYSTEM:
+					return self::ERR_SYSTEM;
+			}
+		}
+
+		return $errorCode;
 	}
 }
