@@ -18,7 +18,7 @@ var formBuilder = {
 		// Setup event handlers
 		this.$editTable.on('click', '.icon-expand', this.hideForm);
 		this.$editTable.on('click', '.icon-collapse', this.showForm);
-		this.$editTable.find('iframe').load(formBuilder.updateIFrame);
+		this.$editTable.on('change', 'iframe', this.updateIFrame);
 	},
 
 	showForm: function(e){
@@ -44,14 +44,17 @@ var formBuilder = {
 		$this.removeClass('icon-expand').addClass('icon-collapse');
 	},
 	updateIFrame:function(e){
-		var $iFrame = $(this);
-		$iFrame.height($iFrame.contents().find("html").height());
+		var $iframe = $(this);
+
+		// Set the height of the iframe to the height of the content
+		setTimeout(function() {
+			$iframe.height($iframe.contents().find('.formBuilder').height()+60);
+		},50);
 	},
 	__insertFormCallback: function(url, data, iframe){
 		return $.getJSON(url, data, function(data, textStatus, jqXHR){
 			if(data.success){
-				iframe.contents().find('body').html(data.form);
-				iframe.load();
+				iframe.attr('srcdoc',data.form).change();
 			}else{
 				if(typeof(console) != 'undefined') console.log('AJAX Error: '+data.errorMsg+"\nError Code: "+data.errorCode);
 				$formTarget.html('Failed to load form.');
