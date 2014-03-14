@@ -168,7 +168,7 @@ abstract class formFields implements Countable{
 	/**
 	 * Returns the requested field or NULL if no field defined
 	 *
-	 * @param $name
+	 * @param string $name
 	 * @return fieldBuilder|NULL
 	 */
 	public function getField($name){
@@ -180,7 +180,7 @@ abstract class formFields implements Countable{
 	/**
 	 * Return TRUE if the field has been defined
 	 *
-	 * @param string $name
+	 * @param string|fieldBuilder $name
 	 * @return bool
 	 */
 	public function hasField($name){
