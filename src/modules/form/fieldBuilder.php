@@ -311,6 +311,8 @@ class fieldBuilder{
 		$func = array($this, '__render_'.$this->field['type']);
 		if (!is_callable($func)) $func = array($this, '__render_input');
 
+		if (isset($options['display'])) unset($options['display']);
+
 		// Render time!
 		$this->renderOptions = $options;
 		$this->setRenderedValue($this->getFieldOption('value'));
@@ -333,6 +335,9 @@ class fieldBuilder{
 
 		// Continue for a normal field
 		$this->ensureFieldID();
+
+		if (isset($options['name'])) unset($options['name']);
+		if (isset($options['display'])) unset($options['display']);
 
 		$this->renderOptions = $options;
 		$output = sprintf('<label for="%s"%s>%s</label>',
