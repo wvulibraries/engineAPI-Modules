@@ -132,26 +132,37 @@ class formProcessor extends formFields{
 		$isValid   = TRUE;
 		$validator = validate::getInstance();
 		foreach($this->fields as $field){
+			$fieldData = $data[ $field->name ];
+
+			// If this field is required, make sure it's present
+			if($field->required && !$validator->present($fieldData)){
+				$isValid = FALSE;
+				errorHandle::errorMsg($validator->getErrorMessage('present', $fieldData));
+				continue;
+			}
+
 			// If no validation set, skip
 			if(isnull($field->validate)) continue;
 
-			// If no data for this field, skip
-			if(!isset($data[ $field->name ])) continue;
+			// If no data for this field and it's optional, skip
+			if(!isset($data[ $field->name ]) && str2bool($field->optional)) continue;
 
 			// Try and validate the data
-			$fieldData = $data[ $field->name ];
 			$result = method_exists($validator, $field->validate)
 				? call_user_func(array($validator, $field->validate), $fieldData)
 				: $validator->regexp($field->validate, $fieldData);
 
+			if($result === NULL){
+				errorHandle::newError(__METHOD__."() Error occurred during validation for field '{$field->name}'! (possible regex error: ".preg_last_error().")", errorHandle::DEBUG);
+			}elseif($result === FALSE){
+				$isValid = FALSE;
+				errorHandle::errorMsg($validator->getErrorMessage($field->validate, $fieldData));
+				continue;
+			}
+
 			// Did an error occur? (like a bad regex pattern)
 			if($result === NULL) errorHandle::newError(__METHOD__."() Error occurred during validation for field '{$field->name}'! (possible regex error: ".preg_last_error().")", errorHandle::DEBUG);
 
-			// Did validation fail?
-			if(!$result){
-				$isValid = FALSE;
-				errorHandle::errorMsg($validator->getErrorMessage($field->validate, $fieldData));
-			}
 		}
 		return $isValid;
 	}
