@@ -311,7 +311,20 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$template = $formTemplate->render('{rowLoop}<li>{field display="field" name="name"}</li>{/rowLoop}');
 
 		// Assertions
-		$this->assertEquals('<li>'.$foo->renderField().'</li><li>'.$foo->renderField().'</li><li>'.$foo->renderField().'</li>', $template);
+		$this->assertTag(array(
+			'children' => array(
+				'count' => 3,
+				'only'  => array(
+					'tag'      => 'li',
+					'children' => array(
+						'only' => array(
+							'tag' => 'input'
+						)
+					)
+				)
+			)
+
+		), $template, 'It contains 3 <input> tags');
 	}
 
 }
