@@ -162,7 +162,7 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'name'  => 'foo',
 			'label' => 'Testing',
 		));
-		$this->assertRegExp('|<label.+?for="formField_[a-z0-9]{13}".*?>Testing</label>|', $field->renderLabel());
+		$this->assertRegExp('|<label.+?for="[a-z0-9]{13}".*?>Testing</label>|', $field->renderLabel());
 	}
 
 	function testType_text(){
