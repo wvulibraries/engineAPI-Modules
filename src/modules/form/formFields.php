@@ -64,7 +64,11 @@ abstract class formFields implements Countable{
 		// If there's a field ID, make sure it's unique
 		if (!is_empty($field->fieldID) && in_array($field->fieldID, $this->fieldIDs)) return FALSE;
 
-		if(in_array($field->name, $this->primaryFields)){
+		// If this field is set to be a primary field, add it
+		if($field->primary) $this->addPrimaryFields($field->name);
+
+		// If this field is a primary field, disable it (to prevent the user from munging it)
+		if($this->isPrimaryField($field->name)){
 			// Set the field to disabled since it's a primary field
 			$field->disabled = TRUE;
 		}
@@ -266,9 +270,14 @@ abstract class formFields implements Countable{
 			}
 
 			// Save the new field to the list
-			$this->primaryFields[] = $field;
+			if ($this->isPrimaryField($field)) {
+				errorHandle::newError(__METHOD__."() Field '$field' already set as a primary field!", errorHandle::DEBUG);
+				return FALSE;
+			} else {
+				$this->primaryFields[] = $field;
+				return TRUE;
+			}
 		}
-		return TRUE;
 	}
 
 	/**
@@ -293,4 +302,13 @@ abstract class formFields implements Countable{
 		return $this->primaryFields;
 	}
 
+	/**
+	 * Checks if a given field is set as a primary field
+	 *
+	 * @param string $name The name of the field to test
+	 * @return bool
+	 */
+	public function isPrimaryField($name) {
+		return in_array($name, $this->primaryFields);
+	}
 }
