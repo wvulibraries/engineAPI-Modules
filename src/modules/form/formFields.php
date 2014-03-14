@@ -316,10 +316,11 @@ abstract class formFields implements Countable{
 	/**
 	 * Checks if a given field is set as a primary field
 	 *
-	 * @param string $name The name of the field to test
+	 * @param string|fieldBuilder $name The field to test
 	 * @return bool
 	 */
 	public function isPrimaryField($name) {
+		if($name instanceof fieldBuilder) $name = $name->name;
 		return in_array($name, $this->primaryFields);
 	}
 }
