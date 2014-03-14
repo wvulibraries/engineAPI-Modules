@@ -28,7 +28,7 @@ class fieldBuilder{
 		'labelID'        => '',
 		'options'        => array(),
 		'multiple'       => FALSE,
-		'showInEditStrip' => TRUE,
+		'showInEditStrip' => FALSE,
 	);
 
 	/**
