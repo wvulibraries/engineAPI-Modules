@@ -37,13 +37,18 @@ iframe{
 	cursor: pointer;
 }
 
+/* Position fix for multiSelect */
+.ms-container{
+	display: inline-block !important;
+}
+
 /* insertUpdateForm CSS */
-.formBuilder.insertUpdateForm ul{
+.formBuilder.insertUpdateForm ul.formFields{
 	list-style: none;
 	margin: 0;
 	padding: 0;
 }
-.formBuilder.insertUpdateForm ul li.formField{
+.formBuilder.insertUpdateForm ul.formFields > li{
 	margin-bottom: 15px;
 }
 .formBuilder.insertUpdateForm .radioLabel{

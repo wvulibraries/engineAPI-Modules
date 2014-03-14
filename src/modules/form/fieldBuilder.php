@@ -3,32 +3,33 @@
 class fieldBuilder{
 	/** @var array An array with all default field options */
 	private static $fieldDefaults = array(
-		'disabled'       => FALSE,
-		'size'           => 40,
-		'duplicates'     => FALSE,
-		'optional'       => FALSE,
-		'type'           => 'text',
-		'readonly'       => FALSE,
-		'value'          => '',
-		'linkedTo'       => array(),
-		'validate'       => NULL,
-		'placeholder'    => '',
-		'help'           => array(),
-		'dragDrop'       => FALSE,
-		'label'          => '',
-		'labelMetadata'  => array(),
-		'fieldMetadata'  => array(),
-		'required'       => FALSE,
-		'disableStyling' => FALSE,
-		'fieldCSS'       => '',
-		'fieldClass'     => '',
-		'fieldID'        => '',
-		'labelCSS'       => '',
-		'labelClass'     => '',
-		'labelID'        => '',
-		'options'        => array(),
-		'multiple'       => FALSE,
+		'disabled'        => FALSE,
+		'size'            => 40,
+		'duplicates'      => FALSE,
+		'optional'        => FALSE,
+		'type'            => 'text',
+		'readonly'        => FALSE,
+		'value'           => '',
+		'linkedTo'        => array(),
+		'validate'        => NULL,
+		'placeholder'     => '',
+		'help'            => array(),
+		'dragDrop'        => FALSE,
+		'label'           => '',
+		'labelMetadata'   => array(),
+		'fieldMetadata'   => array(),
+		'required'        => FALSE,
+		'disableStyling'  => FALSE,
+		'fieldCSS'        => '',
+		'fieldClass'      => '',
+		'fieldID'         => '',
+		'labelCSS'        => '',
+		'labelClass'      => '',
+		'labelID'         => '',
+		'options'         => array(),
+		'multiple'        => FALSE,
 		'showInEditStrip' => FALSE,
+		'primary'         => FALSE,
 	);
 
 	/**
@@ -154,11 +155,12 @@ class fieldBuilder{
 			case 'wysiwyg':
 				return array(
 //					__DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'ckeditor'.DIRECTORY_SEPARATOR.'ckeditor.js',
-					__DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'wysiwyg.js'
+					__DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'wysiwyg.js',
 				);
 			case 'multiselect':
 				return array(
-					__DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multiSelect.js'
+					__DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multi-select.css',
+					__DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multi-select.js',
 				);
 			default:
 				return array();
@@ -369,7 +371,11 @@ class fieldBuilder{
 	 */
 	private function __render_select(){
 		// If there are multiple values, force multiple to be TRUE (needed for valid HTML5)
-		if (is_array($this->field['value'])) $this->field['multiple'] = TRUE;
+		if (is_array($this->getFieldOption('value'))) $this->renderOptions['multiple'] = TRUE;
+
+		// If this is a multiple select, make the name array-friendly
+		if($this->getFieldOption('multiple')) $this->renderOptions['name'] = $this->getFieldOption('name').'[]';
+
 		// Return the built tag
 		return sprintf('<select %s>%s</select>',
 			$this->buildFieldAttributes(),
@@ -381,15 +387,20 @@ class fieldBuilder{
 	 * @return string
 	 */
 	private function __render_multiselect(){
-		return 'multiSelect';
+		$this->renderOptions['multiple'] = TRUE;
+		$selectBox = $this->__render_select();
+		$scriptTag = sprintf("<script>$('#%s').multiSelect()</script>",
+			$this->getFieldOption('fieldID')
+		);
+		return $selectBox.$scriptTag;
 	}
 
-	/**
-	 * [Render Helper] Render a WYSIWYG editor
-	 * @return string
-	 */
+			/**
+			 * [Render Helper] Render a WYSIWYG editor
+			 * @return string
+			 */
 	private function __render_wysiwyg(){
-//		$fieldClass = $this->getFieldOption('class');
+		//		$fieldClass = $this->getFieldOption('class');
 //		if(FALSE === strpos('ckeditor', $fieldClass)) $this->renderOptions['class'] = "$fieldClass ckeditor";
 
 		$output = $this->__render_textarea();
