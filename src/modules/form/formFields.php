@@ -195,21 +195,29 @@ abstract class formFields implements Countable{
 	 * @return array
 	 */
 	public function listFields($editStrip = NULL){
-		if(is_null($editStrip)) $editStrip = 'NULL';
-		if(!isset($this->orderedFields[$editStrip])) $this->getSortedFields($editStrip);
-		return (array)$this->orderedFields[$editStrip];
+		return array_keys($this->getSortedFields($editStrip));
 	}
 
 	/**
 	 * Returns a clean, and fully sorted, array of fields in the order they should appear
 	 *
 	 * @param bool $editStrip
+	 *        TRUE: Only return editStrip
+	 *        FALSE: Only return non-editStrip
+	 *        NULL: Return all fields (ignore editStrip)
 	 * @return fieldBuilder[]
 	 */
 	public function getSortedFields($editStrip = NULL){
-		if (isnull($editStrip)) $editStrip = 'NULL';
+		// Convert the (bool)$editStrip into (string) $storageKey since we can't use bool's as array keys
+		if($editStrip === TRUE){
+			$storageKey = '_TRUE_';
+		}elseif($editStrip === FALSE){
+			$storageKey = '_FALSE_';
+		}else{
+			$storageKey = '_NULL_';
+		}
 
-		if(!isset($this->orderedFields[$editStrip])){
+		if(!isset($this->orderedFields[$storageKey])){
 			// Get local copied of the fieldOrderings
 			$fieldOrdering = $this->fieldOrdering;
 
@@ -229,20 +237,20 @@ abstract class formFields implements Countable{
 					$field = $this->getField($fieldName);
 					if (in_array($field->type, array('submit','reset','button'))) continue;
 					// Skip fields if they don't match $editStrip (null shows all)
-					if (!isnull($editStrip)) {
-						if ($editStrip && !$field->showInEditStrip) continue;
-						if (!$editStrip && $field->showInEditStrip) continue;
-					}
+					if (TRUE === $editStrip && !$field->showInEditStrip) continue;
+					if (FALSE === $editStrip && $field->showInEditStrip) continue;
 
-					$this->orderedFields[$editStrip][] = $fieldName;
+					$this->orderedFields[$storageKey][] = $fieldName;
 				}
 			}
 		}
 
 		// Return the final, sorted, array of fields
 		$returnArray = array();
-		foreach($this->orderedFields[$editStrip] as $fieldName){
-			$returnArray[] = $this->getField($fieldName);
+		if(isset($this->orderedFields[$storageKey]) && sizeof($this->orderedFields[$storageKey])){
+			foreach($this->orderedFields[$storageKey] as $fieldName){
+				$returnArray[ $fieldName ] = $this->getField($fieldName);
+			}
 		}
 		return $returnArray;
 	}
