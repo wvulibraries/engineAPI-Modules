@@ -57,7 +57,7 @@ var formBuilder = {
 
 				$formInputs.each(function(i,n){
 					$updateField = $(n);
-					$editStrip.find(':input[name^="'+$updateField.attr('name')+'['+rowID+']"]').val($updateField.val())
+					$editStrip.find(':input[name^="'+$updateField.attr('name')+'['+rowID+']"]').val($updateField.val());
 				});
 
 				$form.slideUp(function(){
@@ -65,7 +65,7 @@ var formBuilder = {
 					setTimeout(function(){
 						$editStrip.find('.icon-expand').click();
 					}, 3000);
-				})
+				});
 			}else{
 				if(typeof(console) != 'undefined') console.log('AJAX Error: '+data.errorMsg+"\nError Code: "+data.errorCode);
 				$form.prepend(data.prettyPrint);
@@ -92,4 +92,3 @@ if (typeof jQuery == 'undefined') {
 }else{
 	$(function(){ formBuilder.init(); });
 }
-
