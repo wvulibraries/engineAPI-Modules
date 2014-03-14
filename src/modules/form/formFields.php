@@ -267,6 +267,8 @@ abstract class formFields implements Countable{
 	 * @return bool
 	 */
 	public function addPrimaryFields(){
+		$returnStatus = TRUE;
+
 		// Get all the fields passed in and loop on each
 		foreach (func_get_args() as $field) {
 			// If we got a fieldBuilder, add it (if needed) and then use its name
@@ -274,18 +276,19 @@ abstract class formFields implements Countable{
 				$fieldName = $field->name;
 				if(!$this->hasField($fieldName)) $this->addField($field);
 				$field->disabled = TRUE;
-				$field = $field->name;
+				$field = $fieldName;
 			}
 
 			// Save the new field to the list
 			if ($this->isPrimaryField($field)) {
 				errorHandle::newError(__METHOD__."() Field '$field' already set as a primary field!", errorHandle::DEBUG);
-				return FALSE;
+				$returnStatus = FALSE;
 			} else {
 				$this->primaryFields[] = $field;
-				return TRUE;
 			}
 		}
+
+		return $returnStatus;
 	}
 
 	/**
