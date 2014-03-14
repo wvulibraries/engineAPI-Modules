@@ -397,7 +397,7 @@ class formBuilder extends formFields{
 		self::$formObjects[$formNameCheck] = new self($formName);
 
 		// link dbTableOptions if it's passed in
-		if (!isnull($dbOptions) && !self::$formObjects[$formName]->linkToDatabase($dbOptions)) return FALSE;
+		if (!isnull($dbOptions) && !self::$formObjects[$formNameCheck]->linkToDatabase($dbOptions)) return FALSE;
 
 		return self::$formObjects[$formNameCheck];
 	}
@@ -661,7 +661,7 @@ class formBuilder extends formFields{
 		$templateText = isset($options['template'])
 			? $this->getTemplateText($templateFile, $options['template'])
 			: $this->getTemplateText($templateFile);
-		
+
 		// Create the template object
 		$template = new formBuilderTemplate($this, $templateText);
 		$template->formID = $this->generateFormID();
