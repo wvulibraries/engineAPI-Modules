@@ -104,16 +104,6 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 		$this->assertEquals($field->name, 'bar');
 	}
 
-	function testSetClearsRenderCache(){
-		$field = fieldBuilder::createField(array('name' => 'foo'));
-		$field->render();
-		$this->assertAttributeNotEmpty('renderedField', $field);
-		$this->assertAttributeNotEmpty('renderedLabel', $field);
-		$field->name = 'bar';
-		$this->assertAttributeEmpty('renderedField', $field);
-		$this->assertAttributeEmpty('renderedLabel', $field);
-	}
-
 	function testSleep(){
 		$field      = fieldBuilder::createField('foo');
 		$serialized = serialize($field);
@@ -898,4 +888,3 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 		$this->assertEquals('Test String', $field->render('Test String'));
 	}
 }
- 
