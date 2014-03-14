@@ -612,6 +612,7 @@ class formBuilder extends formFields{
 				foreach (self::$formObjects as $form) {
 					$assetFiles = array_merge($assetFiles, $form->getAssets());
 				}
+				$assetFiles = array_unique($assetFiles);
 
 				$jsAssetBlob  = '';
 				$cssAssetBlob = '';
