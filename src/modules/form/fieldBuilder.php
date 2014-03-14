@@ -151,20 +151,31 @@ class fieldBuilder{
 	 * @return array
 	 */
 	public function getAssets(){
+		$assets = array();
+
+		// Add assets for specific field types
 		switch($this->field['type']){
 			case 'wysiwyg':
 				return array(
 //					__DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'ckeditor'.DIRECTORY_SEPARATOR.'ckeditor.js',
-					__DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'wysiwyg.js',
+//					__DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'wysiwyg.js',
 				);
 			case 'multiselect':
-				return array(
-					__DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multi-select.css',
-					__DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multi-select.js',
-				);
-			default:
-				return array();
+				$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multi-select.css';
+				$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multi-select.js';
 		}
+
+		// Add assets for specific field options
+		$help = $this->field['help'];
+		if(sizeof($help)){
+			switch(@$help['type']){
+				case 'modal':
+					$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'jquery.leanModal.min.js';
+					break;
+			}
+		}
+
+		return $assets;
 	}
 
 	/**
@@ -173,7 +184,7 @@ class fieldBuilder{
 	 * Note: This sets fieldID on this field's data to the generated ID
 	 */
 	private function ensureFieldID(){
-		if (!isset($this->field['fieldID']) || is_empty($this->field['fieldID'])) $this->field['fieldID'] = uniqid('formField_');
+		if (!isset($this->field['fieldID']) || is_empty($this->field['fieldID'])) $this->field['fieldID'] = uniqid();
 	}
 
 	/**
@@ -284,7 +295,7 @@ class fieldBuilder{
 	 */
 	public function render($template = NULL, $options = array()){
 		// If no template is given, just combine the label and field
-		if (isnull($template)) return $this->renderLabel($options).$this->renderField($options);
+		if (isnull($template)) return $this->renderLabel($options).$this->renderField($options).$this->renderHelp();
 
 		// Determine the internal type and load the template
 		$this->determineInternalFieldType();
@@ -293,6 +304,7 @@ class fieldBuilder{
 		// Replace the {label} and {field} tags
 		$template = str_replace('{label}', $this->renderLabel($options), $template);
 		$template = str_replace('{field}', $this->renderField($options), $template);
+		$template = str_replace('{help}',  $this->renderHelp(),          $template);
 
 		// Return the final, compiled, template
 		return $template;
@@ -351,6 +363,55 @@ class fieldBuilder{
 
 		return $output;
 	}
+
+	/**
+	 * Render a help icon and return it
+	 *
+	 * @return string
+	 */
+	public function renderHelp(){
+		// No help, then no render
+		if(!sizeof($this->field['help'])) return '';
+
+		// Okay, render the help
+		$help = $this->field['help'];
+		switch(@$help['type']) {
+			case 'modal':
+				if(isset($help['text'])){
+					$value = $help['text'];
+				}elseif(isset($help['path'])){
+					$value = file_get_contents($help['path']);
+				}elseif(isset($help['url'])){
+					// Get the source of the URL page
+					$value = file_get_contents($help['url']);
+					// If the page is plain-text, wrap the source in <pre> tags to preserve formatting
+					$headers = get_headers($help['url'], 1);
+					if($headers['Content-Type'] == 'text/plain') $value = "<pre>$value</pre>";
+				}else{
+					errorHandle::newError(__METHOD__."() Warning: No valid source provided for modal! (Please use text, url, or path)", errorHandle::DEBUG);
+					$value = '';
+				}
+
+				return sprintf('<a href="#modalWindow_%s" id="modalTrigger_%s"><i class="icon-help"></i></a><div id="modalWindow_%s" class="modalWindow">%s</div><script>$(\'#modalTrigger_%s\').leanModal()</script>',
+					$this->getFieldOption('fieldID'),
+					$this->getFieldOption('fieldID'),
+					$this->getFieldOption('fieldID'),
+					$value,
+					$this->getFieldOption('fieldID')
+				);
+
+			case 'newWindow':
+				return sprintf('<a href="%s" target="_blank"><i class="icon-help"></i></a>', $help['url']);
+
+			case 'hover':
+			case 'tooltip':
+			default:
+				return sprintf('<i class="icon-help" title="%s"></i>',
+					isset($help['text']) ? htmlSanitize($help['text'])  : ''
+				);
+		}
+	}
+
 
 	/**
 	 * [Render Helper] Render an <input> field
@@ -549,6 +610,10 @@ class fieldBuilder{
 			$this->renderOptions['options'][1] = $yes;
 				return $this->__render_select();
 		}
+	}
+
+	private function buildFieldHelp(){
+
 	}
 
 	/**
