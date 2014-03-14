@@ -193,7 +193,7 @@ abstract class formFields implements Countable{
 	public function listFields($editStrip = NULL){
 		if(is_null($editStrip)) $editStrip = 'NULL';
 		if(!isset($this->orderedFields[$editStrip])) $this->getSortedFields($editStrip);
-		return $this->orderedFields[$editStrip];
+		return (array)$this->orderedFields[$editStrip];
 	}
 
 	/**
