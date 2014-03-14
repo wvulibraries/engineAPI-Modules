@@ -589,7 +589,8 @@ class formBuilder extends formFields{
 	 * @return string
 	 */
 	public function display($display, $options=array()){
-		switch (trim(strtolower($display))) {
+		$display = trim(strtolower($display));
+		switch ($display) {
 			case 'insert':
 			case 'insertform':
 				$this->ensureFormSubmit();
@@ -606,6 +607,14 @@ class formBuilder extends formFields{
 				$this->ensureFormSubmit();
 				if(!$this->ensurePrimaryFieldsSet()) return 'Misconfigured formBuilder!';
 				return $this->displayEditTable($options);
+
+			case 'expandable':
+			case 'expandableedit':
+			case 'expandabletable':
+			case 'expandableedittable':
+				$this->ensureFormSubmit();
+				if(!$this->ensurePrimaryFieldsSet()) return 'Misconfigured formBuilder!';
+				return $this->displayExpandableEditTable($options);
 
 			case 'assets':
 				$assetFiles = $this->getAssets();
@@ -756,8 +765,11 @@ class formBuilder extends formFields{
 	 * @return string
 	 */
 	public function displayEditTable($options = array()){
+		// Default expandable to FALSE
+		if(!isset($options['expandable'])) $options['expandable'] = FALSE;
+
 		// Get the template text (overriding the template if needed)
-		$templateFile = 'edit.html';
+		$templateFile = $options['expandable'] ? 'expandable.html' : 'edit.html';
 		$templateText = isset($options['template'])
 			? $this->getTemplateText($templateFile, $options['template'])
 			: $this->getTemplateText($templateFile);
@@ -784,5 +796,16 @@ class formBuilder extends formFields{
 
 		// Return the final output
 		return $output;
+	}
+
+	/**
+	 * Displays an Expandable Edit Table using a given template
+	 *
+	 * @param array $options
+	 * @return string
+	 */
+	public function displayExpandableEditTable($options = array()) {
+		$options['expandable'] = TRUE;
+		return $this->displayEditTable($options);
 	}
 }
