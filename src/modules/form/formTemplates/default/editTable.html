@@ -7,7 +7,7 @@
 	<table>
 		<thead>
 		<tr>
-			<th></th>
+			<th class="formControlsLabel">{controlsLabel}</th>
 			{fieldsLoop editStrip="true"}
 			<th>{field display="label"}</th>
 			{/fieldsLoop}
@@ -16,15 +16,17 @@
 		<tbody class="editStripFields">
 		{rowLoop}
 		<tr data-row_id="{rowLoopID}">
-			<td><i class="icon-collapse" data-target="#updateForm_{rowLoopID}"></i></td>
+			<td class="formControls">{controls}</td>
 			{fieldsLoop editStrip="true" showHidden="true"}
-			<td>{field display="field"}</td>
+			<td class="formField">{field display="field"}</td>
 			{/fieldsLoop}
 		</tr>
+		{ifExpandable}
 		<tr>
 			<td></td>
 			<td colspan="{fieldCount}"><div class="expandable" id="updateForm_{rowLoopID}"></div></td>
 		</tr>
+		{/ifExpandable}
 		{/rowLoop}
 		</tbody>
 	</table>

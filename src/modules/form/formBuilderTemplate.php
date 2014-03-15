@@ -78,6 +78,15 @@ class formBuilderTemplate {
 		$patterns = array('|{ifFormErrors}(.+?){/ifFormErrors}|ism', '|{formErrors}|i');
 		$templateText = preg_replace_callback($patterns, array($this, '__renderFormErrors'), $templateText);
 
+		// Process {ifExpandable}
+		if(isset($this->renderOptions['expandable']) && $this->renderOptions['expandable']){
+			// Expandable enabled: only remove the {ifExpandable} and {/ifExpandable} tags
+			$templateText = preg_replace('|{/?ifExpandable}|i', '', $templateText);
+		}else{
+			// Expandable disabled: remove entire {ifExpandable} block
+			$templateText = preg_replace('|{ifExpandable(.*?)}(.+?){/ifExpandable}|ism', '', $templateText);
+		}
+
 		// Process {fieldsLoop}
 		$templateText = preg_replace_callback('|{fieldsLoop(.*?)}(.+?){/fieldsLoop}|ism', array($this, '__renderFieldLoop'), $templateText);
 
@@ -201,8 +210,16 @@ class formBuilderTemplate {
 				if (!in_array($field, $templateFields)) continue;
 				$rowBlock = preg_replace('/{field\s+((?=.*name="'.preg_quote($field).'".*)(?!.*value=".+".*).*?)}/', '{field $1 value="'.$value.'" rowID="'.$rowID.'"}', $rowBlock, -1, $count);
 			}
+
+			$controls = '';
+			if(isset($this->renderOptions['expandable']) && $this->renderOptions['expandable']){
+				$controls .= '<i class="icon-collapse" data-target="#updateForm_'.$rowID.'" title="Expand"></i>';
+			}
+			$rowBlock = str_replace('{controls}', $controls, $rowBlock);
+
 			$output .= $rowBlock;
 		}
+
 
 		// Replace any field or row count tags inside our block
 		$output = str_replace('{rowCount}', $this->counterRows, $output);
@@ -366,6 +383,11 @@ class formBuilderTemplate {
 						errorHandle::newError(__METHOD__."() Invalid 'display' for field '{$attrPairs['name']}'! (only full|field|label valid)", errorHandle::DEBUG);
 						return '';
 				}
+
+			case 'controlslabel':
+				return isset($this->renderOptions['controlsLabel'])
+					? $this->renderOptions['controlsLabel']
+					: '';
 
 			case 'fieldset':
 				$legend = isset($attrPairs['legend']) && !is_empty($attrPairs['legend'])

@@ -769,7 +769,7 @@ class formBuilder extends formFields{
 		if(!isset($options['expandable'])) $options['expandable'] = FALSE;
 
 		// Get the template text (overriding the template if needed)
-		$templateFile = $options['expandable'] ? 'expandable.html' : 'edit.html';
+		$templateFile = 'editTable.html';
 		$templateText = isset($options['template'])
 			? $this->getTemplateText($templateFile, $options['template'])
 			: $this->getTemplateText($templateFile);
