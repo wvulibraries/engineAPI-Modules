@@ -678,7 +678,7 @@ class formBuilder extends formFields{
 		$template->renderOptions = $options;
 
 		// Apply any options
-		$template->formAction = isset($options['formAction']) ? $options['formAction'] : NULL;
+		if (isset($options['formAction'])) $template->formAttributes['action'] = $options['formAction'];
 
 		// Render time!
 		$this->ensureFormSubmit();
