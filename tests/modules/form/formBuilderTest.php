@@ -255,14 +255,13 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_display_update_distributionTemplatePath(){
-		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
-		$options                 = array('template' => 'test');
-
 		// Reset database
 		db::getInstance()->appDB->query(file_get_contents(__DIR__.'/fieldBuilderTest.sql'));
 
 		// Success cases
-		$form = formBuilder::createForm("updateForm", array('table' => 'fieldBuilderTest'));
+		$form              = formBuilder::createForm("updateForm", array('table' => 'fieldBuilderTest'));
+		$form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
+		$options           = array('template' => 'test');
 
 		$form->addField(fieldBuilder::createField(array(
 			'name'    => 'ID',
@@ -340,13 +339,12 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_display_update_noParameters(){
-		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
-
 		// Reset database
 		db::getInstance()->appDB->query(file_get_contents(__DIR__.'/fieldBuilderTest.sql'));
 
 		// Success cases
-		$form = formBuilder::createForm("updateForm", array('table' => 'fieldBuilderTest'));
+		$form              = formBuilder::createForm("updateForm", array('table' => 'fieldBuilderTest'));
+		$form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
 
 		$form->addField(fieldBuilder::createField(array(
 			'name'    => 'ID',
@@ -422,13 +420,12 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_display_update_nullTemplate(){
-		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
-
 		// Reset database
 		db::getInstance()->appDB->query(file_get_contents(__DIR__.'/fieldBuilderTest.sql'));
 
 		// Success cases
-		$form = formBuilder::createForm("updateForm", array('table' => 'fieldBuilderTest'));
+		$form              = formBuilder::createForm("updateForm", array('table' => 'fieldBuilderTest'));
+		$form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
 
 		$form->addField(fieldBuilder::createField(array(
 			'name'    => 'ID',
@@ -582,25 +579,36 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 		$this->assertEquals(errorHandle::prettyPrint(), $this->form->display('errors'));
 	}
 
-	function test_display_update_errorCases() {
+	function test_display_update_errorCases_noDatabase() {
 		$form = formBuilder::createForm("updateForm");
 		$form->addField(fieldBuilder::createField(array(
-			'name'    => 'ID',
-			'value'   => 1,
-			'primary' => TRUE,
+				'name'    => 'ID',
+				'value'   => 1,
+				'primary' => TRUE,
 			)
 		));
 
-		$formOutput = $form->display('updateForm', $options);
+		$formOutput = $form->display('updateForm');
+		$this->assertEquals('Misconfigured formBuilder!', $formOutput);
+	}
+	function test_display_update_errorCases_noREcord() {
+		// Reset database
+		db::getInstance()->appDB->query(file_get_contents(__DIR__.'/fieldBuilderTest.sql'));
+
+		// Setup formBuilder
+		$form = formBuilder::createForm("updateForm", array('table' => 'fieldBuilderTest'));
+		$form->addField(fieldBuilder::createField(array(
+				'name'    => 'ID',
+				'primary' => TRUE,
+			)
+		));
+
+		$formOutput = $form->display('updateForm');
 		$this->assertEquals('Misconfigured formBuilder!', $formOutput);
 
 		$form->modifyField('ID', 'value', 9999);
-		$formOutput = $form->display('updateForm', $options);
+		$formOutput = $form->display('updateForm');
 		$this->assertEquals('No record found!', $formOutput);
-
-		$form->modifyField('ID', 'value', '');
-		$formOutput = $form->display('updateForm', $options);
-		$this->assertEquals('Misconfigured formBuilder!', $formOutput);
 	}
 
 	function test_display_invalidType() {
