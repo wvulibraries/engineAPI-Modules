@@ -157,8 +157,8 @@ class fieldBuilder{
 		switch($this->field['type']){
 			case 'wysiwyg':
 				return array(
-//					__DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'ckeditor'.DIRECTORY_SEPARATOR.'ckeditor.js',
-//					__DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'wysiwyg.js',
+					// __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'ckeditor'.DIRECTORY_SEPARATOR.'ckeditor.js',
+					// __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'wysiwyg.js',
 				);
 			case 'multiselect':
 				$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multi-select.css';
@@ -260,7 +260,6 @@ class fieldBuilder{
 			switch ($this->field['type']) {
 				case 'radio':
 				case 'checkbox':
-				case 'select':
 				case 'multiselect':
 				case 'plaintext':
 				case 'password':
@@ -269,6 +268,7 @@ class fieldBuilder{
 				case 'textarea':
 					$type = $this->field['type'];
 					break;
+				case 'select':
 				case 'dropdown':
 					$type = 'select';
 				case 'bool':
@@ -603,11 +603,11 @@ class fieldBuilder{
 				$this->renderOptions['options'][1] = $yes;
 				return $this->__render_radio();
 
-			default:
 			case 'select':
+			default:
 				if(isset($options['includeBlank']) && $options['includeBlank']) $this->renderOptions['options'][''] = '';
-			$this->renderOptions['options'][0] = $no;
-			$this->renderOptions['options'][1] = $yes;
+				$this->renderOptions['options'][0] = $no;
+				$this->renderOptions['options'][1] = $yes;
 				return $this->__render_select();
 		}
 	}
