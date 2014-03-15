@@ -21,12 +21,12 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 
 	// -------------------------------------------------
 
-	function test_templates_localOverrideTemplate(){
+	function test_localOverrideTemplate(){
 		$formTemplate = new formBuilderTemplate($this->form);
 		$this->assertEquals('Some template test', $formTemplate->render('Some template test'));
 	}
 
-	function test_templates_formTitle(){
+	function test_formTitle(){
 		$template = '{formTitle}';
 
 		$this->assertEquals('', $this->formTemplate->render($template));
@@ -36,7 +36,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertEquals('foo', $formTemplate->render($template));
 	}
 
-	function test_templates_formBegin(){
+	function test_formBegin(){
 		$html = $this->formTemplate->render('{form}');
 		$this->assertContains('<form method="post">', $html);
 		$this->assertContains('<input type="hidden" name="__formID"', $html);
@@ -44,7 +44,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertContains('<input type="hidden" name="__csrfToken"', $html);
 	}
 
-	function test_templates_formBegin_hiddenTrue(){
+	function test_formBegin_hiddenTrue(){
 		$this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'type' => 'hidden')));
 		$this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'type' => 'text')));
 		$html = $this->formTemplate->render('{form hidden="true"}');
@@ -57,7 +57,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertNotContains($bar->render(), $html);
 	}
 
-	function test_templates_formBegin_hiddenFalse(){
+	function test_formBegin_hiddenFalse(){
 		$this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'type' => 'hidden')));
 		$this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'type' => 'text')));
 		$html = $this->formTemplate->render('{form hidden="false"}');
@@ -70,19 +70,19 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertNotContains($bar->render(), $html);
 	}
 
-	function test_templates_formBegin_miscAttributes(){
 		$html = $this->formTemplate->render('{form foo="bar" red="green"}');
 		$this->assertContains('<form method="post" foo="bar" red="green">', $html);
+	function test_formBegin_miscAttributes(){
 		$this->assertContains('<input type="hidden" name="__formID"', $html);
 		$this->assertContains('<input type="hidden" name="__csrfID"', $html);
 		$this->assertContains('<input type="hidden" name="__csrfToken"', $html);
 	}
 
-	function test_templates_formEnd(){
+	function test_formEnd(){
 		$this->assertEquals('</form>', $this->formTemplate->render('{/form}'));
 	}
 
-	function test_templates_fields_default(){
+	function test_fields_default(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->form->addField($bar = fieldBuilder::createField('bar'));
 
@@ -91,7 +91,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertContains($bar->render(), $template, "The rendered template contains the bar field");
 	}
 
-	function test_templates_fields_full(){
+	function test_fields_full(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->form->addField($bar = fieldBuilder::createField('bar'));
 
@@ -100,7 +100,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertContains($bar->render(), $template, "The rendered template contains the bar field");
 	}
 
-	function test_templates_fields_fields(){
+	function test_fields_fields(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->form->addField($bar = fieldBuilder::createField('bar'));
 
@@ -111,7 +111,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertNotContains($bar->renderLabel(), $template, "The rendered template doesn't contain the bar label");
 	}
 
-	function test_templates_fields_labels(){
+	function test_fields_labels(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->form->addField($bar = fieldBuilder::createField('bar'));
 
@@ -122,7 +122,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertNotContains($bar->renderField(), $template, "The rendered template doesn't contain the bar field");
 	}
 
-	function test_templates_fields_hidden(){
+	function test_fields_hidden(){
 		$this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'type' => 'hidden')));
 		$this->form->addField($cat = fieldBuilder::createField(array('name' => 'cat', 'type' => 'hidden')));
 		$this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'type' => 'text')));
@@ -133,89 +133,89 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertNotContains($bar->render(), $template, "The rendered template doesn't contain the bar field");
 	}
 
-	function test_templates_fields_invalidOption(){
+	function test_fields_invalidOption(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->form->addField($bar = fieldBuilder::createField('bar'));
 		$this->assertEquals('', $this->formTemplate->render('{fields display="INVALID"}'));
 	}
 
-	function test_templates_field_default(){
+	function test_field_default(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->assertEquals($foo->render(), $this->formTemplate->render('{field name="foo"}'));
 	}
 
-	function test_templates_field_full(){
+	function test_field_full(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->assertEquals($foo->render(), $this->formTemplate->render('{field name="foo" display="full"}'));
 	}
 
-	function test_templates_field_label(){
+	function test_field_label(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->assertEquals($foo->renderLabel(), $this->formTemplate->render('{field name="foo" display="label"}'));
 	}
 
-	function test_templates_field_field(){
+	function test_field_field(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->assertEquals($foo->renderField(), $this->formTemplate->render('{field name="foo" display="field"}'));
 	}
 
-	function test_templates_field_noFieldName(){
+	function test_field_noFieldName(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->assertEquals('', $this->formTemplate->render('{field}'));
 	}
 
-	function test_templates_field_invalidFieldName(){
+	function test_field_invalidFieldName(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->assertEquals('', $this->formTemplate->render('{field name="invalid"}'));
 	}
 
-	function test_templates_field_invalidDisplay(){
+	function test_field_invalidDisplay(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->assertEquals('', $this->formTemplate->render('{field name="foo" display="invalid"}'));
 	}
 
-	function test_templates_field_disabledPrimaryField(){
+	function test_field_disabledPrimaryField(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->form->addPrimaryFields('foo');
 		$rendered = $this->formTemplate->render('{field name="foo"}');
 		$this->assertTag(array('attributes' => 'disabled'), $rendered);
 	}
 
-	function test_templates_fieldsetBeginNoLegend(){
+	function test_fieldsetBeginNoLegend(){
 		$this->assertEquals('<fieldset>', $this->formTemplate->render('{fieldset}'));
 	}
 
-	function test_templates_fieldsetBeginEmptyLegend(){
+	function test_fieldsetBeginEmptyLegend(){
 		$this->assertEquals('<fieldset>', $this->formTemplate->render('{fieldset legend=""}'));
 	}
 
-	function test_templates_fieldsetBeginLegend(){
+	function test_fieldsetBeginLegend(){
 		$this->assertEquals('<fieldset><legend>foo</legend>', $this->formTemplate->render('{fieldset legend="foo"}'));
 	}
 
-	function test_templates_fieldsetEnd(){
+	function test_fieldsetEnd(){
 		$this->assertEquals('</fieldset>', $this->formTemplate->render('{/fieldset}'));
 	}
 
-	function test_templates_noneFormBuilderTag(){
+	function test_noneFormBuilderTag(){
 		$this->assertEquals('{localvars var="foo"}', $this->formTemplate->render('{localvars var="foo"}'));
 	}
 
-	function test_templates_complexTemplate(){
+	function test_complexTemplate(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$template = '{fieldset legend="test"}{fieldset}{field name="foo"}{/fieldset}{/fieldset}';
 		$expected = '<fieldset><legend>test</legend><fieldset>'.$foo->render().'</fieldset></fieldset>';
 		$this->assertEquals($expected, $this->formTemplate->render($template));
 	}
 
-	function test_templates_fieldsLoop(){
+	function test_fieldsLoop(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->form->addField($bar = fieldBuilder::createField('bar'));
 		$template = $this->formTemplate->render('{fieldsLoop}<li>{field}</li>{/fieldsLoop}');
 		$this->assertEquals('<li>'.$foo->render().'</li><li>'.$bar->render().'</li>', $template);
 	}
 
-	function test_templates_fieldsLoop_listedFields(){
+	function test_fieldsLoop_listedFields(){
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->form->addField($bar = fieldBuilder::createField('bar'));
 		$this->form->addField($dog = fieldBuilder::createField('dog'));
@@ -224,14 +224,14 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertEquals('<li>'.$foo->render().'</li><li>'.$dog->render().'</li>', $template);
 	}
 
-	function test_templates_fieldsLoop_editStrip_null(){
+	function test_fieldsLoop_editStrip_null(){
 		$this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'showInEditStrip' => TRUE)));
 		$this->form->addField($bar = fieldBuilder::createField('bar'));
 		$template = $this->formTemplate->render('{fieldsLoop editStrip="null"}<li>{field}</li>{/fieldsLoop}');
 		$this->assertEquals('<li>'.$foo->render().'</li><li>'.$bar->render().'</li>', $template);
 	}
 
-	function test_templates_fieldsLoop_editStrip_true(){
+	function test_fieldsLoop_editStrip_true(){
 		$this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'showInEditStrip' => TRUE)));
 		$this->form->addField($bar = fieldBuilder::createField('bar'));
 		$template = $this->formTemplate->render('{fieldsLoop editStrip="true"}<li>{field}</li>{/fieldsLoop}');
@@ -240,7 +240,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertEquals('<li>'.$foo->render().'</li>', $template);
 	}
 
-	function test_templates_fieldsLoop_editStrip_false(){
+	function test_fieldsLoop_editStrip_false(){
 		$this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'showInEditStrip' => TRUE)));
 		$this->form->addField($bar = fieldBuilder::createField('bar'));
 		$template = $this->formTemplate->render('{fieldsLoop editStrip="false"}<li>{field}</li>{/fieldsLoop}');
@@ -249,7 +249,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertEquals('<li>'.$bar->render().'</li>', $template);
 	}
 
-	function test_templates_fieldsLoop_listedFieldsAndEditStrip(){
+	function test_fieldsLoop_listedFieldsAndEditStrip(){
 		$this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo')));
 		$this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'showInEditStrip' => TRUE)));
 		$this->form->addField($dog = fieldBuilder::createField(array('name' => 'dog', 'showInEditStrip' => FALSE)));
@@ -258,7 +258,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertEquals('<li>'.$bar->render().'</li>', $template);
 	}
 
-	function test_templates_fieldsLoop_showHiddenTrue(){
+	function test_fieldsLoop_showHiddenTrue(){
 		$this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'type' => 'hidden')));
 		$this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'type' => 'hidden')));
 		$this->form->addField($cat = fieldBuilder::createField(array('name' => 'cat', 'type' => 'text')));
@@ -272,7 +272,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertContains($cat->render(), $template);
 	}
 
-	function test_templates_fieldsLoop_showHiddenFalse(){
+	function test_fieldsLoop_showHiddenFalse(){
 		$this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'type' => 'hidden')));
 		$this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'type' => 'hidden')));
 		$this->form->addField($cat = fieldBuilder::createField(array('name' => 'cat', 'type' => 'text')));
@@ -286,7 +286,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertContains($cat->render(), $template);
 	}
 
-	function test_templates_fieldsLoop_showHiddenWithList(){
+	function test_fieldsLoop_showHiddenWithList(){
 		$this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'type' => 'hidden')));
 		$this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'type' => 'hidden')));
 		$this->form->addField($cat = fieldBuilder::createField(array('name' => 'cat', 'type' => 'text')));
@@ -296,7 +296,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertContains($cat->render(), $template);
 	}
 
-	function test_templates_rowLoop(){
+	function test_rowLoop(){
 		// Reset database
 		db::getInstance()->appDB->query(file_get_contents(__DIR__.'/fieldBuilderTest.sql'));
 
@@ -328,4 +328,3 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 	}
 
 }
- 
