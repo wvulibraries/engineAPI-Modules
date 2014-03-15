@@ -654,7 +654,7 @@ class formBuilder extends formFields{
 				return errorHandle::prettyPrint();
 
 			default:
-				errorHandle::newError(__METHOD__."() Unsupported display type '{$options['display']}' for form '{$this->formName}'", errorHandle::DEBUG);
+				errorHandle::newError(__METHOD__."() Unsupported display type '$display' for form '{$this->formName}'", errorHandle::DEBUG);
 				return '';
 		}
 	}
