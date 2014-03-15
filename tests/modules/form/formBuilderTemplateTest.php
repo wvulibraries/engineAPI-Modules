@@ -70,9 +70,33 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->assertNotContains($bar->render(), $html);
 	}
 
-		$html = $this->formTemplate->render('{form foo="bar" red="green"}');
-		$this->assertContains('<form method="post" foo="bar" red="green">', $html);
 	function test_formBegin_miscAttributes(){
+		$html = $this->formTemplate->render('{form foo="bar" red="green" data-cat="dog"}');
+		$this->assertContains('<form method="post" foo="bar" red="green" data-cat="dog">', $html);
+		$this->assertContains('<input type="hidden" name="__formID"', $html);
+		$this->assertContains('<input type="hidden" name="__csrfID"', $html);
+		$this->assertContains('<input type="hidden" name="__csrfToken"', $html);
+	}
+
+	function test_formBegin_formAttributes(){
+		$this->formTemplate->formAttributes['foo'] = 'bar';
+		$this->formTemplate->formAttributes['cat'] = 'dog';
+
+		$html = $this->formTemplate->render('{form}');
+
+		$this->assertContains('<form method="post" foo="bar" cat="dog">', $html);
+		$this->assertContains('<input type="hidden" name="__formID"', $html);
+		$this->assertContains('<input type="hidden" name="__csrfID"', $html);
+		$this->assertContains('<input type="hidden" name="__csrfToken"', $html);
+	}
+
+	function test_formBegin_dataAttributes(){
+		$this->formTemplate->formDataAttributes['foo'] = 'bar';
+		$this->formTemplate->formDataAttributes['cat'] = 'dog';
+
+		$html = $this->formTemplate->render('{form}');
+
+		$this->assertContains('<form method="post" data-foo="bar" data-cat="dog">', $html);
 		$this->assertContains('<input type="hidden" name="__formID"', $html);
 		$this->assertContains('<input type="hidden" name="__csrfID"', $html);
 		$this->assertContains('<input type="hidden" name="__csrfToken"', $html);
@@ -330,6 +354,59 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 			)
 
 		), $template, 'It contains 3 <input> tags');
+	}
+
+	function test_rowLoop_invalidTable(){
+		// Reset database
+		db::getInstance()->appDB->query(file_get_contents(__DIR__.'/fieldBuilderTest.sql'));
+
+		// Create a new form
+		$form         = formBuilder::createForm("rowLoop");
+		$formTemplate = new formBuilderTemplate($form);
+
+		// Add a field
+		$form->addField($foo = fieldBuilder::createField('name'));
+
+		// Process the template
+		$template = $formTemplate->render('{rowLoop}<li>{field display="field" name="name"}</li>{/rowLoop}');
+
+		// Assertions
+		$this->assertEquals('', $template);
+	}
+
+	function test_rowcount() {
+		// Reset database
+		db::getInstance()->appDB->query(file_get_contents(__DIR__.'/fieldBuilderTest.sql'));
+
+		// Create a new form
+		$form         = formBuilder::createForm("rowLoop", array('table' => 'fieldBuilderTest', 'limit' => 3));
+		$formTemplate = new formBuilderTemplate($form);
+
+		// Process the template
+		$this->assertEquals('3', $formTemplate->render('{rowCount}'), "'{rowCount}' is 3");
+		$this->assertEquals('3', $formTemplate->render('{rowcount}'), "'{rowcount}' is 3");
+	}
+
+	function test_fieldcount() {
+		$this->form->addField($foo = fieldBuilder::createField('name'));
+		$this->assertEquals('1', $this->formTemplate->render('{fieldCount}'), "'{fieldCount}' is 1");
+		$this->assertEquals('1', $this->formTemplate->render('{fieldcount}'), "'{fieldcount}' is 1");
+
+		$this->form->addField($bar = fieldBuilder::createField('ID'));
+		$this->assertEquals('2', $this->formTemplate->render('{fieldCount}'), "'{fieldCount}' is 2");
+		$this->assertEquals('2', $this->formTemplate->render('{fieldcount}'), "'{fieldcount}' is 2");
+	}
+
+	function test_formErrors() {
+		errorHandle::errorMsg("Test errorMsg1");
+
+		$this->assertEquals('<ul class="errorPrettyPrint"><li><span class="errorMessage">Test errorMsg1</span></li></ul>', $this->formTemplate->render('{formErrors}'));
+	}
+
+	function test_wrappedFormErrors() {
+		errorHandle::errorMsg("Test errorMsg2");
+
+		$this->assertEquals('<span class="test"><ul class="errorPrettyPrint"><li><span class="errorMessage">Test errorMsg2</span></li></ul></span>', $this->formTemplate->render('{ifFormErrors}<span class="test">{formErrors}</span>{/ifFormErrors}'));
 	}
 
 }
