@@ -417,4 +417,18 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$engine->errorStack = array();
 	}
 
+	function test_expandableEditTable_enabled(){
+		$this->formTemplate->renderOptions['expandable'] = TRUE;
+		$template = $this->formTemplate->render('{ifExpandable}Foo{/ifExpandable}');
+		$this->assertEquals('Foo', $template);
+	}
+	function test_expandableEditTable_disabled(){
+		$this->formTemplate->renderOptions['expandable'] = FALSE;
+		$template = $this->formTemplate->render('{ifExpandable}Foo{/ifExpandable}');
+		$this->assertEquals('', $template);
+
+		$template = $this->formTemplate->render('Before{ifExpandable}Foo{/ifExpandable}After');
+		$this->assertEquals('BeforeAfter', $template);
+	}
+
 }
