@@ -612,10 +612,6 @@ class fieldBuilder{
 		}
 	}
 
-	private function buildFieldHelp(){
-
-	}
-
 	/**
 	 * Build the attribute pairs for the label element
 	 *
