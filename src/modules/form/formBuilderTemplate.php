@@ -213,8 +213,9 @@ class formBuilderTemplate {
 
 			$controls = '';
 			if(isset($this->renderOptions['expandable']) && $this->renderOptions['expandable']){
-				$controls .= '<i class="icon-collapse" data-target="#updateForm_'.$rowID.'" title="Expand"></i>';
+				$controls .= '<i class="icon icon-collapse" data-target="#updateForm_'.$rowID.'" title="Expand"></i>';
 			}
+			$controls .= '<i class="icon icon-trash" data-target="#updateForm_'.$rowID.'" title="Delete"></i>';
 			$rowBlock = str_replace('{controls}', $controls, $rowBlock);
 
 			$output .= $rowBlock;

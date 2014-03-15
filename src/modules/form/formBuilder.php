@@ -591,6 +591,9 @@ class formBuilder extends formFields{
 	public function display($display, $options=array()){
 		$display = trim(strtolower($display));
 		switch ($display) {
+			case 'form':
+				return $this->displayForm($options);
+
 			case 'insert':
 			case 'insertform':
 				$this->ensureFormSubmit();
@@ -657,6 +660,11 @@ class formBuilder extends formFields{
 				errorHandle::newError(__METHOD__."() Unsupported display type '$display' for form '{$this->formName}'", errorHandle::DEBUG);
 				return '';
 		}
+	}
+
+	public function displayForm($options = array()){
+		// TODO
+		return '';
 	}
 
 	/**
@@ -767,6 +775,13 @@ class formBuilder extends formFields{
 	public function displayEditTable($options = array()){
 		// Default expandable to FALSE
 		if(!isset($options['expandable'])) $options['expandable'] = FALSE;
+
+		// Add the 'deletedRows' field
+		$this->addField(array(
+			'name'    => '__deleted',
+			'fieldID' => 'deletedRowIDs',
+			'type'    => 'hidden',
+		));
 
 		// Get the template text (overriding the template if needed)
 		$templateFile = 'editTable.html';

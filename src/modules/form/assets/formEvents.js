@@ -18,6 +18,8 @@ var formBuilder = {
 		// Setup event handlers
 		this.$editTable.on('click', '.icon-expand', this.hideForm);
 		this.$editTable.on('click', '.icon-collapse', this.showForm);
+		this.$editTable.on('click', '.icon-trash', this.deleteRow);
+
 	},
 
 	showForm: function(e){
@@ -82,6 +84,29 @@ var formBuilder = {
 				$target.html('Failed to load form.');
 			}
 		});
+	},
+
+	deleteRow: function(e){
+		var $parent = $(this).parents('[data-row_id]');
+		var $deletedRowIDs = $('#deletedRowIDs');
+		var deletedRowIDs = $deletedRowIDs.val().length
+			? $deletedRowIDs.val().split(',')
+			: [];
+		var rowID = $parent.data('row_id');
+
+		if(-1 == (index = deletedRowIDs.indexOf(rowID))){
+			// Delete the row
+			if(confirm("Are you sure?")){
+				// Delete the row
+				deletedRowIDs.push(rowID);
+				$parent.find(':input').addClass('deleted');
+			}
+		}else{
+			// un-Delete the row
+			deletedRowIDs.splice(index, 1);
+			$parent.find(':input').removeClass('deleted');
+		}
+		$deletedRowIDs.val( deletedRowIDs.join() );
 	}
 };
 
