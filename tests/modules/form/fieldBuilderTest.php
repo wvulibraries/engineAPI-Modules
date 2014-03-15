@@ -120,6 +120,11 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 		), $field);
 	}
 
+	function testToSqlSnippet(){
+		$field = fieldBuilder::createField('foo');
+		$this->assertEquals('`foo`=?', $field->toSqlSnippet());
+	}
+
 	function testItFailsIfNotGivenAFieldName(){
 		$field = fieldBuilder::createField(array());
 		$this->assertFalse($field);
@@ -344,6 +349,14 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 		$this->assertIsInputTag($field->renderField(), 'radio');
 	}
 
+	function testType_radio_noOptions(){
+		$field = fieldBuilder::createField(array(
+			'name'    => 'foo',
+			'type'    => 'radio',
+		));
+		$this->assertEquals('', $field->renderField());
+	}
+
 	function testType_checkbox(){
 		$field = fieldBuilder::createField(array(
 			'name'    => 'foo',
@@ -351,6 +364,333 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'options' => array('a', 'b', 'c')
 		));
 		$this->assertIsInputTag($field->renderField(), 'checkbox');
+	}
+
+	function testType_checkbox_singleOption(){
+		$field = fieldBuilder::createField(array(
+			'name'    => 'foo',
+			'type'    => 'checkbox',
+			'options' => array('a')
+		));
+		$this->assertTag(array(
+			'children' => array(
+				'count' => 1,
+				'only' => array(
+					'tag' => 'input',
+					),
+				),
+			), $field->renderField()
+		);
+	}
+
+	function testType_checkbox_noOptions(){
+		$field = fieldBuilder::createField(array(
+			'name'    => 'foo',
+			'type'    => 'checkbox',
+		));
+		$this->assertEquals('', $field->renderField());
+	}
+
+	function testType_plaintext(){
+		$field = fieldBuilder::createField(array(
+			'name'    => 'foo',
+			'type'    => 'plaintext',
+			'value'   => '<b>Hello World!</b>',
+		));
+		$this->assertEquals('<b>Hello World!</b>', $field->renderField());
+	}
+
+	function testType_textarea(){
+		$field = fieldBuilder::createField(array(
+			'name'    => 'foo',
+			'type'    => 'textarea',
+		));
+		$this->assertTag(array('tag'=>'textarea'), $field->renderField());
+	}
+
+	function testType_boolean_noLabels(){
+		$field = fieldBuilder::createField(array(
+			'name'    => 'foo',
+			'type'    => 'boolean',
+		));
+
+		$renderedField = $field->renderField();
+
+		$this->assertTag(array(
+			'tag' => 'option',
+			'content' => 'Yes',
+			'attributes' => array(
+				'value' => '1',
+			),
+		), $renderedField, "Has a 'Yes' option");
+
+		$this->assertTag(array(
+			'tag' => 'option',
+			'content' => 'No',
+			'attributes' => array(
+				'value' => '0',
+			),
+		), $renderedField, "Has a 'No' option");
+	}
+
+	function testType_boolean_withLabels(){
+		$field = fieldBuilder::createField(array(
+			'name'    => 'foo',
+			'type'    => 'boolean',
+			'options' => array(
+				'labels' => array('False', 'True'),
+			)
+		));
+
+		$renderedField = $field->renderField();
+
+		$this->assertTag(array(
+			'tag' => 'option',
+			'content' => 'True',
+			'attributes' => array(
+				'value' => '1',
+			),
+		), $renderedField, "Has a 'True' option");
+
+		$this->assertTag(array(
+			'tag' => 'option',
+			'content' => 'False',
+			'attributes' => array(
+				'value' => '0',
+			),
+		), $renderedField, "Has a 'False' option");
+	}
+
+	function testType_boolean_select_noLabels(){
+		$field = fieldBuilder::createField(array(
+			'name'    => 'foo',
+			'type'    => 'boolean',
+			'options' => array(
+				'type' => 'select',
+			)
+		));
+
+		$renderedField = $field->renderField();
+
+		$this->assertTag(array(
+			'tag' => 'option',
+			'content' => 'Yes',
+			'attributes' => array(
+				'value' => '1',
+			),
+		), $renderedField, "Select has a 'Yes' option");
+
+		$this->assertTag(array(
+			'tag' => 'option',
+			'content' => 'No',
+			'attributes' => array(
+				'value' => '0',
+			),
+		), $renderedField, "Select has a 'No' option");
+	}
+
+	function testType_boolean_select_withLabels(){
+		$field = fieldBuilder::createField(array(
+			'name'    => 'foo',
+			'type'    => 'boolean',
+			'options' => array(
+				'type' => 'select',
+				'labels' => array('False', 'True'),
+			)
+		));
+
+		$renderedField = $field->renderField();
+
+		$this->assertTag(array(
+			'tag' => 'option',
+			'content' => 'True',
+			'attributes' => array(
+				'value' => '1',
+			),
+		), $renderedField, "Select has a 'True' option");
+
+		$this->assertTag(array(
+			'tag' => 'option',
+			'content' => 'False',
+			'attributes' => array(
+				'value' => '0',
+			),
+		), $renderedField, "Select has a 'False' option");
+	}
+
+	function testType_boolean_select_noLabels_includeEmpty(){
+		$field = fieldBuilder::createField(array(
+			'name'    => 'foo',
+			'type'    => 'boolean',
+			'options' => array(
+				'type' => 'select',
+				'includeBlank' => TRUE,
+			)
+		));
+
+		$renderedField = $field->renderField();
+
+		$this->assertTag(array(
+			'tag' => 'option',
+			'content' => 'Yes',
+			'attributes' => array(
+				'value' => '1',
+			),
+		), $renderedField, "Select has a 'Yes' option");
+
+		$this->assertTag(array(
+			'tag' => 'option',
+			'content' => 'No',
+			'attributes' => array(
+				'value' => '0',
+			),
+		), $renderedField, "Select has a 'No' option");
+
+		$this->assertTag(array(
+			'tag' => 'option',
+			'content' => '',
+			'attributes' => array(
+				'value' => '',
+			),
+		), $renderedField, "Select has a 'Blank' option");
+	}
+
+	function testType_boolean_select_withLabels_includeEmpty(){
+		$field = fieldBuilder::createField(array(
+			'name'    => 'foo',
+			'type'    => 'boolean',
+			'options' => array(
+				'type' => 'select',
+				'includeBlank' => TRUE,
+				'labels' => array('False', 'True'),
+			)
+		));
+
+		$renderedField = $field->renderField();
+
+		$this->assertTag(array(
+			'tag' => 'option',
+			'content' => 'True',
+			'attributes' => array(
+				'value' => '1',
+			),
+		), $renderedField, "Select has a 'True' option");
+
+		$this->assertTag(array(
+			'tag' => 'option',
+			'content' => 'False',
+			'attributes' => array(
+				'value' => '0',
+			),
+		), $renderedField, "Select has a 'False' option");
+
+		$this->assertTag(array(
+			'tag' => 'option',
+			'content' => '',
+			'attributes' => array(
+				'value' => '',
+			),
+		), $renderedField, "Select has a 'Blank' option");
+	}
+
+	function testType_boolean_radio_noLabels(){
+		$field = fieldBuilder::createField(array(
+			'name'    => 'foo',
+			'type'    => 'boolean',
+			'options' => array(
+				'type' => 'radio',
+			)
+		));
+
+		$renderedField = $field->renderField();
+
+		$this->assertTag(array(
+			'tag' => 'label',
+			'content' => 'Yes',
+			'children' => array(
+				'count' => 1,
+				'only' => array(
+					'tag' => 'input',
+					'attributes' => array(
+						'value' => '1',
+					),
+				),
+			),
+		), $renderedField, "Radio has a 'Yes' option");
+
+		$this->assertTag(array(
+			'tag' => 'label',
+			'content' => 'No',
+			'children' => array(
+				'count' => 1,
+				'only' => array(
+					'tag' => 'input',
+					'attributes' => array(
+						'value' => '0',
+					),
+				),
+			),
+		), $renderedField, "Radio has a 'No' option");
+	}
+
+	function testType_boolean_radio_withLabels(){
+		$field = fieldBuilder::createField(array(
+			'name'    => 'foo',
+			'type'    => 'boolean',
+			'options' => array(
+				'type' => 'radio',
+				'labels' => array('False', 'True'),
+			)
+		));
+
+		$renderedField = $field->renderField();
+
+		$this->assertTag(array(
+			'tag' => 'label',
+			'content' => 'True',
+			'children' => array(
+				'count' => 1,
+				'only' => array(
+					'tag' => 'input',
+					'attributes' => array(
+						'value' => '1',
+					),
+				),
+			),
+		), $renderedField, "Radio has a 'True' option");
+
+		$this->assertTag(array(
+			'tag' => 'label',
+			'content' => 'False',
+			'children' => array(
+				'count' => 1,
+				'only' => array(
+					'tag' => 'input',
+					'attributes' => array(
+						'value' => '0',
+					),
+				),
+			),
+		), $renderedField, "Radio has a 'False' option");
+	}
+
+	function testType_boolean_checkbox(){
+		$field = fieldBuilder::createField(array(
+			'name'    => 'foo',
+			'type'    => 'boolean',
+			'options' => array(
+				'type' => 'checkbox',
+			)
+		));
+
+		$renderedField = $field->renderField();
+
+		$this->assertTag(array(
+			'tag' => 'input',
+			'attributes' => array(
+				'value' => '1',
+			),
+		), $renderedField);
 	}
 
 	function testType_wysiwyg(){
