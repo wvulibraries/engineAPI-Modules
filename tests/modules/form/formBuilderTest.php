@@ -620,18 +620,8 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_linkToDatabase_noTable() {
-		$this->assertFalse($this->form->linkToDatabase());
+		$this->assertFalse($this->form->linkToDatabase(array()));
 	}
-
-
-
-
-
-
-
-
-
-
 
 	// Old display tests - keeping for now to remember each step and what it should output
 	function test_displayInsertForm_absoluteTemplatePathFile(){
