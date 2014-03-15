@@ -117,7 +117,7 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 		$field = fieldBuilder::createField('foo');
 		$this->assertTag(array(
 			'tag' => 'input',
-		), $field->renderField());
+		), $field);
 	}
 
 	function testItFailsIfNotGivenAFieldName(){
