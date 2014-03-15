@@ -166,12 +166,12 @@ class formBuilder extends formFields{
 				}
 
 				// Generate <li> HTML
-				$output .= sprintf('<li><span class="%s">%s</span>', $class, htmlentities($msg));
+				$output .= sprintf('<li><span class="%s">%s</span></li>', $class, htmlentities($msg));
 			}
 
 			// Loop through all the form errors and generate their <li> HTML
 			foreach ($formErrors as $formError) {
-				$output .= sprintf('<li><span class="%s">%s</span>', errorHandle::$uiClassError, htmlentities($formError));
+				$output .= sprintf('<li><span class="%s">%s</span></li>', errorHandle::$uiClassError, htmlentities($formError));
 			}
 
 			// Finish the <ul> and return
@@ -636,7 +636,7 @@ class formBuilder extends formFields{
 							$cssAssetBlob .= minifyCSS($file);
 							break;
 						case 'js':
-//							$jsAssetBlob .= minifyJS($file);
+							// $jsAssetBlob .= minifyJS($file);
 							$jsAssetBlob .= file_get_contents($file);
 							break;
 						default:
