@@ -398,15 +398,21 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_formErrors() {
+		$engine = EngineAPI::singleton();
+		$engine->errorStack = array();
 		errorHandle::errorMsg("Test errorMsg1");
 
 		$this->assertEquals('<ul class="errorPrettyPrint"><li><span class="errorMessage">Test errorMsg1</span></li></ul>', $this->formTemplate->render('{formErrors}'));
+		$engine->errorStack = array();
 	}
 
 	function test_wrappedFormErrors() {
+		$engine = EngineAPI::singleton();
+		$engine->errorStack = array();
 		errorHandle::errorMsg("Test errorMsg2");
 
 		$this->assertEquals('<span class="test"><ul class="errorPrettyPrint"><li><span class="errorMessage">Test errorMsg2</span></li></ul></span>', $this->formTemplate->render('{ifFormErrors}<span class="test">{formErrors}</span>{/ifFormErrors}'));
+		$engine->errorStack = array();
 	}
 
 }
