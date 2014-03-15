@@ -227,11 +227,10 @@ class formBuilderTemplate {
 		// If there's a block move into it, and replace {formErrors} with the formErrorsHTML from above
 		if(sizeof($matches) > 1){
 			$block = $matches[1];
-			$block = str_replace('{formErrors}', $block, $formErrorHTML);
+			return str_replace('{formErrors}', $formErrorHTML, $block);
+		}else{
+			return $formErrorHTML;
 		}
-
-		// Return the final HTML
-		return $block;
 	}
 
 	/**
