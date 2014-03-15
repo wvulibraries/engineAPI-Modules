@@ -375,6 +375,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_rowcount() {
+		$this->markTestIncomplete();
 		// Reset database
 		db::getInstance()->appDB->query(file_get_contents(__DIR__.'/fieldBuilderTest.sql'));
 
@@ -388,6 +389,7 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_fieldcount() {
+		$this->markTestIncomplete();
 		$this->form->addField($foo = fieldBuilder::createField('name'));
 		$this->assertEquals('1', $this->formTemplate->render('{fieldCount}'), "'{fieldCount}' is 1");
 		$this->assertEquals('1', $this->formTemplate->render('{fieldcount}'), "'{fieldcount}' is 1");
