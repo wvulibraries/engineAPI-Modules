@@ -178,7 +178,12 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 		$this->form->addField($foo = fieldBuilder::createField('foo'));
 		$this->form->addPrimaryFields('foo');
 		$rendered = $this->formTemplate->render('{field name="foo"}');
-		$this->assertTag(array('attributes' => 'disabled'), $rendered);
+		$this->assertTag(array(
+			'tag'        => 'input',
+			'attributes' => array(
+				'disabled' => TRUE
+			)
+		), $rendered);
 	}
 
 	function test_fieldsetBeginNoLegend(){
