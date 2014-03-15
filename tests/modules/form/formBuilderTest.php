@@ -138,22 +138,22 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 		$this->form->addPrimaryFields('foo');
 
 		$formOutput = $this->form->display('expandable', $options);
-		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertEquals('Test Edit Table', $formOutput);
 		$this->assertFormData('expandableEditTable');
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 
 		$formOutput = $this->form->display('expandableEdit', $options);
-		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertEquals('Test Edit Table', $formOutput);
 		$this->assertFormData('expandableEditTable');
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 
 		$formOutput = $this->form->display('expandableTable', $options);
-		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertEquals('Test Edit Table', $formOutput);
 		$this->assertFormData('expandableEditTable');
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 
 		$formOutput = $this->form->display('expandableEditTable', $options);
-		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertEquals('Test Edit Table', $formOutput);
 		$this->assertFormData('expandableEditTable');
 	}
 
@@ -198,7 +198,7 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_display_edit_absoluteTemplatePathFile(){
-		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test/edit.html');
+		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test/editTable.html');
 
 		$this->form->addField(fieldBuilder::createField('foo'));
 		$this->form->addPrimaryFields('foo');
@@ -214,28 +214,28 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_display_expandable_absoluteTemplatePathFile(){
-		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test/expandable.html');
+		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test/editTable.html');
 
 		$this->form->addField(fieldBuilder::createField('foo'));
 		$this->form->addPrimaryFields('foo');
 
 		$formOutput = $this->form->display('expandable', $options);
-		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertEquals('Test Edit Table', $formOutput);
 		$this->assertFormData('expandableEditTable');
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 
 		$formOutput = $this->form->display('expandableEdit', $options);
-		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertEquals('Test Edit Table', $formOutput);
 		$this->assertFormData('expandableEditTable');
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 
 		$formOutput = $this->form->display('expandableTable', $options);
-		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertEquals('Test Edit Table', $formOutput);
 		$this->assertFormData('expandableEditTable');
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 
 		$formOutput = $this->form->display('expandableEditTable', $options);
-		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertEquals('Test Edit Table', $formOutput);
 		$this->assertFormData('expandableEditTable');
 	}
 
@@ -305,22 +305,22 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 		$this->form->addPrimaryFields('foo');
 
 		$formOutput = $this->form->display('expandable', $options);
-		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertEquals('Test Edit Table', $formOutput);
 		$this->assertFormData('expandableEditTable');
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 
 		$formOutput = $this->form->display('expandableEdit', $options);
-		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertEquals('Test Edit Table', $formOutput);
 		$this->assertFormData('expandableEditTable');
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 
 		$formOutput = $this->form->display('expandableTable', $options);
-		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertEquals('Test Edit Table', $formOutput);
 		$this->assertFormData('expandableEditTable');
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 
 		$formOutput = $this->form->display('expandableEditTable', $options);
-		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertEquals('Test Edit Table', $formOutput);
 		$this->assertFormData('expandableEditTable');
 	}
 
@@ -386,22 +386,22 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 		$this->form->addPrimaryFields('foo');
 
 		$formOutput = $this->form->display('expandable');
-		$this->assertEquals('Expandable Edit Table Form', $formOutput);
+		$this->assertEquals('Edit Table Form', $formOutput);
 		$this->assertFormData('expandableEditTable');
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 
 		$formOutput = $this->form->display('expandableEdit');
-		$this->assertEquals('Expandable Edit Table Form', $formOutput);
+		$this->assertEquals('Edit Table Form', $formOutput);
 		$this->assertFormData('expandableEditTable');
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 
 		$formOutput = $this->form->display('expandableTable');
-		$this->assertEquals('Expandable Edit Table Form', $formOutput);
+		$this->assertEquals('Edit Table Form', $formOutput);
 		$this->assertFormData('expandableEditTable');
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 
 		$formOutput = $this->form->display('expandableEditTable');
-		$this->assertEquals('Expandable Edit Table Form', $formOutput);
+		$this->assertEquals('Edit Table Form', $formOutput);
 		$this->assertFormData('expandableEditTable');
 	}
 
@@ -467,22 +467,22 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 		$this->form->addPrimaryFields('foo');
 
 		$formOutput = $this->form->display('expandable', NULL);
-		$this->assertEquals('Expandable Edit Table Form', $formOutput);
+		$this->assertEquals('Edit Table Form', $formOutput);
 		$this->assertFormData('expandableEditTable');
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 
 		$formOutput = $this->form->display('expandableEdit', NULL);
-		$this->assertEquals('Expandable Edit Table Form', $formOutput);
+		$this->assertEquals('Edit Table Form', $formOutput);
 		$this->assertFormData('expandableEditTable');
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 
 		$formOutput = $this->form->display('expandableTable', NULL);
-		$this->assertEquals('Expandable Edit Table Form', $formOutput);
+		$this->assertEquals('Edit Table Form', $formOutput);
 		$this->assertFormData('expandableEditTable');
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 
 		$formOutput = $this->form->display('expandableEditTable', NULL);
-		$this->assertEquals('Expandable Edit Table Form', $formOutput);
+		$this->assertEquals('Edit Table Form', $formOutput);
 		$this->assertFormData('expandableEditTable');
 	}
 
