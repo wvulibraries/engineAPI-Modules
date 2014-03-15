@@ -13,7 +13,7 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 	}
 
 	private function assertFormData($formType){
-		$validFormTypes = array('insertForm', 'updateForm', 'editTable');
+		$validFormTypes = array('insertForm', 'updateForm', 'editTable', 'expandableEditTable');
 
 		// Get the save form data from the session
 		$formData = session::get(formBuilder::SESSION_SAVED_FORMS_KEY);
@@ -75,16 +75,560 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 		$this->assertEmpty(sizeof($this->form));
 	}
 
-	function test_displayInsertForm_absoluteTemplatePathDir(){
+	// absoluteTemplatePathDir
+	function test_display_insert_absoluteTemplatePathDir(){
 		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test');
-		$formOutput = $this->form->displayInsertForm($options);
-		$this->assertFormData('insertForm');
+
+		$formOutput = $this->form->display('insert', $options);
 		$this->assertEquals('Test Insert Form', $formOutput);
+		$this->assertFormData('insertForm');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('insertForm', $options);
+		$this->assertEquals('Test Insert Form', $formOutput);
+		$this->assertFormData('insertForm');
 	}
 
+	function test_display_update_absoluteTemplatePathDir(){
+		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test');
+
+		// Reset database
+		db::getInstance()->appDB->query(file_get_contents(__DIR__.'/fieldBuilderTest.sql'));
+
+		// Success cases
+		$form = formBuilder::createForm("updateForm", array('table' => 'fieldBuilderTest'));
+
+		$form->addField(fieldBuilder::createField(array(
+			'name'    => 'ID',
+			'value'   => 1,
+			'primary' => TRUE,
+			)
+		));
+
+		$formOutput = $form->display('update', $options);
+		$this->assertEquals('Test Insert Form', $formOutput);
+		$this->assertFormData('updateForm');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $form->display('updateForm', $options);
+		$this->assertEquals('Test Insert Form', $formOutput);
+		$this->assertFormData('updateForm');
+	}
+
+	function test_display_edit_absoluteTemplatePathDir(){
+		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test');
+
+		$this->form->addField(fieldBuilder::createField('foo'));
+		$this->form->addPrimaryFields('foo');
+
+		$formOutput = $this->form->display('edit', $options);
+		$this->assertEquals('Test Edit Table', $formOutput);
+		$this->assertFormData('editTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('editTable', $options);
+		$this->assertEquals('Test Edit Table', $formOutput);
+		$this->assertFormData('editTable');
+	}
+
+	function test_display_expandable_absoluteTemplatePathDir(){
+		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test');
+
+		$this->form->addField(fieldBuilder::createField('foo'));
+		$this->form->addPrimaryFields('foo');
+
+		$formOutput = $this->form->display('expandable', $options);
+		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableEdit', $options);
+		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableTable', $options);
+		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableEditTable', $options);
+		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertFormData('expandableEditTable');
+	}
+
+	// absoluteTemplatePathFile
+	function test_display_insert_absoluteTemplatePathFile(){
+		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test/insertUpdate.html');
+
+		$formOutput = $this->form->display('insert', $options);
+		$this->assertEquals('Test Insert Form', $formOutput);
+		$this->assertFormData('insertForm');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('insertForm', $options);
+		$this->assertEquals('Test Insert Form', $formOutput);
+		$this->assertFormData('insertForm');
+	}
+
+	function test_display_update_absoluteTemplatePathFile(){
+		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test/insertUpdate.html');
+
+		// Reset database
+		db::getInstance()->appDB->query(file_get_contents(__DIR__.'/fieldBuilderTest.sql'));
+
+		// Success cases
+		$form = formBuilder::createForm("updateForm", array('table' => 'fieldBuilderTest'));
+
+		$form->addField(fieldBuilder::createField(array(
+			'name'    => 'ID',
+			'value'   => 1,
+			'primary' => TRUE,
+			)
+		));
+
+		$formOutput = $form->display('update', $options);
+		$this->assertEquals('Test Insert Form', $formOutput);
+		$this->assertFormData('updateForm');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $form->display('updateForm', $options);
+		$this->assertEquals('Test Insert Form', $formOutput);
+		$this->assertFormData('updateForm');
+	}
+
+	function test_display_edit_absoluteTemplatePathFile(){
+		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test/edit.html');
+
+		$this->form->addField(fieldBuilder::createField('foo'));
+		$this->form->addPrimaryFields('foo');
+
+		$formOutput = $this->form->display('edit', $options);
+		$this->assertEquals('Test Edit Table', $formOutput);
+		$this->assertFormData('editTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('editTable', $options);
+		$this->assertEquals('Test Edit Table', $formOutput);
+		$this->assertFormData('editTable');
+	}
+
+	function test_display_expandable_absoluteTemplatePathFile(){
+		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test/expandable.html');
+
+		$this->form->addField(fieldBuilder::createField('foo'));
+		$this->form->addPrimaryFields('foo');
+
+		$formOutput = $this->form->display('expandable', $options);
+		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableEdit', $options);
+		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableTable', $options);
+		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableEditTable', $options);
+		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertFormData('expandableEditTable');
+	}
+
+	// distributionTemplatePath
+	function test_display_insert_distributionTemplatePath(){
+		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
+		$options                 = array('template' => 'test');
+
+		$formOutput = $this->form->display('insert', $options);
+		$this->assertEquals('Test Insert Form', $formOutput);
+		$this->assertFormData('insertForm');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('insertForm', $options);
+		$this->assertEquals('Test Insert Form', $formOutput);
+		$this->assertFormData('insertForm');
+	}
+
+	function test_display_update_distributionTemplatePath(){
+		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
+		$options                 = array('template' => 'test');
+
+		// Reset database
+		db::getInstance()->appDB->query(file_get_contents(__DIR__.'/fieldBuilderTest.sql'));
+
+		// Success cases
+		$form = formBuilder::createForm("updateForm", array('table' => 'fieldBuilderTest'));
+
+		$form->addField(fieldBuilder::createField(array(
+			'name'    => 'ID',
+			'value'   => 1,
+			'primary' => TRUE,
+			)
+		));
+
+		$formOutput = $form->display('update', $options);
+		$this->assertEquals('Test Insert Form', $formOutput);
+		$this->assertFormData('updateForm');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $form->display('updateForm', $options);
+		$this->assertEquals('Test Insert Form', $formOutput);
+		$this->assertFormData('updateForm');
+	}
+
+	function test_display_edit_distributionTemplatePath(){
+		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
+		$options                 = array('template' => 'test');
+
+		$this->form->addField(fieldBuilder::createField('foo'));
+		$this->form->addPrimaryFields('foo');
+
+		$formOutput = $this->form->display('edit', $options);
+		$this->assertEquals('Test Edit Table', $formOutput);
+		$this->assertFormData('editTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('editTable', $options);
+		$this->assertEquals('Test Edit Table', $formOutput);
+		$this->assertFormData('editTable');
+	}
+
+	function test_display_expandable_distributionTemplatePath(){
+		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
+		$options                 = array('template' => 'test');
+
+		$this->form->addField(fieldBuilder::createField('foo'));
+		$this->form->addPrimaryFields('foo');
+
+		$formOutput = $this->form->display('expandable', $options);
+		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableEdit', $options);
+		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableTable', $options);
+		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableEditTable', $options);
+		$this->assertEquals('Test Expandable Table', $formOutput);
+		$this->assertFormData('expandableEditTable');
+	}
+
+	// noParameters
+	function test_display_insert_noParameters(){
+		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
+
+		$formOutput = $this->form->display('insert');
+		$this->assertEquals('Insert Form Template', $formOutput);
+		$this->assertFormData('insertForm');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('insertForm');
+		$this->assertEquals('Insert Form Template', $formOutput);
+		$this->assertFormData('insertForm');
+	}
+
+	function test_display_update_noParameters(){
+		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
+
+		// Reset database
+		db::getInstance()->appDB->query(file_get_contents(__DIR__.'/fieldBuilderTest.sql'));
+
+		// Success cases
+		$form = formBuilder::createForm("updateForm", array('table' => 'fieldBuilderTest'));
+
+		$form->addField(fieldBuilder::createField(array(
+			'name'    => 'ID',
+			'value'   => 1,
+			'primary' => TRUE,
+			)
+		));
+
+		$formOutput = $form->display('update');
+		$this->assertEquals('Insert Form Template', $formOutput);
+		$this->assertFormData('updateForm');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $form->display('updateForm');
+		$this->assertEquals('Insert Form Template', $formOutput);
+		$this->assertFormData('updateForm');
+	}
+
+	function test_display_edit_noParameters(){
+		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
+
+		$this->form->addField(fieldBuilder::createField('foo'));
+		$this->form->addPrimaryFields('foo');
+
+		$formOutput = $this->form->display('edit');
+		$this->assertEquals('Edit Table Form', $formOutput);
+		$this->assertFormData('editTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('editTable');
+		$this->assertEquals('Edit Table Form', $formOutput);
+		$this->assertFormData('editTable');
+	}
+
+	function test_display_expandable_noParameters(){
+		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
+
+		$this->form->addField(fieldBuilder::createField('foo'));
+		$this->form->addPrimaryFields('foo');
+
+		$formOutput = $this->form->display('expandable');
+		$this->assertEquals('Expandable Edit Table Form', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableEdit');
+		$this->assertEquals('Expandable Edit Table Form', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableTable');
+		$this->assertEquals('Expandable Edit Table Form', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableEditTable');
+		$this->assertEquals('Expandable Edit Table Form', $formOutput);
+		$this->assertFormData('expandableEditTable');
+	}
+
+	// nullTemplate
+	function test_display_insert_nullTemplate(){
+		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
+
+		$formOutput = $this->form->display('insert', NULL);
+		$this->assertEquals('Insert Form Template', $formOutput);
+		$this->assertFormData('insertForm');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('insertForm', NULL);
+		$this->assertEquals('Insert Form Template', $formOutput);
+		$this->assertFormData('insertForm');
+	}
+
+	function test_display_update_nullTemplate(){
+		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
+
+		// Reset database
+		db::getInstance()->appDB->query(file_get_contents(__DIR__.'/fieldBuilderTest.sql'));
+
+		// Success cases
+		$form = formBuilder::createForm("updateForm", array('table' => 'fieldBuilderTest'));
+
+		$form->addField(fieldBuilder::createField(array(
+			'name'    => 'ID',
+			'value'   => 1,
+			'primary' => TRUE,
+			)
+		));
+
+		$formOutput = $form->display('update', NULL);
+		$this->assertEquals('Insert Form Template', $formOutput);
+		$this->assertFormData('updateForm');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $form->display('updateForm', NULL);
+		$this->assertEquals('Insert Form Template', $formOutput);
+		$this->assertFormData('updateForm');
+	}
+
+	function test_display_edit_nullTemplate(){
+		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
+
+		$this->form->addField(fieldBuilder::createField('foo'));
+		$this->form->addPrimaryFields('foo');
+
+		$formOutput = $this->form->display('edit', NULL);
+		$this->assertEquals('Edit Table Form', $formOutput);
+		$this->assertFormData('editTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('editTable', NULL);
+		$this->assertEquals('Edit Table Form', $formOutput);
+		$this->assertFormData('editTable');
+	}
+
+	function test_display_expandable_nullTemplate(){
+		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
+
+		$this->form->addField(fieldBuilder::createField('foo'));
+		$this->form->addPrimaryFields('foo');
+
+		$formOutput = $this->form->display('expandable', NULL);
+		$this->assertEquals('Expandable Edit Table Form', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableEdit', NULL);
+		$this->assertEquals('Expandable Edit Table Form', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableTable', NULL);
+		$this->assertEquals('Expandable Edit Table Form', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableEditTable', NULL);
+		$this->assertEquals('Expandable Edit Table Form', $formOutput);
+		$this->assertFormData('expandableEditTable');
+	}
+
+	// templateBlob
+	function test_display_insert_templateBlob(){
+		$options    = array('template' => 'Test String');
+
+		$formOutput = $this->form->display('insert', $options);
+		$this->assertEquals('Test String', $formOutput);
+		$this->assertFormData('insertForm');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('insertForm', $options);
+		$this->assertEquals('Test String', $formOutput);
+		$this->assertFormData('insertForm');
+	}
+
+	function test_display_update_templateBlob(){
+		$options    = array('template' => 'Test String');
+
+		// Reset database
+		db::getInstance()->appDB->query(file_get_contents(__DIR__.'/fieldBuilderTest.sql'));
+
+		// Success cases
+		$form = formBuilder::createForm("updateForm", array('table' => 'fieldBuilderTest'));
+
+		$form->addField(fieldBuilder::createField(array(
+			'name'    => 'ID',
+			'value'   => 1,
+			'primary' => TRUE,
+			)
+		));
+
+		$formOutput = $form->display('update', $options);
+		$this->assertEquals('Test String', $formOutput);
+		$this->assertFormData('updateForm');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $form->display('updateForm', $options);
+		$this->assertEquals('Test String', $formOutput);
+		$this->assertFormData('updateForm');
+	}
+
+	function test_display_edit_templateBlob(){
+		$options    = array('template' => 'Test String');
+
+		$this->form->addField(fieldBuilder::createField('foo'));
+		$this->form->addPrimaryFields('foo');
+
+		$formOutput = $this->form->display('edit', $options);
+		$this->assertEquals('Test String', $formOutput);
+		$this->assertFormData('editTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('editTable', $options);
+		$this->assertEquals('Test String', $formOutput);
+		$this->assertFormData('editTable');
+	}
+
+	function test_display_expandable_templateBlob(){
+		$options    = array('template' => 'Test String');
+
+		$this->form->addField(fieldBuilder::createField('foo'));
+		$this->form->addPrimaryFields('foo');
+
+		$formOutput = $this->form->display('expandable', $options);
+		$this->assertEquals('Test String', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableEdit', $options);
+		$this->assertEquals('Test String', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableTable', $options);
+		$this->assertEquals('Test String', $formOutput);
+		$this->assertFormData('expandableEditTable');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+
+		$formOutput = $this->form->display('expandableEditTable', $options);
+		$this->assertEquals('Test String', $formOutput);
+		$this->assertFormData('expandableEditTable');
+	}
+
+
+	function test_display_assets() {
+		$output = $this->form->display('assets');
+		$this->assertStringStartsWith('<!-- engine Instruction displayTemplateOff -->', $output);
+		$this->assertStringEndsWith("<!-- engine Instruction displayTemplateOn -->\n", $output);
+	}
+
+	function test_display_errors() {
+		$this->assertEquals(errorHandle::prettyPrint(), $this->form->display('errors'));
+	}
+
+	function test_display_update_errorCases() {
+		$form = formBuilder::createForm("updateForm");
+		$form->addField(fieldBuilder::createField(array(
+			'name'    => 'ID',
+			'value'   => 1,
+			'primary' => TRUE,
+			)
+		));
+
+		$formOutput = $form->display('updateForm', $options);
+		$this->assertEquals('Misconfigured formBuilder!', $formOutput);
+
+		$form->modifyField('ID', 'value', 9999);
+		$formOutput = $form->display('updateForm', $options);
+		$this->assertEquals('No record found!', $formOutput);
+
+		$form->modifyField('ID', 'value', '');
+		$formOutput = $form->display('updateForm', $options);
+		$this->assertEquals('Misconfigured formBuilder!', $formOutput);
+	}
+
+	function test_display_invalidType() {
+		$this->assertEquals('', $this->form->display('somethingInvalid'));
+	}
+
+	function test_linkToDatabase() {
+		$this->assertTrue($this->form->linkToDatabase(array('table' => 'fieldBuilderTest')));
+	}
+
+	function test_linkToDatabase_noTable() {
+		$this->assertFalse($this->form->linkToDatabase());
+	}
+
+
+
+
+
+
+
+
+
+
+
+	// Old display tests - keeping for now to remember each step and what it should output
 	function test_displayInsertForm_absoluteTemplatePathFile(){
 		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test/insertUpdate.html');
-		$formOutput = $this->form->displayInsertForm($options);
+		$formOutput = $this->form->display('insertForm', $options);
 		$this->assertFormData('insertForm');
 		$this->assertEquals('Test Insert Form', $formOutput);
 	}
@@ -92,31 +636,29 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 	function test_displayInsertForm_distributionTemplatePath(){
 		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
 		$options                 = array('template' => 'test');
-		$formOutput              = $this->form->displayInsertForm($options);
+		$formOutput              = $this->form->display('insertForm', $options);
 		$this->assertFormData('insertForm');
 		$this->assertEquals('Test Insert Form', $formOutput);
 	}
 
 	function test_displayInsertForm_noParameters(){
 		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
-		$formOutput              = $this->form->displayInsertForm();
+		$formOutput              = $this->form->display('insertForm');
 		$this->assertFormData('insertForm');
 		$this->assertEquals('Insert Form Template', $formOutput);
 	}
 
 	function test_displayInsertForm_nullTemplate(){
 		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
-		$formOutput              = $this->form->displayInsertForm(NULL);
+		$formOutput              = $this->form->display('insertForm', NULL);
 		$this->assertFormData('insertForm');
 		$this->assertEquals('Insert Form Template', $formOutput);
 	}
 
 	function test_displayInsertForm_templateBlob(){
 		$options    = array('template' => 'Test String');
-		$formOutput = $this->form->displayInsertForm($options);
+		$formOutput = $this->form->display('insertForm', $options);
 		$this->assertFormData('insertForm');
 		$this->assertEquals('Test String', $formOutput);
 	}
-
 }
- 
