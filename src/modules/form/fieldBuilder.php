@@ -77,6 +77,22 @@ class fieldBuilder{
 	}
 
 	/**
+	 * Returns TRUE if this is a 'special' field like a button
+	 * @return bool
+	 */
+	function isSpecial(){
+		return in_array($this->type, array('submit','reset','button'));
+	}
+
+	/**
+	 * Returns TRUE is this is a 'system' field that begins with '__'
+	 * @return bool
+	 */
+	function isSystem(){
+		return (0 === strpos($this->name, '__'));
+	}
+
+	/**
 	 * [Factory] Create a fieldBuilder object. (Returns FALSE on error)
 	 *
 	 * @param array|string $field
@@ -411,7 +427,6 @@ class fieldBuilder{
 				);
 		}
 	}
-
 
 	/**
 	 * [Render Helper] Render an <input> field

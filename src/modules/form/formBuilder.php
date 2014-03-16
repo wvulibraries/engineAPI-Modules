@@ -492,14 +492,14 @@ class formBuilder extends formFields{
 	/**
 	 * Make sure rendered form is submittable by ensuring there is a submit field defined
 	 */
-	private function ensureFormSubmit(){
+	private function ensureFormSubmit($buttonText='Submit'){
 		foreach ($this->fields as $field) {
 			if ($field->type == 'submit') return;
 		}
 		$this->addField(array(
 			'type'  => 'submit',
 			'name'  => 'submit',
-			'value' => 'Submit',
+			'value' => $buttonText,
 			'showInEditStrip' => FALSE,
 		));
 	}
@@ -596,26 +596,20 @@ class formBuilder extends formFields{
 
 			case 'insert':
 			case 'insertform':
-				$this->ensureFormSubmit();
 				return $this->displayInsertForm($options);
 
 			case 'update':
 			case 'updateform':
-				$this->ensureFormSubmit();
-				if(!$this->ensurePrimaryFieldsSet()) return 'Misconfigured formBuilder!';
 				return $this->displayUpdateForm($options);
 
 			case 'edit':
 			case 'edittable':
-				$this->ensureFormSubmit();
-				if(!$this->ensurePrimaryFieldsSet()) return 'Misconfigured formBuilder!';
 				return $this->displayEditTable($options);
 
 			case 'expandable':
 			case 'expandableedit':
 			case 'expandabletable':
 			case 'expandableedittable':
-				$this->ensureFormSubmit();
 				if(!$this->ensurePrimaryFieldsSet()) return 'Misconfigured formBuilder!';
 				return $this->displayExpandableEditTable($options);
 
@@ -663,8 +657,16 @@ class formBuilder extends formFields{
 	}
 
 	public function displayForm($options = array()){
-		// TODO
-		return '';
+		// If no primary fields set, display insertForm
+		if(!sizeof($priFields = $this->getPrimaryFields())) return $this->displayInsertForm($options);
+
+		// If any primary field has no value, display insertForm
+		foreach($priFields as $field){
+			if(!$field->value) return $this->displayInsertForm($options);
+		}
+
+		// Else, display updateForm
+		return $this->displayUpdateForm($options);
 	}
 
 	/**
@@ -674,6 +676,8 @@ class formBuilder extends formFields{
 	 * @return string
 	 */
 	public function displayInsertForm($options = array()){
+		$this->ensureFormSubmit(isset($options['submitText']) ? $options['submitText'] : 'Insert');
+
 		// Get the template text (overriding the template if needed)
 		$templateFile = 'insertUpdate.html';
 		$templateText = isset($options['template'])
@@ -689,7 +693,6 @@ class formBuilder extends formFields{
 		if (isset($options['formAction'])) $template->formAttributes['action'] = $options['formAction'];
 
 		// Render time!
-		$this->ensureFormSubmit();
 		$output = $template->render();
 
 		// Save the form to the session
@@ -706,6 +709,9 @@ class formBuilder extends formFields{
 	 * @return string
 	 */
 	public function displayUpdateForm($options = array()){
+		if(!$this->ensurePrimaryFieldsSet()) return 'Misconfigured formBuilder!';
+		$this->ensureFormSubmit(isset($options['submitText']) ? $options['submitText'] : 'Update');
+
 		$primaryFields = $this->getPrimaryFields();
 
 		// Make sure we have dbOptions
@@ -773,6 +779,9 @@ class formBuilder extends formFields{
 	 * @return string
 	 */
 	public function displayEditTable($options = array()){
+		if(!$this->ensurePrimaryFieldsSet()) return 'Misconfigured formBuilder!';
+		$this->ensureFormSubmit(isset($options['submitText']) ? $options['submitText'] : 'Update');
+
 		// Default expandable to FALSE
 		if(!isset($options['expandable'])) $options['expandable'] = FALSE;
 

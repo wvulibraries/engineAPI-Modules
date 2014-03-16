@@ -1,18 +1,18 @@
 <?php
 
 class formProcessor extends formFields{
-	const ERR_OK         = 0;
-	const ERR_NO_POST    = 1;
-	const ERR_NO_ID      = 2;
-	const ERR_INVALID_ID = 3;
-	const ERR_VALIDATION = 4;
-	const ERR_SYSTEM     = 5;
-	const ERR_TYPE       = 6;
+	const ERR_OK              = 0;
+	const ERR_NO_POST         = 1;
+	const ERR_NO_ID           = 2;
+	const ERR_INVALID_ID      = 3;
+	const ERR_VALIDATION      = 4;
+	const ERR_SYSTEM          = 5;
+	const ERR_TYPE            = 6;
 	const ERR_INCOMPLETE_DATA = 7;
 
-	const TYPE_INSERT    = 1;
-	const TYPE_UPDATE    = 2;
-	const TYPE_EDIT      = 3;
+	const TYPE_INSERT = 1;
+	const TYPE_UPDATE = 2;
+	const TYPE_EDIT   = 3;
 
 	/**
 	 * @var array Human-readable error messages for our ERR types
@@ -266,7 +266,7 @@ class formProcessor extends formFields{
 		$whereFields  = array();
 		foreach($data as $field => $value){
 			$field = $this->getField($field);
-			if(in_array($field->name, $primaryFields)){
+			if($this->isPrimaryField($field->name)){
 				if(is_empty($value)){
 					errorHandle::newError(__METHOD__."() Cannot update record! (primary field '{$field->name}' is empty)", errorHandle::DEBUG);
 					return self::ERR_INCOMPLETE_DATA;
@@ -356,6 +356,9 @@ class formProcessor extends formFields{
 	private function __processInsert($data){
 		$insertData = array();
 		foreach($this->fields as $field){
+			// Skip system or special fields
+			if($field->isSystem() || $field->isSpecial()) continue;
+
 			// Skip disabled fields
 			if($field->disabled) continue;
 
@@ -363,15 +366,19 @@ class formProcessor extends formFields{
 			if($field->readonly) $data[ $field->name ] = $field->renderedValue;
 
 			// Save the field for insertion
-			$insertData[ $field->name ] = $data[ $field->name ];
+			if(isset($data[ $field->name ])) $insertData[ $field->name ] = $data[ $field->name ];
 		}
 
 		// Trigger beforeInsert and doInsert events
 		if($this->triggerPresent('beforeInsert')) $insertData = $this->triggerCallback('beforeInsert', array($insertData));
-		$doUpdate = $this->triggerCallback('doInsert', array($insertData), '__insertRow');
-		if($doUpdate !== self::ERR_OK && $this->triggerPresent('onFailure')){
-			$onFailure = $this->triggerCallback('onFailure', array($doUpdate, $insertData));
-			if(!$onFailure) return $onFailure;
+		$doInsert = $this->triggerCallback('doInsert', array($insertData), '__insertRow');
+		if($doInsert !== self::ERR_OK) {
+			if ($this->triggerPresent('onFailure')) {
+				$onFailure = $this->triggerCallback('onFailure', array($doInsert, $insertData));
+				if(!$onFailure) return $onFailure;
+			}else {
+				return $doInsert;
+			}
 		}
 
 		// Trigger onSuccess event
@@ -387,30 +394,39 @@ class formProcessor extends formFields{
 	 */
 	private function __processUpdate($data){
 		$updateData = array();
-		foreach($this->fields as $field){
-			// Skip system fields
-			if(0 === strpos($field->name, '__')) continue;
 
-			// Skip special fields
-			if(in_array($field->type, array('submit','reset','button'))) continue;
+		foreach($this->fields as $field){
+			// Skip system or special fields
+			if($field->isSystem() || $field->isSpecial()) continue;
+
+			// If this is a primary field, reset its value back to the saved one (dropping any user munging)
+			if($this->isPrimaryField($field)){
+				$updateData[ $field->name ] = $field->value;
+				continue;
+			}
 
 			// Skip disabled fields
 			if($field->disabled) continue;
+
+			// Skip fields not set
+			if(!isset($data[ $field->name ])) continue;
 
 			// Revert read-only fields to their original state
 			if($field->readonly) $data[ $field->name ] = $field->renderedValue;
 
 			// Save the field for insertion
-			$updateData[] = isset($data[ $field->name ])
-				? $data[ $field->name ]
-				: $field->value;
+			$updateData[ $field->name ] = $data[ $field->name ];
 		}
 
 		if($this->triggerPresent('beforeUpdate')) $updateData = $this->triggerCallback('beforeUpdate', array($updateData));
 		$doUpdate = $this->triggerCallback('doUpdate', array($updateData), '__updateRow');
-		if($doUpdate !== self::ERR_OK && $this->triggerPresent('onFailure')){
-			$onFailure = $this->triggerCallback('onFailure', array($doUpdate, $updateData));
-			if(!$onFailure) return $onFailure;
+		if($doUpdate !== self::ERR_OK) {
+			if ($this->triggerPresent('onFailure')) {
+				$onFailure = $this->triggerCallback('onFailure', array($doUpdate, $updateData));
+				if(!$onFailure) return $onFailure;
+			}else {
+				return $doUpdate;
+			}
 		}
 
 		// Trigger onSuccess event
@@ -428,10 +444,11 @@ class formProcessor extends formFields{
 		// Normalize data
 		$updateRowData = array();
 		foreach($data as $fieldName => $fieldRows){
-			// Skip system fields
-			if(0 === strpos($fieldName, '__')) continue;
-			// Skip special fields
-			if(in_array($fieldName, array('submit','reset','button'))) continue;
+			$field = $this->getField($fieldName);
+
+			// Skip system or special fields
+			if($field->isSystem() || $field->isSpecial()) continue;
+
 			// Foreach row, merge it's primary keys back in
 			foreach((array)$fieldRows as $rowID => $rowData){
 				$updateRowData[$rowID][$fieldName] = $rowData;
@@ -464,17 +481,25 @@ class formProcessor extends formFields{
 		// Trigger beforeDelete and doDelete events
 		if($this->triggerPresent('beforeDelete')) $deletedRows = $this->triggerCallback('beforeDelete', array($deletedRows));
 		$doDelete = $this->triggerCallback('doDelete', array($deletedRows), '__deleteRows');
-		if($doDelete !== self::ERR_OK && $this->triggerPresent('onFailure')){
-			$onFailure = $this->triggerCallback('onFailure', array($doDelete, $deletedRows));
-			if(!$onFailure) return $onFailure;
+		if($doDelete !== self::ERR_OK) {
+			if ($this->triggerPresent('onFailure')) {
+				$onFailure = $this->triggerCallback('onFailure', array($doDelete, $deletedRows));
+				if(!$onFailure) return $onFailure;
+			}else {
+				return $doDelete;
+			}
 		}
 
 		// Trigger beforeEdit and doEdit events
 		if($this->triggerPresent('beforeEdit')) $updateRowData = $this->triggerCallback('beforeEdit', array($updateRowData));
 		$doEdit = $this->triggerCallback('doEdit', array($updateRowData), '__updateRows');
-		if($doEdit !== self::ERR_OK && $this->triggerPresent('onFailure')){
-			$onFailure = $this->triggerCallback('onFailure', array($doEdit, $updateRowData));
-			if(!$onFailure) return $onFailure;
+		if($doEdit !== self::ERR_OK) {
+			if ($this->triggerPresent('onFailure')) {
+				$onFailure = $this->triggerCallback('onFailure', array($doEdit, $updateRowData));
+				if(!$onFailure) return $onFailure;
+			}else {
+				return $doEdit;
+			}
 		}
 
 		// Trigger onSuccess event
