@@ -661,6 +661,12 @@ class formBuilder extends formFields{
 		}
 	}
 
+	/**
+	 * Displays an insert or update form depending on if the primary fields have values
+	 *
+	 * @param array $options
+	 * @return string
+	 */
 	public function displayForm($options = array()){
 		// If no primary fields set, display insertForm
 		if(!sizeof($priFields = $this->getPrimaryFields())) return $this->displayInsertForm($options);
