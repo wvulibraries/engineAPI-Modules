@@ -307,11 +307,16 @@ class formBuilder extends formFields{
 	 * @return int Result code from formProcessor object
 	 */
 	public static function process($formID = NULL){
+		// If there's no POST, return
+		if(!sizeof($_POST) && !session::has('POST')) return NULL;
+
+		// Catch the case where you pass an array of data in manually
 		if (is_array($formID)) {
 			$formData = $formID;
 			$formID   = NULL;
 		}
 
+		// Create the processor and go!
 		$processor = self::createProcessor($formID);
 		return ($processor instanceof formProcessor)
 			? isset($formData) ? $processor->process($formData) : $processor->processPost()
