@@ -8,6 +8,7 @@ class formProcessor extends formFields{
 	const ERR_VALIDATION = 4;
 	const ERR_SYSTEM     = 5;
 	const ERR_TYPE       = 6;
+	const ERR_INCOMPLETE_DATA = 7;
 
 	const TYPE_INSERT    = 1;
 	const TYPE_UPDATE    = 2;
@@ -26,11 +27,6 @@ class formProcessor extends formFields{
 	);
 
 	/**
-	 * @var array The data to process
-	 */
-	private $processData;
-
-	/**
 	 * @var int The internal type of form to be processed
 	 */
 	private $processorType;
@@ -40,9 +36,12 @@ class formProcessor extends formFields{
 	 */
 	private $callbacks = array(
 		'beforeInsert'    => NULL,
+		'doInsert'        => NULL,
 		'beforeUpdate'    => NULL,
+		'doUpdate'        => NULL,
 		'beforeEdit'      => NULL,
 		'doEdit'          => NULL,
+		'beforeDelete'    => NULL,
 		'doDelete'        => NULL,
 		'onSuccess'       => NULL,
 		'onFailure'       => NULL,
@@ -58,11 +57,6 @@ class formProcessor extends formFields{
 	 * @var string The database table
 	 */
 	private $dbTable;
-
-	/**
-	 * @var array Array of deleted rows (rows to be deleted)
-	 */
-	private $deletedRows;
 
 	/**
 	 * @var array Array of primary key values (used in self::__processEdit())
@@ -154,7 +148,7 @@ class formProcessor extends formFields{
 	 * @param array $data
 	 * @return mixed
 	 */
-	private function triggerCallback($trigger, $data, $default=NULL){
+	private function triggerCallback($trigger, $data=array(), $default=NULL){
 		if(!$this->callbacks[$trigger] && isnull($default)) return NULL;
 		$fn = $this->callbacks[$trigger]
 			? $this->callbacks[$trigger]
@@ -166,57 +160,12 @@ class formProcessor extends formFields{
 		return call_user_func_array($fn, $data);
 	}
 
-
-	public function processPost(){
-		if (!$this->processorType) return self::ERR_TYPE;
-
-		if(!session::has('POST')){
-			if(sizeof($_POST)){
-				// Save the POST in the session and redirect back to the same URL (this time w/o POST data)
-				session::set('POST', $_POST, TRUE);
-				http::redirect($_SERVER['REQUEST_URI'], 303, TRUE);
-			}else{
-				errorHandle::newError(__METHOD__."() Cannot find saved POST data!", errorHandle::DEBUG);
-				return self::ERR_SYSTEM;
-			}
-		}
-
-		/*
-		 * Extract the RAW data from _POST and pass it to process() for processing
-		 *
-		 * We use RAW here to avoid double-escaping when we process the data in process()
-		 * This may happen because the developer will use process() to handle his own raw data
-		 * Since the database module uses prepared statements, manually escaping the POST data is not necessary
-		 */
-		$post = session::get('POST');
-		session::destroy('POST');
-		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
-		return $this->process($post['RAW']);
-	}
-
-	public function process($data){
-		// Save the data to our processData var
-		$this->processData = $data;
-
-		switch($this->processorType){
-			case self::TYPE_INSERT:
-				$result = $this->__processInsert();
-				break;
-			case self::TYPE_UPDATE:
-				$result = $this->__processUpdate();
-				break;
-			case self::TYPE_EDIT:
-				$result = $this->__processEdit();
-				break;
-			default:
-				errorHandle::newError(__METHOD__."() Invalid formType! (engineAPI bug)", errorHandle::DEBUG);
-				return self::ERR_SYSTEM;
-		}
-		if($result === self::ERR_OK) errorHandle::successMsg('Form submission successful!');
-		return $result;
-	}
-
-	private function __processValidation($data){
+	/**
+	 * Perform validation rules against $data
+	 * @param array $data
+	 * @return bool
+	 */
+	public function validate($data){
 		// Validation
 		$isValid   = TRUE;
 		$validator = validate::getInstance();
@@ -246,6 +195,7 @@ class formProcessor extends formFields{
 				errorHandle::newError(__METHOD__."() Error occurred during validation for field '{$field->name}'! (possible regex error: ".preg_last_error().")", errorHandle::DEBUG);
 			}elseif($result === FALSE){
 				$isValid = FALSE;
+				// TODO: Trigger onValidateError event
 				errorHandle::errorMsg($validator->getErrorMessage($field->validate, $fieldData));
 				continue;
 			}
@@ -257,46 +207,186 @@ class formProcessor extends formFields{
 		return $isValid;
 	}
 
-	private function __processInsert(){
+	/**
+	 * Perform INSERT operation based on the given data
+	 *
+	 * This method expects $data to be a key=>value array of all fields
+	 * ready to go with no additional processing needed.
+	 *
+	 * @param array $data
+	 * @return int
+	 */
+	public function insert($data){
 		// Process field validation rules
-		if(!$this->__processValidation($this->processData)) return self::ERR_VALIDATION;
+		if(!$this->validate($data)) return self::ERR_VALIDATION;
 
-		$sqlFields = array();
+		$fields = array();
+		foreach($data as $field => $value){
+			$field = $this->getField($field);
+			$fields[ $field->name ] = $data[ $field->name ];
+		}
+
+		$sql = sprintf('INSERT INTO `%s` (`%s`) VALUES (%s)',
+			$this->dbTable,
+			implode('`,`',array_keys($fields)),
+			implode(',',array_fill(0,sizeof($fields),'?')));
+		$stmt = $this->db->query($sql, $fields);
+		if($stmt->errorCode()){
+			errorHandle::newError(__METHOD__."() SQL Error! {$stmt->errorCode()}:{$stmt->errorMsg()} ($sql)", errorHandle::HIGH);
+			return self::ERR_SYSTEM;
+		}
+
+		return self::ERR_OK;
+	}
+
+	/**
+	 * Perform UPDATE operation based on the given data
+	 *
+	 * This method expects $data to be a key=>value array of all fields (primary and not)
+	 * ready to go with no additional processing needed.
+	 *
+	 * @param array $data
+	 * @return int
+	 */
+	public function update($data){
+		// Process field validation rules
+		if(!$this->validate($data)) return self::ERR_VALIDATION;
+
+		// Get the list of primary fields
+		$primaryFields = $this->listPrimaryFields();
+
+		// Make sure we have all primary fields accounted for in $data
+		$missingPrimaryKeys = array_diff($primaryFields, array_keys($data));
+		if(sizeof($missingPrimaryKeys)){
+			errorHandle::newError(__METHOD__."() Cannot update record! (missing primary keys ".implode(',',$missingPrimaryKeys)." in data)", errorHandle::DEBUG);
+			return self::ERR_INCOMPLETE_DATA;
+		}
+
+		$updateFields = array();
+		$whereFields  = array();
+		foreach($data as $field => $value){
+			$field = $this->getField($field);
+			if(in_array($field->name, $primaryFields)){
+				if(is_empty($value)){
+					errorHandle::newError(__METHOD__."() Cannot update record! (primary field '{$field->name}' is empty)", errorHandle::DEBUG);
+					return self::ERR_INCOMPLETE_DATA;
+				}
+				$whereFields[ $field->toSqlSnippet() ] = $value;
+			}else{
+				$updateFields[ $field->toSqlSnippet() ] = $value;
+			}
+		}
+
+		$sql = sprintf('UPDATE `%s` SET %s WHERE %s LIMIT 1',
+			$this->dbTable,
+			implode(',', array_keys($updateFields)),
+			implode(' AND ', array_keys($whereFields)));
+		$stmt = $this->db->query($sql, array_merge(array_values($updateFields), array_values($whereFields)));
+		if($stmt->errorCode()){
+			errorHandle::newError(__METHOD__."() SQL Error! {$stmt->errorCode()}:{$stmt->errorMsg()} ($sql)", errorHandle::HIGH);
+			return self::ERR_SYSTEM;
+		}
+
+		return self::ERR_OK;
+	}
+
+	/**
+	 * Process POST data
+	 * @return int
+	 */
+	public function processPost(){
+		if (!$this->processorType) return self::ERR_TYPE;
+
+		if(!session::has('POST')){
+			if(sizeof($_POST)){
+				// Save the POST in the session and redirect back to the same URL (this time w/o POST data)
+				session::set('POST', $_POST, TRUE);
+				http::redirect($_SERVER['REQUEST_URI'], 303, TRUE);
+			}else{
+				errorHandle::newError(__METHOD__."() Cannot find saved POST data!", errorHandle::DEBUG);
+				return self::ERR_SYSTEM;
+			}
+		}
+
+		/*
+		 * Extract the RAW data from _POST and pass it to process() for processing
+		 *
+		 * We use RAW here to avoid double-escaping when we process the data in process()
+		 * This may happen because the developer will use process() to handle his own raw data
+		 * Since the database module uses prepared statements, manually escaping the POST data is not necessary
+		 */
+		$post = session::get('POST');
+		session::destroy('POST');
+		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
+		return $this->process($post['RAW']);
+	}
+
+	/**
+	 * Process raw data
+	 * @param array $data
+	 * @return int
+	 */
+	public function process($data){
+		switch($this->processorType){
+			case self::TYPE_INSERT:
+				$result = $this->__processInsert($data);
+				break;
+
+			case self::TYPE_UPDATE:
+				$result = $this->__processUpdate($data);
+				break;
+
+			case self::TYPE_EDIT:
+				$result = $this->__processEdit($data);
+				break;
+
+			default:
+				errorHandle::newError(__METHOD__."() Invalid formType! (engineAPI bug)", errorHandle::DEBUG);
+				return self::ERR_SYSTEM;
+		}
+		if($result === self::ERR_OK) errorHandle::successMsg('Form submission successful!');
+		return $result;
+	}
+
+	/**
+	 * [Internal helper] Process data from an insertForm
+	 * @param array $data
+	 * @return int
+	 */
+	private function __processInsert($data){
+		$insertData = array();
 		foreach($this->fields as $field){
 			// Skip disabled fields
 			if($field->disabled) continue;
 
 			// Revert read-only fields to their original state
-			if($field->readonly) $this->processData[ $field->name ] = $field->renderedValue;
+			if($field->readonly) $data[ $field->name ] = $field->renderedValue;
 
 			// Save the field for insertion
-			$sqlFields[ $field->name ] = $this->processData[ $field->name ];
+			$insertData[ $field->name ] = $data[ $field->name ];
 		}
 
-		// Build the SQL
-		$sql = sprintf('INSERT INTO `%s` (`%s`) VALUES (%s)',
-			$this->dbTable,
-			implode('`,`',array_keys($sqlFields)),
-			implode(',',array_fill(0,sizeof($sqlFields),'?')));
-
-		// Execute the SQL and check for errors
-		$stmt = $this->db->query($sql, $sqlFields);
-		if($stmt->errorCode()){
-			errorHandle::newError(__METHOD__."() SQL Error! ({$stmt->errorCode()}:{$stmt->errorMsg()})", errorHandle::HIGH);
-			return self::ERR_SYSTEM;
+		// Trigger beforeInsert and doInsert events
+		if($this->triggerPresent('beforeInsert')) $insertData = $this->triggerCallback('beforeInsert', array($insertData));
+		$doUpdate = $this->triggerCallback('doInsert', array($insertData), '__insertRow');
+		if($doUpdate !== self::ERR_OK && $this->triggerPresent('onFailure')){
+			$onFailure = $this->triggerCallback('onFailure', array($doUpdate, $insertData));
+			if(!$onFailure) return $onFailure;
 		}
 
-		// All's well
-		return self::ERR_OK;
+		// Trigger onSuccess event
+		return $this->triggerPresent('onSuccess')
+			? $this->triggerCallback('onSuccess')
+			: self::ERR_OK;
 	}
 
-	private function __processUpdate($data=NULL){
-		if(isnull($data)) $data = $this->processData;
-
-		// Process field validation rules
-		if(!$this->__processValidation($data)) return self::ERR_VALIDATION;
-
-		$sqlFields = array();
+	/**
+	 * [Internal helper] Process data from an updateForm
+	 * @param array $data
+	 * @return int
+	 */
+	private function __processUpdate($data){
+		$updateData = array();
 		foreach($this->fields as $field){
 			// Skip system fields
 			if(0 === strpos($field->name, '__')) continue;
@@ -310,46 +400,34 @@ class formProcessor extends formFields{
 			// Revert read-only fields to their original state
 			if($field->readonly) $data[ $field->name ] = $field->renderedValue;
 
-			// Skip the field if there's no data provided (and catch edge-cases like checkbox)
-			if(!isset($data[ $field->name ])){
-				switch($field->type){
-					case 'boolean':
-					case 'checkbox':
-						$data[ $field->name ] = 0;
-						break;
-					default:
-						continue 2;
-				}
-			}
-
 			// Save the field for insertion
-			$sqlFields[ $field->toSqlSnippet() ] = isset($data[ $field->name ])
+			$updateData[] = isset($data[ $field->name ])
 				? $data[ $field->name ]
 				: $field->value;
 		}
 
-		$primaryFieldsSQL = array();
-		foreach ($this->getPrimaryFields() as $primaryField) {
-			$primaryFieldsSQL[$primaryField->toSqlSnippet()] = isset($primaryField->value) ? $primaryField->value : $data[ $primaryField->name ];
+		if($this->triggerPresent('beforeUpdate')) $updateData = $this->triggerCallback('beforeUpdate', array($updateData));
+		$doUpdate = $this->triggerCallback('doUpdate', array($updateData), '__updateRow');
+		if($doUpdate !== self::ERR_OK && $this->triggerPresent('onFailure')){
+			$onFailure = $this->triggerCallback('onFailure', array($doUpdate, $updateData));
+			if(!$onFailure) return $onFailure;
 		}
 
-		$sql = sprintf('UPDATE `%s` SET %s WHERE %s LIMIT 1',
-			$this->dbTable,
-			implode(',', array_keys($sqlFields)),
-			implode(' AND ', array_keys($primaryFieldsSQL)));
-		$stmt = $this->db->query($sql, array_merge(array_values($sqlFields), array_values($primaryFieldsSQL)));
-		if($stmt->errorCode()){
-			errorHandle::newError(__METHOD__."() SQL Error! ({$stmt->errorCode()}:{$stmt->errorMsg()})", errorHandle::HIGH);
-			return self::ERR_SYSTEM;
-		}
-
-		return self::ERR_OK;
+		// Trigger onSuccess event
+		return $this->triggerPresent('onSuccess')
+			? $this->triggerCallback('onSuccess')
+			: self::ERR_OK;
 	}
 
-	private function __processEdit(){
+	/**
+	 * [Internal helper] Process data from an editTable
+	 * @param array $data
+	 * @return int
+	 */
+	private function __processEdit($data){
 		// Normalize data
 		$updateRowData = array();
-		foreach($this->processData as $fieldName => $fieldRows){
+		foreach($data as $fieldName => $fieldRows){
 			// Skip system fields
 			if(0 === strpos($fieldName, '__')) continue;
 			// Skip special fields
@@ -367,7 +445,7 @@ class formProcessor extends formFields{
 
 		// Build list of deleted rows
 		$deletedRows = array();
-		$deletedRowIDs = array_filter(explode(',', $this->processData['__deleted']));
+		$deletedRowIDs = array_filter(explode(',', $data['__deleted']));
 		foreach($deletedRowIDs as $deletedRowID){
 			// Save the row's data and then delete it from the array
 			$deletedRowData = $updateRowData[$deletedRowID];
@@ -380,27 +458,73 @@ class formProcessor extends formFields{
 			$deletedRows[] = $deletedRowData;
 		}
 
-		// Trigger callback for deleted rows
-		$this->triggerCallback('doDelete', array($deletedRows), '__deleteRows');
-
-		// Trigger callback for updated rows (after stripping off rowID)
+		// Strip rowID off updatedRows now that deletedRows is build (and it's no longer needed)
 		$updateRowData = array_values($updateRowData);
-		if($this->triggerPresent('beforeEdit')){
-			$updateRowData = $this->triggerCallback('beforeEdit', array($updateRowData));
+
+		// Trigger beforeDelete and doDelete events
+		if($this->triggerPresent('beforeDelete')) $deletedRows = $this->triggerCallback('beforeDelete', array($deletedRows));
+		$doDelete = $this->triggerCallback('doDelete', array($deletedRows), '__deleteRows');
+		if($doDelete !== self::ERR_OK && $this->triggerPresent('onFailure')){
+			$onFailure = $this->triggerCallback('onFailure', array($doDelete, $deletedRows));
+			if(!$onFailure) return $onFailure;
 		}
 
-		// Trigger callback for updated rows (after stripping off rowID)
-		return $this->triggerCallback('doEdit', array($updateRowData), '__processEditCallback');
+		// Trigger beforeEdit and doEdit events
+		if($this->triggerPresent('beforeEdit')) $updateRowData = $this->triggerCallback('beforeEdit', array($updateRowData));
+		$doEdit = $this->triggerCallback('doEdit', array($updateRowData), '__updateRows');
+		if($doEdit !== self::ERR_OK && $this->triggerPresent('onFailure')){
+			$onFailure = $this->triggerCallback('onFailure', array($doEdit, $updateRowData));
+			if(!$onFailure) return $onFailure;
+		}
+
+		// Trigger onSuccess event
+		return $this->triggerPresent('onSuccess')
+			? $this->triggerCallback('onSuccess')
+			: self::ERR_OK;
 	}
 
-	private function __processEditCallback($processor, $data){
+	/**
+	 * [Callback] Default callback for doDelete
+	 * @param self $processor
+	 * @param array $rows
+	 * @return int
+	 */
+	private function __deleteRows($processor, $rows){
+		foreach($rows as $row){
+			if(self::ERR_OK != ($return = $processor->delete($row))) return $return;
+		}
+		return self::ERR_OK;
+	}
+
+	/**
+	 * [Callback] Default callback for doInsert
+	 * @param self $processor
+	 * @param array $data
+	 * @return int
+	 */
+	private function __insertRow($processor, $data){
+		return $processor->insert($data);
+	}
+
+	/**
+	 * [Callback] Default callback for doEdit
+	 * @param self $processor
+	 * @param array $data
+	 * @return int
+	 */
+	private function __updateRows($processor, $data){
 		$errorCode = self::ERR_OK;
 		foreach($data as $row){
 			// Update the row and handle the result
-			switch($this->__processUpdate($row)){
-				// Skip this row if it fails validation
+			$result = $processor->triggerCallback('doUpdate', array($row), '__updateRow');
+			switch($result){
+				// Continue if it fails validation
 				case self::ERR_VALIDATION:
 					$errorCode = self::ERR_VALIDATION;
+					continue;
+				// Continue if it fails due to incomplete data
+				case self::ERR_INCOMPLETE_DATA:
+					$errorCode = self::ERR_INCOMPLETE_DATA;
 					continue;
 				// Return if we have a system error
 				case self::ERR_SYSTEM:
@@ -410,15 +534,30 @@ class formProcessor extends formFields{
 		return $errorCode;
 	}
 
-	private function __deleteRows($processor, $rows){
-		foreach($rows as $row){
-			if(self::ERR_OK != ($return = $this->delete($row))) return $return;
+	/**
+	 * [Callback] Default callback for doUpdate
+	 * @param self $processor
+	 * @param array $data
+	 * @return int
+	 */
+	private function __updateRow($processor, $data) {
+		foreach($processor->fields as $field){
+			switch($field->type){
+				case 'boolean':
+				case 'checkbox':
+					if(!isset($data[ $field->name ])) $data[ $field->name ] = '';
+					break;
+			}
 		}
-		return self::ERR_OK;
+
+		return $processor->update($data);
 	}
 
 	/**
 	 * Delete a given record from the database
+	 *
+	 * @TODO Discuss referential integrity checking
+	 *
 	 * @param array $data
 	 * @return int
 	 */
