@@ -6,7 +6,6 @@ class fieldBuilder{
 		'disabled'        => FALSE,
 		'size'            => 40,
 		'duplicates'      => FALSE,
-		'optional'        => FALSE,
 		'type'            => 'text',
 		'readonly'        => FALSE,
 		'value'           => '',
