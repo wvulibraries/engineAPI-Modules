@@ -33,7 +33,6 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 		$field = fieldBuilder::createField(array('name' => 'foo'));
 		$this->assertFalse($field->disabled);
 		$this->assertFalse($field->duplicates);
-		$this->assertFalse($field->optional);
 		$this->assertFalse($field->readonly);
 		$this->assertFalse($field->dragDrop);
 		$this->assertFalse($field->required);

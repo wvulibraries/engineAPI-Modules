@@ -18,12 +18,14 @@ class formProcessor extends formFields{
 	 * @var array Human-readable error messages for our ERR types
 	 */
 	public static $errorMessages = array(
-		self::ERR_NO_POST    => 'No data received',
-		self::ERR_NO_ID      => 'No formID received',
-		self::ERR_INVALID_ID => 'Invalid ID received',
-		self::ERR_VALIDATION => 'Validation error',
-		self::ERR_SYSTEM     => 'Internal system error',
-		self::ERR_TYPE       => 'Invalid formType',
+		self::ERR_OK              => 'Success',
+		self::ERR_NO_POST         => 'No data received',
+		self::ERR_NO_ID           => 'No formID received',
+		self::ERR_INVALID_ID      => 'Invalid ID received',
+		self::ERR_VALIDATION      => 'Validation error',
+		self::ERR_SYSTEM          => 'Internal system error',
+		self::ERR_TYPE            => 'Invalid formType',
+		self::ERR_INCOMPLETE_DATA => 'Incomplete Data',
 	);
 
 	/**
