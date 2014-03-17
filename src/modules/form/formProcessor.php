@@ -446,8 +446,8 @@ class formProcessor extends formFields{
 		foreach($data as $fieldName => $fieldRows){
 			$field = $this->getField($fieldName);
 
-			// Skip system or special fields
-			if($field->isSystem() || $field->isSpecial()) continue;
+			// Skip undefined fields, or system/special fields
+			if($field === NULL || $field->isSystem() || $field->isSpecial()) continue;
 
 			// Foreach row, merge it's primary keys back in
 			foreach((array)$fieldRows as $rowID => $rowData){
