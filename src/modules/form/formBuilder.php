@@ -63,6 +63,22 @@ class formBuilder extends formFields{
 	public $editTableRowData = array();
 
 	/**
+	 * @var string The text to render into the submit button for insertForm
+	 */
+	public $submitTextInsert = 'Insert';
+
+	/**
+	 * @var string The text to render into the submit button for updateForm
+	 */
+	public $submitTextUpdate = 'Update';
+
+	/**
+	 * @var string The text to render into the submit button for editTable
+	 */
+	public $submitTextEdit = 'Update';
+
+
+	/**
 	 * Class constructor
 	 *
 	 * @param string $formName
@@ -495,18 +511,29 @@ class formBuilder extends formFields{
 	}
 
 	/**
-	 * Make sure rendered form is submittable by ensuring there is a submit field defined
+	 * Add a submit field if one doesn't exist already.
+	 *
+	 * @param string $buttonText
+	 * @return bool Returns TRUE if a field was added, FALSE otherwise
 	 */
-	private function ensureFormSubmit($buttonText='Submit'){
+	private function addFormSubmit($buttonText){
 		foreach ($this->fields as $field) {
-			if ($field->type == 'submit') return;
+			if ($field->type == 'submit') return FALSE;
 		}
-		$this->addField(array(
-			'type'  => 'submit',
-			'name'  => 'submit',
-			'value' => $buttonText,
+
+		$submitField = array(
+			'type'            => 'submit',
+			'name'            => 'submit',
+			'value'           => $buttonText,
 			'showInEditStrip' => FALSE,
-		));
+		);
+
+		if($this->addField($submitField)){
+			return TRUE;
+		}else{
+			errorHandle::newError(__METHOD__."() Failed to add submit field!", errorHandle::DEBUG);
+			return FALSE;
+		}
 	}
 
 	private function ensurePrimaryFieldsSet(){
@@ -687,7 +714,8 @@ class formBuilder extends formFields{
 	 * @return string
 	 */
 	public function displayInsertForm($options = array()){
-		$this->ensureFormSubmit(isset($options['submitText']) ? $options['submitText'] : 'Insert');
+		// Add a submit button if one does not exist
+		$submitAdded = $this->addFormSubmit($this->submitTextInsert);
 
 		// Get the template text (overriding the template if needed)
 		$templateFile = 'insertUpdate.html';
@@ -706,6 +734,9 @@ class formBuilder extends formFields{
 		// Render time!
 		$output = $template->render();
 
+		// Remove any submit button which we added (must be before form is saved)
+		if($submitAdded) $this->removeField('submit');
+
 		// Save the form to the session
 		$this->saveForm($template->formID, 'insertForm');
 
@@ -720,9 +751,8 @@ class formBuilder extends formFields{
 	 * @return string
 	 */
 	public function displayUpdateForm($options = array()){
+		// Make sure there's primary fields set, and get a list of them
 		if(!$this->ensurePrimaryFieldsSet()) return 'Misconfigured formBuilder!';
-		$this->ensureFormSubmit(isset($options['submitText']) ? $options['submitText'] : 'Update');
-
 		$primaryFields = $this->getPrimaryFields();
 
 		// Make sure we have dbOptions
@@ -759,6 +789,9 @@ class formBuilder extends formFields{
 			$this->modifyField($field, 'value', $value);
 		}
 
+		// Add a submit button if one does not exist
+		$submitAdded = $this->addFormSubmit($this->submitTextUpdate);
+
 		// Get the template text (overriding the template if needed)
 		$templateFile = 'insertUpdate.html';
 		$templateText = isset($options['template'])
@@ -776,6 +809,9 @@ class formBuilder extends formFields{
 		// Render time!
 		$output = $template->render();
 
+		// Remove any submit button which we added (must be before form is saved)
+		if($submitAdded) $this->removeField('submit');
+
 		// Save the form to the session
 		$this->saveForm($template->formID, 'updateForm');
 
@@ -791,7 +827,9 @@ class formBuilder extends formFields{
 	 */
 	public function displayEditTable($options = array()){
 		if(!$this->ensurePrimaryFieldsSet()) return 'Misconfigured formBuilder!';
-		$this->ensureFormSubmit(isset($options['submitText']) ? $options['submitText'] : 'Update');
+
+		// Add a submit button if one does not exist
+		$submitAdded = $this->addFormSubmit($this->submitTextEdit);
 
 		// Default expandable to FALSE
 		if(!isset($options['expandable'])) $options['expandable'] = FALSE;
@@ -825,6 +863,9 @@ class formBuilder extends formFields{
 
 		// Render time!
 		$output = $template->render();
+
+		// Remove any submit button which we added (must be before form is saved)
+		if($submitAdded) $this->removeField('submit');
 
 		// Save the form to the session
 		$this->saveForm($template->formID, 'editTable');
