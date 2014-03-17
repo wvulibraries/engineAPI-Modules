@@ -279,13 +279,8 @@ abstract class formFields implements Countable{
 				$field = $fieldName;
 			}
 
-			// Save the new field to the list
-			if ($this->isPrimaryField($field)) {
-				errorHandle::newError(__METHOD__."() Field '$field' already set as a primary field!", errorHandle::DEBUG);
-				$returnStatus = FALSE;
-			} else {
-				$this->primaryFields[] = $field;
-			}
+			// Save the new field to the list if it's no already there
+			if (!$this->isPrimaryField($field)) $this->primaryFields[] = $field;
 		}
 
 		return $returnStatus;
