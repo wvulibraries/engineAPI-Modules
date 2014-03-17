@@ -194,6 +194,21 @@ class fieldBuilder{
 	}
 
 	/**
+	 * Returns the applicable option given the current scope
+	 *
+	 * Looks in renderOptions first, then falls back to the field definition.
+	 * All else fails, return NULL
+	 *
+	 * @param string $name
+	 * @return mixed
+	 */
+	private function getFieldOption($name){
+		if (isset($this->renderOptions[$name])) return $this->renderOptions[$name];
+		if (isset($this->field[$name])) return $this->field[$name];
+		return NULL;
+	}
+
+	/**
 	 * Make sure we have a fieldID set
 	 * This is done to make sure that <label> and field inputs link to one another
 	 * Note: This sets fieldID on this field's data to the generated ID
@@ -470,10 +485,10 @@ class fieldBuilder{
 		return $selectBox.$scriptTag;
 	}
 
-			/**
-			 * [Render Helper] Render a WYSIWYG editor
-			 * @return string
-			 */
+	/**
+	 * [Render Helper] Render a WYSIWYG editor
+	 * @return string
+	 */
 	private function __render_wysiwyg(){
 		//		$fieldClass = $this->getFieldOption('class');
 //		if(FALSE === strpos('ckeditor', $fieldClass)) $this->renderOptions['class'] = "$fieldClass ckeditor";
@@ -505,7 +520,7 @@ class fieldBuilder{
 				$value,
 				($this->getFieldOption('value') == $value ? ' checked ' : ''),
 				$this->buildFieldAttributes(),
-				$label
+				htmlSanitize($label)
 			);
 		}
 		return $output;
@@ -542,7 +557,7 @@ class fieldBuilder{
 					$value,
 					(in_array($value, $values) ? ' checked ' : ''),
 					$this->buildFieldAttributes(),
-					$label);
+					htmlSanitize($label));
 			}
 		}else{
 			$keys = array_keys($options);
@@ -665,12 +680,6 @@ class fieldBuilder{
 		return $this->__buildAttributes($attributes);
 	}
 
-	private function getFieldOption($name){
-		if (isset($this->renderOptions[$name])) return $this->renderOptions[$name];
-		if (isset($this->field[$name])) return $this->field[$name];
-		return NULL;
-	}
-
 	/**
 	 * [Helper] Takes an array and builds the attributes needed for an HTML tag
 	 *
@@ -770,7 +779,7 @@ class fieldBuilder{
 			$output .= sprintf('<option value="%s"%s>%s</option>',
 				$key,
 				$selected,
-				$val);
+				htmlSanitize($val));
 		}
 		return $output;
 

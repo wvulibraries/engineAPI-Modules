@@ -182,12 +182,12 @@ class formBuilder extends formFields{
 				}
 
 				// Generate <li> HTML
-				$output .= sprintf('<li><span class="%s">%s</span></li>', $class, htmlentities($msg));
+				$output .= sprintf('<li><span class="%s">%s</span></li>', $class, htmlSanitize($msg));
 			}
 
 			// Loop through all the form errors and generate their <li> HTML
 			foreach ($formErrors as $formError) {
-				$output .= sprintf('<li><span class="%s">%s</span></li>', errorHandle::$uiClassError, htmlentities($formError));
+				$output .= sprintf('<li><span class="%s">%s</span></li>', errorHandle::$uiClassError, htmlSanitize($formError));
 			}
 
 			// Finish the <ul> and return
