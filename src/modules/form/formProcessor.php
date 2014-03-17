@@ -173,7 +173,7 @@ class formProcessor extends formFields{
 		$validator = validate::getInstance();
 		foreach($this->fields as $field){
 			// If this field is required, make sure it's present
-			if($field->required && !isset($data[ $field->name ]) && !$validator->present($data[ $field->name ])){
+			if($field->required && (!isset($data[ $field->name ]) || !$validator->present($data[ $field->name ]))){
 				$isValid = FALSE;
 				errorHandle::errorMsg("Field '$field->label' required!");
 				continue;
@@ -184,6 +184,12 @@ class formProcessor extends formFields{
 
 			// If no validation set, skip
 			if(isnull($field->validate)) continue;
+
+			// Save the data for easy access
+			$fieldData = $data[ $field->name ];
+
+			// If no value, contineu (at this point we know the field isn't required)
+			if(is_empty($fieldData)) continue;
 
 			// Save the data for easy access
 			$fieldData = $data[ $field->name ];
