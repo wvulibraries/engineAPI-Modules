@@ -182,12 +182,12 @@ class formBuilder extends formFields{
 				}
 
 				// Generate <li> HTML
-				$output .= sprintf('<li><span class="%s">%s</span></li>', $class, htmlSanitize($msg));
+				$output .= sprintf('<li><span class="%s">%s</span></li>', $class, htmlSanitize($msg, ENT_QUOTES, "UTF-8", FALSE));
 			}
 
 			// Loop through all the form errors and generate their <li> HTML
 			foreach ($formErrors as $formError) {
-				$output .= sprintf('<li><span class="%s">%s</span></li>', errorHandle::$uiClassError, htmlSanitize($formError));
+				$output .= sprintf('<li><span class="%s">%s</span></li>', errorHandle::$uiClassError, htmlSanitize($formError, ENT_QUOTES, "UTF-8", FALSE));
 			}
 
 			// Finish the <ul> and return
@@ -772,8 +772,8 @@ class formBuilder extends formFields{
 		}
 
 		$db  = $this->dbOptions['connection'];
-		$sql = sprintf('SELECT `%s` FROM `%s` WHERE %s LIMIT 1',
-			implode('`,`', $this->listFields()),
+		$sql = sprintf('SELECT * FROM `%s` WHERE %s LIMIT 1',
+//			implode('`,`', $this->listFields()),
 			$db->escape($this->dbOptions['table']),
 			implode(' AND ', array_keys($primaryFieldsSQL)));
 		$stmt = $db->query($sql, array_values($primaryFieldsSQL));
