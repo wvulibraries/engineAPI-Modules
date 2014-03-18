@@ -53,16 +53,28 @@ abstract class formFields implements Countable{
 		if (is_array($field) || is_string($field)) $field = fieldBuilder::createField($field);
 
 		// Make sure we're working with a fieldBuilder
-		if (!($field instanceof fieldBuilder)) return FALSE;
+		if (!($field instanceof fieldBuilder)){
+			errorHandle::newError(__METHOD__."() invalid field object given! (only fieldBuilder accepted)", errorHandle::DEBUG);
+			return FALSE;
+		}
 
 		// Make sure the field name is unique
-		if (isset($this->fields[$field->name])) return FALSE;
+		if (isset($this->fields[$field->name])){
+			errorHandle::newError(__METHOD__."() Field name '{$field->name}' already taken!", errorHandle::DEBUG);
+			return FALSE;
+		}
 
 		// If there's a label, make sure it's unique
-		if (!is_empty($field->label) && in_array($field->label, $this->fieldLabels)) return FALSE;
+		if (!is_empty($field->label) && in_array($field->label, $this->fieldLabels)){
+			errorHandle::newError(__METHOD__."() Field label '{$field->label}' already taken!", errorHandle::DEBUG);
+			return FALSE;
+		}
 
 		// If there's a field ID, make sure it's unique
-		if (!is_empty($field->fieldID) && in_array($field->fieldID, $this->fieldIDs)) return FALSE;
+		if (!is_empty($field->fieldID) && in_array($field->fieldID, $this->fieldIDs)){
+			errorHandle::newError(__METHOD__."() Field ID '{$field->fieldID}' already taken!", errorHandle::DEBUG);
+			return FALSE;
+		}
 
 		// If this field is set to be a primary field, add it
 		if($field->primary) $this->addPrimaryFields($field->name);
