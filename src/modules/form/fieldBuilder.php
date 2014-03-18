@@ -725,45 +725,45 @@ class fieldBuilder{
 		if (sizeof($this->getFieldOption('options'))) {
 			$options = $this->getFieldOption('options');
 		} elseif (sizeof($this->getFieldOption('linkedTo'))) {
-			$linkedTo = $this->getFieldOption('linkedTo');
-			$dbConnection = isset($linkedTo['dbConnection']) ? $linkedTo['dbConnection'] : 'appDB';
-			$key          = isset($linkedTo['key'])          ? $linkedTo['key']          : NULL;
-			$field        = isset($linkedTo['field'])        ? $linkedTo['field']        : NULL;
-			$table        = isset($linkedTo['table'])        ? $linkedTo['table']        : NULL;
-			$order        = isset($linkedTo['order'])        ? $linkedTo['order']        : NULL;
-			$where        = isset($linkedTo['where'])        ? $linkedTo['where']        : NULL;
-			$limit        = isset($linkedTo['limit'])        ? $linkedTo['limit']        : NULL;
-			$sql          = isset($linkedTo['sql'])          ? $linkedTo['sql']          : NULL;
+			$linkedTo         = $this->getFieldOption('linkedTo');
+			$dbConnection     = isset($linkedTo['dbConnection'])     ? $linkedTo['dbConnection']     : 'appDB';
+			$foreignTable     = isset($linkedTo['foreignTable'])     ? $linkedTo['foreignTable']     : NULL;
+			$foreignKey       = isset($linkedTo['foreignKey'])       ? $linkedTo['foreignKey']       : 'ID';
+			$foreignLabel     = isset($linkedTo['foreignLabel'])     ? $linkedTo['foreignLabel']     : NULL;
+			$foreignOrder     = isset($linkedTo['foreignOrder'])     ? $linkedTo['foreignOrder']     : NULL;
+			$foreignWhere     = isset($linkedTo['foreignWhere'])     ? $linkedTo['foreignWhere']     : NULL;
+			$foreignLimit     = isset($linkedTo['foreignLimit'])     ? $linkedTo['foreignLimit']     : NULL;
+			$foreignSQL       = isset($linkedTo['foreignSQL'])       ? $linkedTo['foreignSQL']       : NULL;
 
 			// Get the db connection we'll be talking to
 			$db = db::getInstance()->$dbConnection;
 
 			// Build the SQL (if needed)
-			if (!isset($sql)) {
-				if (!isset($key) || !isset($field) || !isset($table)) {
+			if (!isset($foreignSQL)) {
+				if (!isset($foreignKey) || !isset($foreignLabel) || !isset($foreignTable)) {
 					errorHandle::newError(__METHOD__."() Using linkedTo but missing key, field, and/or table params", errorHandle::DEBUG);
 					return '';
 				}
-				$sql = sprintf('SELECT `%s`, `%s` FROM `%s`',
-					$db->escape($key),
-					$db->escape($field),
-					$db->escape($table));
-				if (isset($where) && !empty($where)) $sql .= " WHERE $where";
-				$sql .= (isset($order) && !empty($order))
-					? " ORDER BY $order"
-					: " ORDER BY ".$db->escape($field)." ASC";
-				if (isset($limit) && !empty($limit)) $sql .= " LIMIT $limit";
+				$foreignSQL = sprintf('SELECT `%s`, `%s` FROM `%s`',
+					$db->escape($foreignKey),
+					$db->escape($foreignLabel),
+					$db->escape($foreignTable));
+				if (isset($foreignWhere) && !empty($foreignWhere)) $foreignSQL .= " WHERE $foreignWhere";
+				$foreignSQL .= (isset($foreignOrder) && !empty($foreignOrder))
+					? " ORDER BY $foreignOrder"
+					: " ORDER BY ".$db->escape($foreignLabel)." ASC";
+				if (isset($foreignLimit) && !empty($foreignLimit)) $foreignSQL .= " LIMIT $foreignLimit";
 			}
 
 			// Run the SQL
-			$sqlResult = $db->query($sql);
+			$sqlResult = $db->query($foreignSQL);
 
 			// Format the result into a usable array
 			$options = array();
 			while ($row = $sqlResult->fetch()) {
-				$key           = array_shift($row); // The key is always the 1st col
+				$foreignKey           = array_shift($row); // The key is always the 1st col
 				$val           = array_shift($row); // The key is always the 2nd col
-				$options[$key] = $val;
+				$options[$foreignKey] = $val;
 			}
 
 		} else {
@@ -772,12 +772,12 @@ class fieldBuilder{
 		}
 
 		// Loop, and build the options
-		foreach ($options as $key => $val) {
-			$selected = in_array($key, (array)$this->field['value'], TRUE)
+		foreach ($options as $foreignKey => $val) {
+			$selected = in_array($foreignKey, (array)$this->field['value'])
 				? ' selected'
 				: '';
 			$output .= sprintf('<option value="%s"%s>%s</option>',
-				$key,
+				$foreignKey,
 				$selected,
 				htmlSanitize($val));
 		}
