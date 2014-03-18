@@ -77,6 +77,10 @@ class formBuilder extends formFields{
 	 */
 	public $submitTextEdit = 'Update';
 
+	/**
+	 * @var bool editTable expandable
+	 */
+	public $expandable = TRUE;
 
 	/**
 	 * Class constructor
@@ -832,7 +836,7 @@ class formBuilder extends formFields{
 		$submitAdded = $this->addFormSubmit($this->submitTextEdit);
 
 		// Default expandable to FALSE
-		if(!isset($options['expandable'])) $options['expandable'] = FALSE;
+		if(!isset($options['expandable'])) $options['expandable'] = $this->expandable;
 
 		// Add the 'deletedRows' field
 		$this->addField(array(
