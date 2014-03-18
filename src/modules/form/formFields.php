@@ -178,17 +178,6 @@ abstract class formFields implements Countable{
 	}
 
 	/**
-	 * Return TRUE if the field has been defined
-	 *
-	 * @param string|fieldBuilder $name
-	 * @return bool
-	 */
-	public function hasField($name){
-		if($name instanceof fieldBuilder) $name = $name->name;
-		return isset($this->fields[$name]);
-	}
-
-	/**
 	 * Returns an array of all defined field names
 	 *
 	 * @param bool $editStrip
@@ -235,7 +224,7 @@ abstract class formFields implements Countable{
 			foreach ($fieldOrdering as $fieldGroup) {
 				foreach ($fieldGroup as $fieldName) {
 					$field = $this->getField($fieldName);
-					if (in_array($field->type, array('submit','reset','button'))) continue;
+
 					// Skip fields if they don't match $editStrip (null shows all)
 					if (TRUE === $editStrip && !$field->showInEditStrip) continue;
 					if (FALSE === $editStrip && $field->showInEditStrip) continue;
@@ -274,7 +263,7 @@ abstract class formFields implements Countable{
 			// If we got a fieldBuilder, add it (if needed) and then use its name
 			if($field instanceof fieldBuilder){
 				$fieldName = $field->name;
-				if(!$this->hasField($fieldName)) $this->addField($field);
+				if(!$this->fieldExists($fieldName)) $this->addField($field);
 				$field->disabled = TRUE;
 				$field = $fieldName;
 			}
