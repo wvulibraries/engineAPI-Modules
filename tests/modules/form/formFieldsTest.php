@@ -236,7 +236,7 @@ class formFieldsTest extends PHPUnit_Framework_TestCase{
 		$this->assertAttributeCount(1, 'primaryFields', $this->formFields);
 		$this->assertAttributeContains('foo', 'primaryFields', $this->formFields);
 
-		$this->assertFalse($this->formFields->addPrimaryFields('foo'));
+		$this->assertTrue($this->formFields->addPrimaryFields('foo'));
 		$this->assertAttributeCount(1, 'primaryFields', $this->formFields);
 		$this->assertAttributeContains('foo', 'primaryFields', $this->formFields);
 	}

@@ -523,7 +523,7 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'type'    => 'boolean',
 			'options' => array(
 				'type' => 'select',
-				'includeBlank' => TRUE,
+				'blankOption' => 'Foo Option',
 			)
 		));
 
@@ -547,7 +547,7 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 
 		$this->assertTag(array(
 			'tag' => 'option',
-			'content' => '',
+			'content' => 'Foo Option',
 			'attributes' => array(
 				'value' => '',
 			),
@@ -560,7 +560,7 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'type'    => 'boolean',
 			'options' => array(
 				'type' => 'select',
-				'includeBlank' => TRUE,
+				'blankOption' => TRUE,
 				'labels' => array('False', 'True'),
 			)
 		));
@@ -997,9 +997,9 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'name'     => 'foo',
 			'type'     => 'select',
 			'linkedTo' => array(
-				'field' => 'name',
-				'key'   => 'ID',
-				'table' => 'fieldBuilderTest',
+				'foreignTable' => 'fieldBuilderTest',
+				'foreignKey'   => 'ID',
+				'foreignLabel' => 'name',
 			),
 		));
 
@@ -1018,10 +1018,10 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'type'     => 'select',
 			'value'    => 1,
 			'linkedTo' => array(
-				'field' => 'name',
-				'key'   => 'ID',
-				'table' => 'fieldBuilderTest',
-				'limit' => 3
+				'foreignTable' => 'fieldBuilderTest',
+				'foreignKey'   => 'ID',
+				'foreignLabel' => 'name',
+				'foreignLimit' => 3
 			),
 		));
 
@@ -1034,10 +1034,10 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'type'     => 'select',
 			'value'    => array(1, 2),
 			'linkedTo' => array(
-				'field' => 'name',
-				'key'   => 'ID',
-				'table' => 'fieldBuilderTest',
-				'limit' => 3
+				'foreignTable' => 'fieldBuilderTest',
+				'foreignKey'   => 'ID',
+				'foreignLabel' => 'name',
+				'foreignLimit' => 3
 			),
 		));
 
@@ -1049,10 +1049,10 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'name'     => 'foo',
 			'type'     => 'select',
 			'linkedTo' => array(
-				'field' => 'name',
-				'key'   => 'ID',
-				'table' => 'fieldBuilderTest',
-				'where' => "name='a'"
+				'foreignTable' => 'fieldBuilderTest',
+				'foreignKey'   => 'ID',
+				'foreignLabel' => 'name',
+				'foreignWhere' => "name='a'"
 			),
 		));
 
@@ -1064,10 +1064,10 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'name'     => 'foo',
 			'type'     => 'select',
 			'linkedTo' => array(
-				'field' => 'name',
-				'key'   => 'ID',
-				'table' => 'fieldBuilderTest',
-				'order' => 'name DESC'
+				'foreignTable' => 'fieldBuilderTest',
+				'foreignKey'   => 'ID',
+				'foreignLabel' => 'name',
+				'foreignOrder' => 'name DESC'
 			),
 		));
 
@@ -1079,10 +1079,10 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'name'     => 'foo',
 			'type'     => 'select',
 			'linkedTo' => array(
-				'field' => 'name',
-				'key'   => 'ID',
-				'table' => 'fieldBuilderTest',
-				'limit' => '2'
+				'foreignTable' => 'fieldBuilderTest',
+				'foreignKey'   => 'ID',
+				'foreignLabel' => 'name',
+				'foreignLimit' => '2'
 			),
 		));
 
@@ -1094,10 +1094,10 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'name'     => 'foo',
 			'type'     => 'select',
 			'linkedTo' => array(
-				'field' => 'name',
-				'key'   => 'ID',
-				'table' => 'fieldBuilderTest',
-				'limit' => '2,1'
+				'foreignTable' => 'fieldBuilderTest',
+				'foreignKey'   => 'ID',
+				'foreignLabel' => 'name',
+				'foreignLimit' => '2,1'
 			),
 		));
 
@@ -1109,11 +1109,11 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'name'     => 'foo',
 			'type'     => 'select',
 			'linkedTo' => array(
-				'field' => 'name',
-				'key'   => 'ID',
-				'table' => 'fieldBuilderTest',
-				'where' => 'id>3',
-				'order' => 'name DESC'
+				'foreignTable' => 'fieldBuilderTest',
+				'foreignKey'   => 'ID',
+				'foreignLabel' => 'name',
+				'foreignWhere' => 'id>3',
+				'foreignOrder' => 'name DESC'
 			),
 		));
 
@@ -1125,11 +1125,11 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'name'     => 'foo',
 			'type'     => 'select',
 			'linkedTo' => array(
-				'field' => 'name',
-				'key'   => 'ID',
-				'table' => 'fieldBuilderTest',
-				'where' => 'id>3',
-				'limit' => '1'
+				'foreignTable' => 'fieldBuilderTest',
+				'foreignKey'   => 'ID',
+				'foreignLabel' => 'name',
+				'foreignWhere' => 'id>3',
+				'foreignLimit' => '1'
 			),
 		));
 
@@ -1141,11 +1141,11 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'name'     => 'foo',
 			'type'     => 'select',
 			'linkedTo' => array(
-				'field' => 'name',
-				'key'   => 'ID',
-				'table' => 'fieldBuilderTest',
-				'order' => 'name DESC',
-				'limit' => '1'
+				'foreignTable' => 'fieldBuilderTest',
+				'foreignKey'   => 'ID',
+				'foreignLabel' => 'name',
+				'foreignOrder' => 'name DESC',
+				'foreignLimit' => '1'
 			),
 		));
 
@@ -1157,12 +1157,12 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'name'     => 'foo',
 			'type'     => 'select',
 			'linkedTo' => array(
-				'field' => 'name',
-				'key'   => 'ID',
-				'table' => 'fieldBuilderTest',
-				'where' => 'id>3',
-				'order' => 'name DESC',
-				'limit' => '1'
+				'foreignTable' => 'fieldBuilderTest',
+				'foreignKey'   => 'ID',
+				'foreignLabel' => 'name',
+				'foreignWhere' => 'id>3',
+				'foreignOrder' => 'name DESC',
+				'foreignLimit' => '1'
 			),
 		));
 
@@ -1174,7 +1174,7 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'name'     => 'foo',
 			'type'     => 'select',
 			'linkedTo' => array(
-				'sql' => "SELECT 'some','value'",
+				'foreignSQL' => "SELECT 'some','value'",
 			),
 		));
 
