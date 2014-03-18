@@ -451,7 +451,7 @@ class fieldBuilder{
 			$this->field['type'],
 			$this->getFieldOption('value'),
 			$this->buildFieldAttributes(),
-			(!is_empty($this->field['placeholder']) ? ' placeholder="'.$this->field['placeholder'].'"' : '')
+			(!is_empty($this->getFieldOption('placeholder')) ? ' placeholder="'.$this->getFieldOption('placeholder').'"' : '')
 		);
 	}
 
@@ -523,7 +523,7 @@ class fieldBuilder{
 				htmlSanitize($label)
 			);
 		}
-		return $output;
+		return "<div class='radioGroup'>$output</div>";
 	}
 
 	/**
@@ -584,11 +584,13 @@ class fieldBuilder{
 	 */
 	private function __render_password(){
 		// Render the password field
+		if(!isset($this->renderOptions['placeholder'])) $this->renderOptions['placeholder'] = 'Password';
 		$output = $this->__render_input();
 
 		// Render the password confirmation field
 		$this->renderOptions['name']    = $this->getFieldOption('name').'_confirm';
 		$this->renderOptions['fieldID'] = $this->getFieldOption('fieldID').'_confirm';
+		$this->renderOptions['placeholder'] = $this->getFieldOption('placeholder').' Confirmation';
 		$output .= $this->__render_input();
 
 		return $output;
@@ -634,7 +636,12 @@ class fieldBuilder{
 
 			case 'select':
 			default:
-				if(isset($options['includeBlank']) && $options['includeBlank']) $this->renderOptions['options'][''] = '';
+				if(isset($options['blankOption']) && $options['blankOption'] !== FALSE){
+					$this->renderOptions['options'][''] = ($options['blankOption'] !== TRUE)
+						? $options['blankOption']
+						: '';
+
+				}
 				$this->renderOptions['options'][0] = $no;
 				$this->renderOptions['options'][1] = $yes;
 				return $this->__render_select();
@@ -734,6 +741,9 @@ class fieldBuilder{
 			$foreignWhere     = isset($linkedTo['foreignWhere'])     ? $linkedTo['foreignWhere']     : NULL;
 			$foreignLimit     = isset($linkedTo['foreignLimit'])     ? $linkedTo['foreignLimit']     : NULL;
 			$foreignSQL       = isset($linkedTo['foreignSQL'])       ? $linkedTo['foreignSQL']       : NULL;
+			$linkTable        = isset($linkedTo['linkTable'])        ? $linkedTo['linkTable']        : NULL;
+			$linkForeignField = isset($linkedTo['linkForeignField']) ? $linkedTo['linkForeignField'] : NULL;
+			$linkLocalField   = isset($linkedTo['linkLocalField'])   ? $linkedTo['linkLocalField']   : NULL;
 
 			// Get the db connection we'll be talking to
 			$db = db::getInstance()->$dbConnection;
@@ -773,7 +783,7 @@ class fieldBuilder{
 
 		// Loop, and build the options
 		foreach ($options as $foreignKey => $val) {
-			$selected = in_array($foreignKey, (array)$this->field['value'])
+			$selected = in_array($foreignKey, (array)$this->field['value'], TRUE)
 				? ' selected'
 				: '';
 			$output .= sprintf('<option value="%s"%s>%s</option>',
