@@ -1,5 +1,7 @@
 var formBuilder = {
 	initialized: false,
+	disabledFields: {},
+
 	init: function(){
 		if(this.initialized) return;
 		this.initialized = true;
@@ -38,13 +40,16 @@ var formBuilder = {
 		formBuilder.insertFormCallback(formBuilder.ajaxURL, ajaxData, $target);
 		$target.closest('.expandable').data('row_id', rowID).slideDown();
 		$this.removeClass('icon-collapse').addClass('icon-expand');
+		formBuilder.$form.find(':submit:last').attr('disabled','disabled');
 	},
 	hideForm: function(e){
 		e.stopPropagation();
 		var $this = $(this);
 		var $target = $($this.data('target'));
-		$target.closest('.expandable').slideUp();
-		$this.removeClass('icon-expand').addClass('icon-collapse');
+		$target.closest('.expandable').slideUp(function(){
+			$this.removeClass('icon-expand').addClass('icon-collapse');
+			if(!formBuilder.$form.find('.icon-expand').length) formBuilder.$form.find(':submit:last').removeAttr('disabled');
+		});
 	},
 	submitForm: function(e){
 		e.preventDefault();
@@ -71,7 +76,6 @@ var formBuilder = {
 			}else{
 				if(typeof(console) != 'undefined') console.log('AJAX Error: '+data.errorMsg+"\nError Code: "+data.errorCode);
 				$form.prepend(data.prettyPrint);
-//				alert("Form didn't save!\n\nError: "+data.errorMsg);
 			}
 		}, 'json');
 	},
@@ -98,13 +102,24 @@ var formBuilder = {
 			// Delete the row
 			if(confirm("Are you sure?")){
 				// Delete the row
+				var disabledFields = [];
+				$parent.find(':input').each(function(i,field){
+					var $field = $(field);
+					if(!$field.is(':disabled')){
+						disabledFields.push($field);
+						$field.attr('disabled','disabled');
+					}
+				});
+				formBuilder.disabledFields[rowID] = disabledFields;
 				deletedRowIDs.push(rowID);
-				$parent.find(':input').addClass('deleted');
 			}
 		}else{
 			// un-Delete the row
+			$.each(formBuilder.disabledFields[rowID], function(i,$field){
+				$field.removeAttr('disabled');
+			});
+			delete formBuilder.disabledFields[rowID];
 			deletedRowIDs.splice(index, 1);
-			$parent.find(':input').removeClass('deleted');
 		}
 		$deletedRowIDs.val( deletedRowIDs.join() );
 	}

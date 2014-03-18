@@ -59,12 +59,6 @@ iframe{
 
 }
 
-.deleted{
-	cursor: not-allowed;
-	color:#666;
-	background-color: #333;
-}
-
 /* Position fix for multiSelect */
 .ms-container{
 	display: inline-block !important;
