@@ -3,6 +3,12 @@
 		<h1>{formTitle}</h1>
 	</header>
 
+	{ifFormErrors}
+	<section class="formErrors">
+		{formErrors}
+	</section>
+	{/ifFormErrors}
+
 	{form}
 	<table>
 		<thead>
