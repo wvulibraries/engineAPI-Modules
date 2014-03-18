@@ -208,7 +208,7 @@ class formBuilderTemplate {
 			// Perform field replacements
 			foreach ($row as $field => $value) {
 				if (!in_array($field, $templateFields)) continue;
-				$rowBlock = preg_replace('/{field\s+((?=.*name="'.preg_quote($field).'".*)(?!.*value=".+".*).*?)}/', '{field $1 value="'.$value.'" rowID="'.$rowID.'"}', $rowBlock, -1, $count);
+				$rowBlock = preg_replace('/{field\s+((?=[^{]*name="'.preg_quote($field).'".*)(?![^{]*value=".+".*).*?)}/', '{field $1 value="'.$value.'" rowID="'.$rowID.'"}', $rowBlock, -1, $count);
 			}
 
 			$controls = '';
