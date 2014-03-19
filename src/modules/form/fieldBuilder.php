@@ -32,6 +32,16 @@ class fieldBuilder{
 	);
 
 	/**
+	 * @var array Define default field validations based on their type (Type => Validation)
+	 */
+	private static $fieldValidations = array(
+		'url'   => 'url',
+		'email' => 'emailAddr',
+		'tel'   => 'phoneNumber',
+		'date'  => 'date',
+	);
+
+	/**
 	 * @var array The field definition
 	 */
 	private $field;
@@ -62,6 +72,11 @@ class fieldBuilder{
 
 		// Normalize field definitions
 		if(isset($this->field['type'])) $this->field['type'] = trim(strtolower($this->field['type']));
+
+		// Handle default field validations (based on their type)
+		if(isset(self::$fieldValidations[ $this->field['type'] ]) && is_empty($this->field['validate'])){
+			$this->field['validate'] = self::$fieldValidations[ $this->field['type'] ];
+		}
 
 		// Set the default template directory container path
 		$this->templateDir = __DIR__.DIRECTORY_SEPARATOR.'fieldTemplates'.DIRECTORY_SEPARATOR;
