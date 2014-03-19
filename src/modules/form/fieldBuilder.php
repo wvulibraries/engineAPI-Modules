@@ -660,12 +660,7 @@ class fieldBuilder{
 
 			case 'select':
 			default:
-				if(isset($options['blankOption']) && $options['blankOption'] !== FALSE){
-					$this->renderOptions['options'][''] = ($options['blankOption'] !== TRUE)
-						? $options['blankOption']
-						: '';
-
-				}
+				if(isset($options['blankOption'])) $this->renderOptions['blankOption'] = $options['blankOption'];
 				$this->renderOptions['options'][0] = $no;
 				$this->renderOptions['options'][1] = $yes;
 				return $this->__render_select();
@@ -803,6 +798,12 @@ class fieldBuilder{
 		} else {
 			// No options
 			return '';
+		}
+
+		// Prepend a 'blank option'?
+		if($blankOption = $this->getFieldOption('blankOption')){
+			$blankOption = ($blankOption !== TRUE) ? $blankOption : '';
+			$output .= sprintf('<option>%s</option>', $blankOption);
 		}
 
 		// Loop, and build the options
