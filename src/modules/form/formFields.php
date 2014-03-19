@@ -50,7 +50,7 @@ abstract class formFields implements Countable{
 	 */
 	public function addField($field){
 		// If we got an array or string, make it a fieldBuilder
-		if (is_array($field) || is_string($field)) $field = fieldBuilder::createField($field);
+		if (is_array($field) || is_string($field)) $field = fieldBuilder::createField($field, $this);
 
 		// Make sure we're working with a fieldBuilder
 		if (!($field instanceof fieldBuilder)){

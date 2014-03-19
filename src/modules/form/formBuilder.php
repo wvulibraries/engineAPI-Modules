@@ -811,6 +811,10 @@ class formBuilder extends formFields{
 			return 'No record found!';
 		}
 
+		/**
+		 * Set the value of each field according to the database
+		 * This is critical as other parts of formBuilder relies on these values being set BEFORE render time
+		 */
 		$row = $stmt->fetch();
 		foreach ($row as $field => $value) {
 			$this->modifyField($field, 'value', $value);

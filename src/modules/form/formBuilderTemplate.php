@@ -192,41 +192,56 @@ class formBuilderTemplate {
 
 		// Save the number of rows
 		$this->counterRows = $sqlResult->rowCount();
+		if($this->counterRows){
+			while($dbRow = $sqlResult->fetch()){
+				$rowBlock = $block;
+				$rowID    = uniqid();
+				$deferedFields = array();
 
-		// Figure out the fields we need to loop on (and save the number of fields)
-		preg_match_all('/{field.*?name="(\w+)".*?}/', $block, $matches);
-		$this->counterFields = sizeof($matches[1]);
-		$templateFields      = array_intersect($sqlResult->fieldNames(), $matches[1]);
+				// Global replacements
+				$rowBlock = str_replace('{rowLoopID}', $rowID, $rowBlock);
 
-		// Loop over each row, transforming the block into a compiled block
-		while ($row = $sqlResult->fetch()) {
-			$rowBlock = $block;
+				// Save this row's primary fields for later (like during processing)
+				$rowData = array();
+				foreach($this->formBuilder->listPrimaryFields() as $field){
+					$rowData[$field] = $dbRow[$field];
+				}
+				$this->formBuilder->editTableRowData[$rowID] = $rowData;
 
-			// Perform global replacements
-			$rowID    = uniqid();
-			$rowBlock = str_replace('{rowLoopID}', $rowID, $rowBlock);
-			$rowData = array();
-			foreach($this->formBuilder->listPrimaryFields() as $field){
-				$rowData[$field] = $row[$field];
+
+				// Regex grabbing all fields
+				preg_match_all('/{field.*?name="(\w+)".*?}/', $rowBlock, $matches);
+				foreach($matches[1] as $matchID => $fieldName){
+					$fieldTag = $matches[0][$matchID];
+					$field = $this->formBuilder->getField($fieldName);
+
+					// Append the rowID onto the field's name
+					list($fieldTag, $rowBlock) = str_replace('name="'.$fieldName.'"', 'name="'.$fieldName.'['.$rowID.']"', array($fieldTag, $rowBlock));
+
+					// If this is a plaintext field, defer it till later
+					if($field->type == 'plaintext'){
+						$deferedFields[] = array('fieldTag' => $fieldTag, 'field' => $field);
+						continue;
+					}
+
+					// Render the field tag!
+					$renderedField = $this->__renderFieldTag($fieldTag, $field, $dbRow[$fieldName], $fieldTag);
+
+					// Replace the field tag with it's fully rendered version
+					$rowBlock = str_replace($fieldTag, $renderedField, $rowBlock);
+				}
+
+				// Now process any deferred fields
+				foreach($deferedFields as $deferedField){
+					$fieldTag      = $deferedField['fieldTag'];
+					$field         = $deferedField['field'];
+					$renderedField = $this->__renderFieldTag($fieldTag, $field, NULL, $fieldTag);
+					$rowBlock         = str_replace($fieldTag, $renderedField, $rowBlock);
+				}
+
+				$output .= $rowBlock;
 			}
-			$this->formBuilder->editTableRowData[$rowID] = $rowData;
-
-			// Perform field replacements
-			foreach ($row as $field => $value) {
-				if (!in_array($field, $templateFields)) continue;
-				$rowBlock = preg_replace('/{field\s+((?=[^{]*name="'.preg_quote($field).'".*)(?![^{]*value=".+".*).*?)}/', '{field $1 value="'.$value.'" rowID="'.$rowID.'"}', $rowBlock, -1, $count);
-			}
-
-			$controls = '';
-			if(isset($this->renderOptions['expandable']) && $this->renderOptions['expandable']){
-				$controls .= '<i class="icon icon-collapse" data-target="#updateForm_'.$rowID.'" title="Expand"></i>';
-			}
-			$controls .= '<i class="icon icon-trash" data-target="#updateForm_'.$rowID.'" title="Delete"></i>';
-//			$rowBlock = str_replace('{controls}', $controls, $rowBlock);
-
-			$output .= $rowBlock;
 		}
-
 
 		// Replace any field or row count tags inside our block
 		$output = str_replace('{rowCount}', $this->counterRows, $output);
@@ -258,15 +273,57 @@ class formBuilderTemplate {
 	}
 
 	/**
+	 * Fully render a given field
+	 *
+	 * @param              $tag
+	 * @param fieldBuilder $field
+	 * @param string       $value
+	 * @param string       $errorReturn
+	 * @return string
+	 */
+	function __renderFieldTag($tag, fieldBuilder $field, $value=NULL, $errorReturn=''){
+		// Get the attribute pairs for this field tag
+		preg_match('/^{\w+(.+)}$/', $tag, $matches);
+		$attrPairs = attPairs($matches[1]);
+
+		if(isset($value)) $attrPairs['value'] = $value;
+
+		$display  = isset($attrPairs['display'])
+			? trim(strtolower($attrPairs['display']))
+			: 'full';
+		$template = isset($attrPairs['template'])
+			? trim(strtolower($attrPairs['template']))
+			: NULL;
+
+		// Render the field tag
+		switch ($display) {
+			case 'full':
+				return $field->render($template, $attrPairs);
+				break;
+			case 'field':
+				return $field->renderField($attrPairs);
+				break;
+			case 'label':
+				return $field->renderLabel($attrPairs);
+				break;
+			default:
+				errorHandle::newError(__METHOD__."() Invalid 'display' for field '{$attrPairs['name']}'! (only full|field|label valid)", errorHandle::DEBUG);
+		}
+
+		return $errorReturn;
+	}
+
+	/**
 	 * [PREG Callback] Process general template tags
 	 *
 	 * @param array $matches
 	 * @return string
 	 */
 	private function __renderGeneralTags($matches){
-		$tmplTag   = trim($matches[1]);
+		$tmplTag   = $matches[0];
+		$tagName   = trim($matches[1]);
 		$attrPairs = attPairs($matches[2]);
-		switch (strtolower($tmplTag)) {
+		switch (strtolower($tagName)) {
 			case 'formtitle':
 				return $this->renderOptions['title'];
 
@@ -366,29 +423,7 @@ class formBuilderTemplate {
 					return '';
 				}
 
-				if(isset($attrPairs['rowID'])) {
-					$attrPairs['name'] .= "[{$attrPairs['rowID']}]";
-					unset($attrPairs['rowID']);
-				}
-
-				$display  = isset($attrPairs['display'])
-					? trim(strtolower($attrPairs['display']))
-					: 'full';
-				$template = isset($attrPairs['template'])
-					? trim(strtolower($attrPairs['template']))
-					: NULL;
-
-				switch ($display) {
-					case 'full':
-						return $field->render($template, $attrPairs);
-					case 'field':
-						return $field->renderField($attrPairs);
-					case 'label':
-						return $field->renderLabel($attrPairs);
-					default:
-						errorHandle::newError(__METHOD__."() Invalid 'display' for field '{$attrPairs['name']}'! (only full|field|label valid)", errorHandle::DEBUG);
-						return '';
-				}
+				return $this->__renderFieldTag($tmplTag, $field);
 
 			case 'fieldset':
 				$legend = isset($attrPairs['legend']) && !is_empty($attrPairs['legend'])

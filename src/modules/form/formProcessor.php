@@ -481,7 +481,7 @@ class formProcessor extends formFields{
 
 		// Build list of deleted rows
 		$deletedRows = array();
-		$deletedIDs  = array_filter((array)$data['__deleted']);
+		$deletedIDs = isset($data['__deleted']) ? $data['__deleted'] : array();
 		if(sizeof($deletedIDs)){
 			foreach($deletedIDs as $deletedRowID){
 				// Save the row's data and then delete it from the array
@@ -496,7 +496,7 @@ class formProcessor extends formFields{
 			}
 		}
 
-		// Strip rowID off updatedRows now that deletedRows is build (and it's no longer needed)
+		// Strip rowID off updatedRows now that deletedRows is build (as it's no longer needed)
 		$updateRowData = array_values($updateRowData);
 
 		// Trigger beforeDelete and doDelete events

@@ -42,6 +42,11 @@ class fieldBuilder{
 	);
 
 	/**
+	 * @var formFields
+	 */
+	private $formFields;
+
+	/**
 	 * @var array The field definition
 	 */
 	private $field;
@@ -115,7 +120,7 @@ class fieldBuilder{
 	 * @param array|string $field
 	 * @return bool|fieldBuilder
 	 */
-	public static function createField($field){
+	public static function createField($field, formFields $formFields){
 		// If given a string, make it a valid array
 		if (is_string($field)) $field = array('name' => $field);
 
@@ -132,7 +137,9 @@ class fieldBuilder{
 		}
 
 		// Return a new fieldBuilder object
-		return new self($field);
+		$field = new self($field);
+		$field->formFields = $formFields;
+		return $field;
 	}
 
 	/**
@@ -407,12 +414,12 @@ class fieldBuilder{
 			: $this->getFieldOption('name');
 
 		$this->renderOptions = $options;
-		$output = !str2bool($options['valueOnly'])
-			? sprintf('<label for="%s"%s>%s</label>',
+		$output = isset($options['valueOnly']) && str2bool($options['valueOnly'])
+			? $label
+			: sprintf('<label for="%s"%s>%s</label>',
 				$this->getFieldOption('fieldID'),
 				$this->buildLabelAttributes(),
-				$label)
-			: $label;
+				$label);
 		$this->renderOptions = NULL;
 
 		return $output;
@@ -599,7 +606,15 @@ class fieldBuilder{
 	 * @return string
 	 */
 	private function __render_plaintext(){
-		return $this->getFieldOption('value');
+		$value      = $this->getFieldOption('value');
+		$formFields = $this->formFields;
+		$value      = preg_replace_callback('/\{(.*?)\}/', function ($m) use ($formFields){
+			$field = $formFields->getField($m[1]);
+			$value = !is_empty($field->renderedValue) ? $field->renderedValue : $field->value;
+			return $value;
+		}, $value);
+
+		return $value;
 	}
 
 	/**
