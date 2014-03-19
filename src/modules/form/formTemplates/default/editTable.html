@@ -13,7 +13,8 @@
 	<table>
 		<thead>
 		<tr>
-			<th class="formControlsLabel">{controlsLabel}</th>
+			{ifExpandable}<th></th>{/ifExpandable}
+			<th></th>
 			{fieldsLoop editStrip="true"}
 			<th>{field display="label"}</th>
 			{/fieldsLoop}
@@ -22,7 +23,8 @@
 		<tbody class="editStripFields">
 		{rowLoop}
 		<tr data-row_id="{rowLoopID}">
-			<td class="formControls">{controls}</td>
+			{ifExpandable}<td><i class="icon icon-collapse" data-target="#updateForm_{rowLoopID}" title="Expand"></i></td>{/ifExpandable}
+			<td><input type="checkbox" name="__deleted[]" value="{rowLoopID}" title="Delete" class="deleteRow"></td>
 			{fieldsLoop editStrip="true" showHidden="true"}
 			<td class="formField">{field display="field"}</td>
 			{/fieldsLoop}

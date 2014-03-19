@@ -222,7 +222,7 @@ class formBuilderTemplate {
 				$controls .= '<i class="icon icon-collapse" data-target="#updateForm_'.$rowID.'" title="Expand"></i>';
 			}
 			$controls .= '<i class="icon icon-trash" data-target="#updateForm_'.$rowID.'" title="Delete"></i>';
-			$rowBlock = str_replace('{controls}', $controls, $rowBlock);
+//			$rowBlock = str_replace('{controls}', $controls, $rowBlock);
 
 			$output .= $rowBlock;
 		}
@@ -390,11 +390,6 @@ class formBuilderTemplate {
 						errorHandle::newError(__METHOD__."() Invalid 'display' for field '{$attrPairs['name']}'! (only full|field|label valid)", errorHandle::DEBUG);
 						return '';
 				}
-
-			case 'controlslabel':
-				return isset($this->renderOptions['controlsLabel'])
-					? $this->renderOptions['controlsLabel']
-					: '';
 
 			case 'fieldset':
 				$legend = isset($attrPairs['legend']) && !is_empty($attrPairs['legend'])

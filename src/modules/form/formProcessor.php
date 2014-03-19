@@ -481,8 +481,7 @@ class formProcessor extends formFields{
 
 		// Build list of deleted rows
 		$deletedRows = array();
-		$deletedRowIDs = array_filter(explode(',', $data['__deleted']));
-		foreach($deletedRowIDs as $deletedRowID){
+		foreach($data['__deleted'] as $deletedRowID){
 			// Save the row's data and then delete it from the array
 			$deletedRowData = $updateRowData[$deletedRowID];
 			unset($updateRowData[$deletedRowID]);

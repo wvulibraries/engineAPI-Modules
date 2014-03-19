@@ -18,10 +18,10 @@ var formBuilder = {
 		if(typeof(this.insertFormCallback) == 'undefined') this.insertFormCallback = this.__insertFormCallback;
 
 		// Setup event handlers
+		this.$form.on('submit', this.submitForm);
 		this.$editTable.on('click', '.icon-expand', this.hideForm);
 		this.$editTable.on('click', '.icon-collapse', this.showForm);
-		this.$editTable.on('click', '.icon-trash', this.deleteRow);
-
+		this.$editTable.on('click', '.deleteRow', this.deleteRow);
 	},
 
 	showForm: function(e){
@@ -35,7 +35,7 @@ var formBuilder = {
 		};
 
 		// Register our 'form submission' handle
-		$target.on('click', ':submit', formBuilder.submitForm);
+		$target.on('click', ':submit', formBuilder.submitExpandedForm);
 
 		formBuilder.insertFormCallback(formBuilder.ajaxURL, ajaxData, $target);
 		$target.closest('.expandable').data('row_id', rowID).slideDown();
@@ -51,7 +51,7 @@ var formBuilder = {
 			if(!formBuilder.$form.find('.icon-expand').length) formBuilder.$form.find(':submit:last').removeAttr('disabled');
 		});
 	},
-	submitForm: function(e){
+	submitExpandedForm: function(e){
 		e.preventDefault();
 		e.stopPropagation();
 		var $submit = $(this);
@@ -79,6 +79,15 @@ var formBuilder = {
 			}
 		}, 'json');
 	},
+	submitForm: function(e){
+		var deletedRows = $('.deleteRow:checked').length;
+		if(deletedRows){
+			if(!confirm("You have marked "+deletedRows+" rows for deletion. Are you sure you want to proceed?")){
+				e.preventDefault();
+				e.stopPropagation();
+			}
+		}
+	},
 	__insertFormCallback: function(url, data, $target){
 		$.getJSON(url, data, function(data, textStatus, jqXHR){
 			if(data.success){
@@ -91,37 +100,28 @@ var formBuilder = {
 	},
 
 	deleteRow: function(e){
-		var $parent = $(this).parents('[data-row_id]');
-		var $deletedRowIDs = $('#deletedRowIDs');
-		var deletedRowIDs = $deletedRowIDs.val().length
-			? $deletedRowIDs.val().split(',')
-			: [];
+		var $chkBox = $(this);
+		var $parent = $chkBox.parents('[data-row_id]');
 		var rowID = $parent.data('row_id');
 
-		if(-1 == (index = deletedRowIDs.indexOf(rowID))){
-			// Delete the row
-			if(confirm("Are you sure?")){
-				// Delete the row
-				var disabledFields = [];
-				$parent.find(':input').each(function(i,field){
-					var $field = $(field);
-					if(!$field.is(':disabled')){
-						disabledFields.push($field);
-						$field.attr('disabled','disabled');
-					}
-				});
-				formBuilder.disabledFields[rowID] = disabledFields;
-				deletedRowIDs.push(rowID);
-			}
+		if($chkBox.is(':checked')){
+			// Mark row for deletion
+			var disabledFields = [];
+			$parent.find(':input').not($chkBox).each(function(i,field){
+				var $field = $(field);
+				if(!$field.is(':disabled')){
+					disabledFields.push($field);
+					$field.attr('disabled','disabled');
+				}
+			});
+			formBuilder.disabledFields[rowID] = disabledFields;
 		}else{
-			// un-Delete the row
+			// Un-mark row for deletion
 			$.each(formBuilder.disabledFields[rowID], function(i,$field){
 				$field.removeAttr('disabled');
 			});
 			delete formBuilder.disabledFields[rowID];
-			deletedRowIDs.splice(index, 1);
 		}
-		$deletedRowIDs.val( deletedRowIDs.join() );
 	}
 };
 
