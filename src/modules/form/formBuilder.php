@@ -876,13 +876,6 @@ class formBuilder extends formFields{
 		// Set default title if needed
 		if (!isset($options['title'])) $options['title'] = $this->editTitle;
 
-		// Add the 'deletedRows' field
-		$this->addField(array(
-			'name'    => '__deleted',
-			'fieldID' => 'deletedRowIDs',
-			'type'    => 'hidden',
-		));
-
 		// Get the template text (overriding the template if needed)
 		$templateFile = 'editTable.html';
 		$templateText = isset($options['template'])
