@@ -26,9 +26,19 @@ class formBuilder extends formFields{
 	private $formName;
 
 	/**
-	 * @var string The public label/name to apply to the form
+	 * @var string The public title to apply to insert forms
 	 */
-	public $formLabel;
+	public $insertTitle;
+
+	/**
+	 * @var string The public tile to apply to update forms
+	 */
+	public $updateTitle;
+
+	/**
+	 * @var string The public title to apply to edit tables
+	 */
+	public $editTitle;
 
 	/**
 	 * @var string Filepath to form templates
@@ -88,13 +98,23 @@ class formBuilder extends formFields{
 	 * @param string $formName
 	 */
 	public function __construct($formName){
+		// Set default template vars
 		$this->templateDir   = __DIR__.DIRECTORY_SEPARATOR.'formTemplates';
 		$this->template      = 'default';
-		$this->formLabel     = $formName;
+
+		// Set form title vars
+		$this->insertTitle   = $formName.' Insert';
+		$this->updateTitle   = $formName.' Update';
+		$this->editTitle     = $formName.' Edit';
+
+		// Set form name
 		$this->formName      = trim(strtolower($formName));
+
+		// Set assets path
 		$engineVars          = enginevars::getInstance();
 		$this->formAssetsURL = $engineVars->get('formAssetsURL', $engineVars->get('engineInc').DIRECTORY_SEPARATOR.'formBuilderAssets');
 
+		// Register errorHandle::prettyPrint callback and {form ...} template tags
 		errorHandle::registerPrettyPrintCallback(array($this, 'prettyPrintFormErrors'));
 		templates::defTempPatterns('/\{form\s+(.+?)\}/', __CLASS__.'::templateMatches', $this);
 	}
@@ -721,6 +741,9 @@ class formBuilder extends formFields{
 		// Add a submit button if one does not exist
 		$submitAdded = $this->addFormSubmit($this->submitTextInsert);
 
+		// Set default title if needed
+		if (!isset($options['title'])) $options['title'] = $this->insertTitle;
+
 		// Get the template text (overriding the template if needed)
 		$templateFile = 'insertUpdate.html';
 		$templateText = isset($options['template'])
@@ -796,6 +819,9 @@ class formBuilder extends formFields{
 		// Add a submit button if one does not exist
 		$submitAdded = $this->addFormSubmit($this->submitTextUpdate);
 
+		// Set default title if needed
+		if (!isset($options['title'])) $options['title'] = $this->updateTitle;
+
 		// Get the template text (overriding the template if needed)
 		$templateFile = 'insertUpdate.html';
 		$templateText = isset($options['template'])
@@ -846,6 +872,9 @@ class formBuilder extends formFields{
 
 		// Add a submit button if one does not exist
 		$submitAdded = $this->addFormSubmit($this->submitTextEdit);
+
+		// Set default title if needed
+		if (!isset($options['title'])) $options['title'] = $this->editTitle;
 
 		// Add the 'deletedRows' field
 		$this->addField(array(

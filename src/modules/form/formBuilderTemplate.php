@@ -268,10 +268,9 @@ class formBuilderTemplate {
 		$attrPairs = attPairs($matches[2]);
 		switch (strtolower($tmplTag)) {
 			case 'formtitle':
-				return $this->formBuilder->formLabel;
+				return $this->renderOptions['title'];
 
 			case 'form':
-
 				$output = '';
 				$showHidden = isset($attrPairs['hidden']) ? str2bool($attrPairs['hidden']) : FALSE;
 				unset($attrPairs['hidden']);
