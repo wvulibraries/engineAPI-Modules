@@ -184,6 +184,12 @@ class formBuilderTemplate {
 		// Run the SQL
 		$sqlResult = $db->query($sql);
 
+		// Catch any sql error
+		if($sqlResult->errorCode()){
+			errorHandle::newError(__METHOD__."() SQL Error: {$sqlResult->errorCode()}:{$sqlResult->errorMsg()}", errorHandle::HIGH);
+			die('Internal database error!');
+		}
+
 		// Save the number of rows
 		$this->counterRows = $sqlResult->rowCount();
 
