@@ -205,7 +205,18 @@ class formProcessor extends formFields{
 				$isValid = FALSE;
 				// TODO: Trigger onValidateError event
 				errorHandle::errorMsg($validator->getErrorMessage($field->validate, $fieldData));
-				continue;
+			}
+
+			// dupe checking
+			if(!$field->duplicates && !is_empty($fieldData)){
+				$sql = sprintf('SELECT COUNT(*) AS i FROM `%s` WHERE `%s`=?',
+					$this->db->escape($this->dbTable),
+					$this->db->escape($field->name));
+				$stmt = $this->db->query($sql, array($fieldData));
+				if($stmt->fetchField()){
+					$isValid = FALSE;
+					errorHandle::errorMsg("Duplicate value '".htmlSanitize($fieldData)."' found for field '{$field->label}'!");
+				}
 			}
 
 			// Did an error occur? (like a bad regex pattern)

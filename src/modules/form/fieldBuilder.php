@@ -5,7 +5,7 @@ class fieldBuilder{
 	private static $fieldDefaults = array(
 		'disabled'        => FALSE,
 		'size'            => 40,
-		'duplicates'      => FALSE,
+		'duplicates'      => TRUE,
 		'type'            => 'text',
 		'readonly'        => FALSE,
 		'value'           => '',
