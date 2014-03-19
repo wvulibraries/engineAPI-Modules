@@ -195,8 +195,8 @@ class formBuilderTemplate {
 
 		// Figure out the fields we need to loop on (and save the number of fields)
 		preg_match_all('/{field.*?name="(\w+)".*?}/', $block, $matches);
+		$this->counterFields = sizeof($matches[1]);
 		$templateFields      = array_intersect($sqlResult->fieldNames(), $matches[1]);
-		$this->counterFields = sizeof($templateFields);
 
 		// Loop over each row, transforming the block into a compiled block
 		while ($row = $sqlResult->fetch()) {
