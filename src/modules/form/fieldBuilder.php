@@ -401,12 +401,18 @@ class fieldBuilder{
 		if (isset($options['name'])) unset($options['name']);
 		if (isset($options['display'])) unset($options['display']);
 
+		// Determine label
+		$label = $this->getFieldOption('label')
+			? $this->getFieldOption('label')
+			: $this->getFieldOption('name');
+
 		$this->renderOptions = $options;
-		$output = sprintf('<label for="%s"%s>%s</label>',
+		$output = !str2bool($options['valueOnly'])
+			? sprintf('<label for="%s"%s>%s</label>',
 				$this->getFieldOption('fieldID'),
 				$this->buildLabelAttributes(),
-				(($label = $this->getFieldOption('label')) ? $label : $this->getFieldOption('name'))
-			);
+				$label)
+			: $label;
 		$this->renderOptions = NULL;
 
 		return $output;
