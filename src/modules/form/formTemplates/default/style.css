@@ -4,10 +4,7 @@ html{
 }
 label{
 	cursor: pointer;
-	display: inline-block;
-	min-width: 100px;
-	text-align: right;
-	margin-right: 10px;
+	vertical-align: top;
 }
 iframe{
 	width: 100%;
@@ -17,6 +14,13 @@ iframe{
 }
 .errorPrettyPrint .errorMessage{
 	color: red;
+}
+
+.insertUpdateForm label{
+	width: 100px;
+	text-align: left;
+	margin-right: 10px;
+	display: inline-block;
 }
 
 .formBuilder label.required{
