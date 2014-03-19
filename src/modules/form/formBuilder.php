@@ -832,11 +832,20 @@ class formBuilder extends formFields{
 	public function displayEditTable($options = array()){
 		if(!$this->ensurePrimaryFieldsSet()) return 'Misconfigured formBuilder!';
 
+		// Apply expandable default
+		if(!isset($options['expandable'])) $options['expandable'] = $this->expandable;
+
+		// Handle the case where expandable is TRUE, but all the fields are in the editStrip (negating the need to expand)
+		if($options['expandable']){
+			$editStripFieldCount = 0;
+			foreach($this->fields as $field){
+				if($field->showInEditStrip) $editStripFieldCount++;
+			}
+			if($editStripFieldCount == sizeof($this->fields)) $options['expandable'] = FALSE;
+		}
+
 		// Add a submit button if one does not exist
 		$submitAdded = $this->addFormSubmit($this->submitTextEdit);
-
-		// Default expandable to FALSE
-		if(!isset($options['expandable'])) $options['expandable'] = $this->expandable;
 
 		// Add the 'deletedRows' field
 		$this->addField(array(
