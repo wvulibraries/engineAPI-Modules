@@ -481,16 +481,19 @@ class formProcessor extends formFields{
 
 		// Build list of deleted rows
 		$deletedRows = array();
-		foreach($data['__deleted'] as $deletedRowID){
-			// Save the row's data and then delete it from the array
-			$deletedRowData = $updateRowData[$deletedRowID];
-			unset($updateRowData[$deletedRowID]);
+		$deletedIDs  = array_filter((array)$data['__deleted']);
+		if(sizeof($deletedIDs)){
+			foreach($deletedIDs as $deletedRowID){
+				// Save the row's data and then delete it from the array
+				$deletedRowData = $updateRowData[$deletedRowID];
+				unset($updateRowData[$deletedRowID]);
 
-			// Merge in the row's primary fields
-			$deletedRowData = array_merge($deletedRowData, $this->primaryFieldsValues[$deletedRowID]);
+				// Merge in the row's primary fields
+				$deletedRowData = array_merge($deletedRowData, $this->primaryFieldsValues[$deletedRowID]);
 
-			// Save the row to $deletedRows
-			$deletedRows[] = $deletedRowData;
+				// Save the row to $deletedRows
+				$deletedRows[] = $deletedRowData;
+			}
 		}
 
 		// Strip rowID off updatedRows now that deletedRows is build (and it's no longer needed)
