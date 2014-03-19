@@ -18,6 +18,10 @@ iframe{
 .errorPrettyPrint .errorMessage{
 	color: red;
 }
+
+.formBuilder label.required{
+	font-weight: bold;
+}
 .formBuilder .icon{
 	background-size: contain;
 	height: 20px;

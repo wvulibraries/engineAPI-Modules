@@ -78,6 +78,9 @@ class fieldBuilder{
 			$this->field['validate'] = self::$fieldValidations[ $this->field['type'] ];
 		}
 
+		// If this field is required, add the 'required' class
+		if($this->required) $this->labelClass .= ' required';
+
 		// Set the default template directory container path
 		$this->templateDir = __DIR__.DIRECTORY_SEPARATOR.'fieldTemplates'.DIRECTORY_SEPARATOR;
 	}
