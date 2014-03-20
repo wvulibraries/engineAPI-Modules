@@ -33,6 +33,11 @@ class formBuilderTemplate {
 	public $formID;
 
 	/**
+	 * @var string The type of form we're rendering (ie insertForm, updateForm, editTable)
+	 */
+	public $formType;
+
+	/**
 	 * @var string[] List of fields which have been rendered (used for de-duping during render)
 	 */
 	private $fieldsRendered = array();
@@ -236,10 +241,8 @@ class formBuilderTemplate {
 	 * @return string
 	 */
 	private function __renderFormErrors($matches){
-		$block = $matches[0];
-
 		// Build formErrors HTML and if there's none, return an empty string
-		$formErrorHTML = errorHandle::prettyPrint();
+		$formErrorHTML = formBuilder::prettyPrintErrors($this->formBuilder->formName.'_'.$this->formType);
 		if(!$formErrorHTML) return '';
 
 		// If there's a block move into it, and replace {formErrors} with the formErrorsHTML from above

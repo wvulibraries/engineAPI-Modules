@@ -10,10 +10,6 @@ class formProcessor extends formFields{
 	const ERR_TYPE            = 6;
 	const ERR_INCOMPLETE_DATA = 7;
 
-	const TYPE_INSERT = 1;
-	const TYPE_UPDATE = 2;
-	const TYPE_EDIT   = 3;
-
 	/**
 	 * @var array Human-readable error messages for our ERR types
 	 */
@@ -27,6 +23,11 @@ class formProcessor extends formFields{
 		self::ERR_TYPE            => 'Invalid formType',
 		self::ERR_INCOMPLETE_DATA => 'Incomplete Data',
 	);
+
+	/**
+	 * @var null|formBuilder A reference back to the formBuilder that created this formProcessor (May be NULL if created manual)
+	 */
+	public $formBuilder;
 
 	/**
 	 * @var int The internal type of form to be processed
@@ -72,28 +73,36 @@ class formProcessor extends formFields{
 		$this->dbTable = $this->db->escape($dbTableName);
 	}
 
-	public function setProcessorType($type){
-		switch(trim(strtolower($type))) {
-			case self::TYPE_INSERT:
-			case 'insert':
-			case 'insertform':
-				$this->processorType = self::TYPE_INSERT;
+	/**
+	 * Record a new form error
+	 * @param string $msg
+	 * @param string $type
+	 */
+	private function formError($msg, $type){
+		switch($type){
+			case errorHandle::ERROR:
+				errorHandle::errorMsg($msg);
 				break;
-			case self::TYPE_UPDATE:
-			case 'update':
-			case 'updateform':
-				$this->processorType = self::TYPE_UPDATE;
+			case errorHandle::SUCCESS:
+				errorHandle::successMsg($msg);
 				break;
-			case self::TYPE_EDIT:
-			case 'edit':
-			case 'edittable':
-				$this->processorType = self::TYPE_EDIT;
+			case errorHandle::WARNING:
+				errorHandle::warningMsg($msg);
 				break;
-			default:
-				errorHandle::newError(__METHOD__."() Invalid processorType! '$type'", errorHandle::DEBUG);
-				return FALSE;
 		}
-		return TRUE;
+
+		// Add error to formErrors (if we can)
+		if($this->formBuilder instanceof formBuilder){
+			$this->formBuilder->formError($msg, $type, $this->formBuilder->formName.'_'.$this->processorType);
+		}
+	}
+
+	/**
+	 * Sets the internal formType (insert, update, edit) which controls how the data is processed
+	 * @param $input
+	 */
+	public function setProcessorType($input){
+		$this->processorType = formBuilder::getFormType($input);
 	}
 
 	/**
@@ -175,7 +184,7 @@ class formProcessor extends formFields{
 			// If this field is required, make sure it's present
 			if($field->required && (!isset($data[ $field->name ]) || !$validator->present($data[ $field->name ]))){
 				$isValid = FALSE;
-				errorHandle::errorMsg("Field '$field->label' required!");
+				$this->formError("Field '$field->label' required!", errorHandle::ERROR);
 				continue;
 			}
 
@@ -204,7 +213,7 @@ class formProcessor extends formFields{
 			}elseif($result === FALSE){
 				$isValid = FALSE;
 				// TODO: Trigger onValidateError event
-				errorHandle::errorMsg($validator->getErrorMessage($field->validate, $fieldData));
+				$this->formError($validator->getErrorMessage($field->validate, $fieldData), errorHandle::ERROR);
 				continue;
 			}
 
@@ -336,15 +345,15 @@ class formProcessor extends formFields{
 	 */
 	public function process($data){
 		switch($this->processorType){
-			case self::TYPE_INSERT:
+			case formBuilder::TYPE_INSERT:
 				$result = $this->__processInsert($data);
 				break;
 
-			case self::TYPE_UPDATE:
+			case formBuilder::TYPE_UPDATE:
 				$result = $this->__processUpdate($data);
 				break;
 
-			case self::TYPE_EDIT:
+			case formBuilder::TYPE_EDIT:
 				$result = $this->__processEdit($data);
 				break;
 
