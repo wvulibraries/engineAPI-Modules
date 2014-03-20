@@ -374,7 +374,7 @@ class formBuilder extends formFields{
 
 			// Set the primary fields
 			call_user_func_array(array($formProcessor, 'addPrimaryFields'), $savedFormBuilder->listPrimaryFields());
-			if($savedFormType == 'editTable') $formProcessor->primaryFieldsValues = $savedFormBuilder->editTableRowData;
+			if($savedFormType == self::TYPE_EDIT) $formProcessor->primaryFieldsValues = $savedFormBuilder->editTableRowData;
 
 			// Add our fields to the form processor
 			foreach ($savedFormBuilder->fields as $field) {
