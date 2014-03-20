@@ -4,6 +4,10 @@ class formBuilder extends formFields{
 	const DEFAULT_FORM_NAME       = '';
 	const DEFAULT_FORM_TIMEOUT    = 300;
 	const SESSION_SAVED_FORMS_KEY = 'formBuilderForms';
+	const TYPE_UNKNOWN = 0;
+	const TYPE_INSERT  = 1;
+	const TYPE_UPDATE  = 2;
+	const TYPE_EDIT    = 3;
 
 	/**
 	 * @var string The base URL where our form assets are located at
@@ -19,6 +23,11 @@ class formBuilder extends formFields{
 	 * @var formProcessor[] An array of all created formProcessor objects (keyed off their formID's)
 	 */
 	private static $formProcessorObjects = array();
+
+	/**
+	 * @var array Array of internal form errors similar to engine's errorStack
+	 */
+	private static $formErrors = array();
 
 	/**
 	 * @var string The name given to this form
@@ -114,8 +123,7 @@ class formBuilder extends formFields{
 		$engineVars          = enginevars::getInstance();
 		$this->formAssetsURL = $engineVars->get('formAssetsURL', $engineVars->get('engineInc').DIRECTORY_SEPARATOR.'formBuilderAssets');
 
-		// Register errorHandle::prettyPrint callback and {form ...} template tags
-		errorHandle::registerPrettyPrintCallback(array($this, 'prettyPrintFormErrors'));
+//		errorHandle::registerPrettyPrintCallback(array($this, 'prettyPrintFormErrors'));
 		templates::defTempPatterns('/\{form\s+(.+?)\}/', __CLASS__.'::templateMatches', $this);
 	}
 
@@ -139,86 +147,44 @@ class formBuilder extends formFields{
 	}
 
 	/**
-	 * [Callback] Our custom callback for prettyPrint()
-	 *
-	 * @see errorHandle::prettyPrint()
-	 * @param array  $errorStack
-	 * @param string $type
-	 * @return string
+	 * Map the given form type to the internal int representation
+	 * @param string|int $input
+	 * @return int
 	 */
-	public function prettyPrintFormErrors($errorStack, $type){
-		// If there's no errorStack, return
-		if (!sizeof($errorStack) || !isset($errorStack[$type])) return '';
+	public static function getFormType($input){
+		switch(trim(strtolower($input))) {
+			case self::TYPE_INSERT:
+			case 'insert':
+			case 'insertform':
+				return self::TYPE_INSERT;
 
-		// Setup vars
-		$engineErrors = array();
-		$formErrors   = array();
-		$errorStack   = (array)$errorStack[$type];
+			case self::TYPE_UPDATE:
+			case 'update':
+			case 'updateform':
+				return self::TYPE_UPDATE;
 
-		// Loop through each error
-		foreach ($errorStack as $v) {
-			// If $v is a string, then it's a regular engine error
-			if (is_string($v)) {
-				$engineErrors[] = array(
-					'msg'  => $v,
-					'type' => $type,
-				);
-				continue;
-			}
+			case self::TYPE_EDIT:
+			case 'edit':
+			case 'edittable':
+				return self::TYPE_EDIT;
 
-			// If $type is 'all' then this is a nested engine error
-			if ($type == 'all') {
-				$engineErrors[] = $v;
-				continue;
-			}
-
-			// If $v is an array, and it has a key with our form name, then it's our form errors
-			if (is_array($v) && isset($v[$this->formName])) {
-				$formErrors = $v[$this->formName];
-			}
+			default:
+				errorHandle::newError(__METHOD__."() Invalid formType! '$input'", errorHandle::DEBUG);
+				return self::TYPE_UNKNOWN;
 		}
+	}
 
-		$output = '';
-		if (sizeof($engineErrors) || sizeof($formErrors)) {
-			// Start building the errors <ul>
-			$output .= '<ul class="errorPrettyPrint">';
+	public static function formError($msg, $type, $scope){
+		self::$formErrors[$scope][] = array(
+			'message' => $msg,
+			'type'    => $type,
+		);
+	}
 
-			// Loop through all the engine errors
-			foreach ($engineErrors as $engineError) {
-				// Pull out the msg and type
-				$msg  = $engineError['message'];
-				$type = $engineError['type'];
-
-				// Map the type to it's CSS class
-				switch ($type) {
-					case errorHandle::ERROR:
-						$class = errorHandle::$uiClassError;
-						break;
-					case errorHandle::SUCCESS:
-						$class = errorHandle::$uiClassSuccess;
-						break;
-					case errorHandle::WARNING:
-						$class = errorHandle::$uiClassWarning;
-						break;
-					default:
-						$class = '';
-						break;
-				}
-
-				// Generate <li> HTML
-				$output .= sprintf('<li><span class="%s">%s</span></li>', $class, htmlSanitize($msg, ENT_QUOTES, "UTF-8", FALSE));
-			}
-
-			// Loop through all the form errors and generate their <li> HTML
-			foreach ($formErrors as $formError) {
-				$output .= sprintf('<li><span class="%s">%s</span></li>', errorHandle::$uiClassError, htmlSanitize($formError, ENT_QUOTES, "UTF-8", FALSE));
-			}
-
-			// Finish the <ul> and return
-			$output .= '</ul>';
-		}
-
-		return $output;
+	public static function prettyPrintErrors($scope){
+		return isset(self::$formErrors[$scope])
+			? errorHandle::makePrettyPrint(self::$formErrors[$scope])
+			: '';
 	}
 
 	/**
@@ -401,6 +367,7 @@ class formBuilder extends formFields{
 
 			// Create the form processor
 			$formProcessor = new formProcessor($savedFormBuilder->dbOptions['table'], $savedFormBuilder->dbOptions['connection']);
+			$formProcessor->formBuilder = $savedFormBuilder;
 
 			// Set the processorType
 			$formProcessor->setProcessorType($savedFormType);
@@ -560,6 +527,13 @@ class formBuilder extends formFields{
 		}
 	}
 
+	/**
+	 * Make sure there are primary fields set
+	 *
+	 * (This is used on displayUpdateForm and displayEditTable for sanity checking)
+	 *
+	 * @return bool
+	 */
 	private function ensurePrimaryFieldsSet(){
 		// Make sure there is at least 1 primary field set
 		if(!sizeof($this->primaryFields)){
@@ -646,28 +620,10 @@ class formBuilder extends formFields{
 	 */
 	public function display($display, $options=array()){
 		$display = trim(strtolower($display));
+
 		switch ($display) {
 			case 'form':
 				return $this->displayForm($options);
-
-			case 'insert':
-			case 'insertform':
-				return $this->displayInsertForm($options);
-
-			case 'update':
-			case 'updateform':
-				return $this->displayUpdateForm($options);
-
-			case 'edit':
-			case 'edittable':
-				return $this->displayEditTable($options);
-
-			case 'expandable':
-			case 'expandableedit':
-			case 'expandabletable':
-			case 'expandableedittable':
-				if(!$this->ensurePrimaryFieldsSet()) return 'Misconfigured formBuilder!';
-				return $this->displayExpandableEditTable($options);
 
 			case 'assets':
 				$assetFiles = $this->getAssets();
@@ -707,8 +663,21 @@ class formBuilder extends formFields{
 				return errorHandle::prettyPrint();
 
 			default:
-				errorHandle::newError(__METHOD__."() Unsupported display type '$display' for form '{$this->formName}'", errorHandle::DEBUG);
-				return '';
+				// Last ditch, try display as a formType
+				switch(self::getFormType($display)){
+					case self::TYPE_INSERT:
+						return $this->displayInsertForm($options);
+
+					case self::TYPE_UPDATE:
+						return $this->displayUpdateForm($options);
+
+					case self::TYPE_EDIT:
+						return $this->displayEditTable($options);
+
+					default:
+						errorHandle::newError(__METHOD__."() Unsupported display type '$display' for form '{$this->formName}'", errorHandle::DEBUG);
+						return '';
+				}
 		}
 	}
 
@@ -751,8 +720,9 @@ class formBuilder extends formFields{
 			: $this->getTemplateText($templateFile);
 
 		// Create the template object
-		$template = new formBuilderTemplate($this, $templateText);
-		$template->formID = $this->generateFormID();
+		$template                = new formBuilderTemplate($this, $templateText);
+		$template->formID        = $this->generateFormID();
+		$template->formType      = self::TYPE_INSERT;
 		$template->renderOptions = $options;
 
 		// Apply any options
@@ -765,7 +735,7 @@ class formBuilder extends formFields{
 		if($submitAdded) $this->removeField('submit');
 
 		// Save the form to the session
-		$this->saveForm($template->formID, 'insertForm');
+		$this->saveForm($template->formID, $template->formType);
 
 		// Return the final output
 		return $output;
@@ -833,8 +803,9 @@ class formBuilder extends formFields{
 			: $this->getTemplateText($templateFile);
 
 		// Create the template object
-		$template = new formBuilderTemplate($this, $templateText);
-		$template->formID = $this->generateFormID();
+		$template                = new formBuilderTemplate($this, $templateText);
+		$template->formID        = $this->generateFormID();
+		$template->formType      = self::TYPE_UPDATE;
 		$template->renderOptions = $options;
 
 		// Apply any options
@@ -847,7 +818,7 @@ class formBuilder extends formFields{
 		if($submitAdded) $this->removeField('submit');
 
 		// Save the form to the session
-		$this->saveForm($template->formID, 'updateForm');
+		$this->saveForm($template->formID, $template->formType);
 
 		// Return the final output
 		return $output;
@@ -887,8 +858,9 @@ class formBuilder extends formFields{
 			: $this->getTemplateText($templateFile);
 
 		// Create the template object
-		$template = new formBuilderTemplate($this, $templateText);
-		$template->formID = $this->generateFormID();
+		$template                = new formBuilderTemplate($this, $templateText);
+		$template->formID        = $this->generateFormID();
+		$template->formType      = self::TYPE_EDIT;
 		$template->renderOptions = $options;
 
 		// Apply any form attributes
@@ -907,20 +879,9 @@ class formBuilder extends formFields{
 		if($submitAdded) $this->removeField('submit');
 
 		// Save the form to the session
-		$this->saveForm($template->formID, 'editTable');
+		$this->saveForm($template->formID, $template->formType);
 
 		// Return the final output
 		return $output;
-	}
-
-	/**
-	 * Displays an Expandable Edit Table using a given template
-	 *
-	 * @param array $options
-	 * @return string
-	 */
-	public function displayExpandableEditTable($options = array()) {
-		$options['expandable'] = TRUE;
-		return $this->displayEditTable($options);
 	}
 }
