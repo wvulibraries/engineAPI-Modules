@@ -537,9 +537,13 @@ class fieldBuilder{
 		$output = '';
 
 		// Make sure there's options
-		$options = $this->getFieldOption('options');
+		$options = $this->getFieldOption('options')
+			? $this->getFieldOption('options')
+			: $this->getLinkedToOptions();
+
+		// If still no options, we don't have any and should return an empty string
 		if(!$options){
-			errorHandle::newError(__METHOD__.'() You must provide options to render a radio field!', errorHandle::DEBUG);
+			errorHandle::newError(__METHOD__.'() You must provide options to render a radio field!', errorHandle::LOW);
 			return '';
 		}
 
@@ -569,9 +573,13 @@ class fieldBuilder{
 		if(is_string($values)) $values = explode(',', $values);
 
 		// Make sure there's options
-		$options = $this->getFieldOption('options');
+		$options = $this->getFieldOption('options')
+			? $this->getFieldOption('options')
+			: $this->getLinkedToOptions();
+
+		// If still no options, we don't have any and should return an empty string
 		if(!$options){
-			errorHandle::newError(__METHOD__.'() You must provide options to render a checkbox field!', errorHandle::DEBUG);
+			errorHandle::newError(__METHOD__.'() You must provide options to render a checkbox field!', errorHandle::LOW);
 			return '';
 		}
 
@@ -598,7 +606,7 @@ class fieldBuilder{
 				$this->buildFieldAttributes());
 		}
 
-		return $output;
+		return "<div class='checkboxGroup'>$output</div>";
 	}
 
 	/**
@@ -763,55 +771,13 @@ class fieldBuilder{
 	private function buildSelectOptions(){
 		$output = '';
 
-		if (sizeof($this->getFieldOption('options'))) {
-			$options = $this->getFieldOption('options');
-		} elseif (sizeof($this->getFieldOption('linkedTo'))) {
-			$linkedTo         = $this->getFieldOption('linkedTo');
-			$dbConnection     = isset($linkedTo['dbConnection'])     ? $linkedTo['dbConnection']     : 'appDB';
-			$foreignTable     = isset($linkedTo['foreignTable'])     ? $linkedTo['foreignTable']     : NULL;
-			$foreignKey       = isset($linkedTo['foreignKey'])       ? $linkedTo['foreignKey']       : 'ID';
-			$foreignLabel     = isset($linkedTo['foreignLabel'])     ? $linkedTo['foreignLabel']     : NULL;
-			$foreignOrder     = isset($linkedTo['foreignOrder'])     ? $linkedTo['foreignOrder']     : NULL;
-			$foreignWhere     = isset($linkedTo['foreignWhere'])     ? $linkedTo['foreignWhere']     : NULL;
-			$foreignLimit     = isset($linkedTo['foreignLimit'])     ? $linkedTo['foreignLimit']     : NULL;
-			$foreignSQL       = isset($linkedTo['foreignSQL'])       ? $linkedTo['foreignSQL']       : NULL;
-			$linkTable        = isset($linkedTo['linkTable'])        ? $linkedTo['linkTable']        : NULL;
-			$linkForeignField = isset($linkedTo['linkForeignField']) ? $linkedTo['linkForeignField'] : NULL;
-			$linkLocalField   = isset($linkedTo['linkLocalField'])   ? $linkedTo['linkLocalField']   : NULL;
+		$options = $this->getFieldOption('options')
+			? $this->getFieldOption('options')
+			: $this->getLinkedToOptions();
 
-			// Get the db connection we'll be talking to
-			$db = db::getInstance()->$dbConnection;
-
-			// Build the SQL (if needed)
-			if (!isset($foreignSQL)) {
-				if (!isset($foreignKey) || !isset($foreignLabel) || !isset($foreignTable)) {
-					errorHandle::newError(__METHOD__."() Using linkedTo but missing key, field, and/or table params", errorHandle::DEBUG);
-					return '';
-				}
-				$foreignSQL = sprintf('SELECT `%s`, `%s` FROM `%s`',
-					$db->escape($foreignKey),
-					$db->escape($foreignLabel),
-					$db->escape($foreignTable));
-				if (isset($foreignWhere) && !empty($foreignWhere)) $foreignSQL .= " WHERE $foreignWhere";
-				$foreignSQL .= (isset($foreignOrder) && !empty($foreignOrder))
-					? " ORDER BY $foreignOrder"
-					: " ORDER BY ".$db->escape($foreignLabel)." ASC";
-				if (isset($foreignLimit) && !empty($foreignLimit)) $foreignSQL .= " LIMIT $foreignLimit";
-			}
-
-			// Run the SQL
-			$sqlResult = $db->query($foreignSQL);
-
-			// Format the result into a usable array
-			$options = array();
-			while ($row = $sqlResult->fetch()) {
-				$foreignKey           = array_shift($row); // The key is always the 1st col
-				$val           = array_shift($row); // The key is always the 2nd col
-				$options[$foreignKey] = $val;
-			}
-
-		} else {
-			// No options
+		// If still no options, we don't have any and should return an empty string
+		if(!$options){
+			errorHandle::newError(__METHOD__.'() No options provided for select field!', errorHandle::DEBUG);
 			return '';
 		}
 
@@ -833,6 +799,70 @@ class fieldBuilder{
 		}
 		return $output;
 
+	}
+
+	/**
+	 * Returns an options array based on the linkedTo settings
+	 *
+	 * @return array|bool The options array or FALSE in case of error
+	 */
+	private function getLinkedToOptions(){
+		// Get the linkedTo settings
+		$linkedTo = $this->getFieldOption('linkedTo');
+
+		// If no linkedTo settings, return FALSE
+		if(is_empty($linkedTo)) return FALSE;
+
+		// Pull out all the settings we need
+		$dbConnection     = isset($linkedTo['dbConnection'])     ? $linkedTo['dbConnection']     : 'appDB';
+		$foreignTable     = isset($linkedTo['foreignTable'])     ? $linkedTo['foreignTable']     : NULL;
+		$foreignKey       = isset($linkedTo['foreignKey'])       ? $linkedTo['foreignKey']       : 'ID';
+		$foreignLabel     = isset($linkedTo['foreignLabel'])     ? $linkedTo['foreignLabel']     : NULL;
+		$foreignOrder     = isset($linkedTo['foreignOrder'])     ? $linkedTo['foreignOrder']     : NULL;
+		$foreignWhere     = isset($linkedTo['foreignWhere'])     ? $linkedTo['foreignWhere']     : NULL;
+		$foreignLimit     = isset($linkedTo['foreignLimit'])     ? $linkedTo['foreignLimit']     : NULL;
+		$foreignSQL       = isset($linkedTo['foreignSQL'])       ? $linkedTo['foreignSQL']       : NULL;
+//		$linkTable        = isset($linkedTo['linkTable'])        ? $linkedTo['linkTable']        : NULL;
+//		$linkForeignField = isset($linkedTo['linkForeignField']) ? $linkedTo['linkForeignField'] : NULL;
+//		$linkLocalField   = isset($linkedTo['linkLocalField'])   ? $linkedTo['linkLocalField']   : NULL;
+
+		// Get the db connection we'll be talking to
+		$db = db::getInstance()->$dbConnection;
+
+		// Build the SQL (if needed)
+		if (!isset($foreignSQL)) {
+			if (!isset($foreignKey) || !isset($foreignLabel) || !isset($foreignTable)) {
+				errorHandle::newError(__METHOD__."() Using linkedTo but missing key, field, and/or table params", errorHandle::DEBUG);
+				return FALSE;
+			}
+			$foreignSQL = sprintf('SELECT `%s`, `%s` FROM `%s`',
+				$db->escape($foreignKey),
+				$db->escape($foreignLabel),
+				$db->escape($foreignTable));
+			if (isset($foreignWhere) && !empty($foreignWhere)) $foreignSQL .= " WHERE $foreignWhere";
+			$foreignSQL .= (isset($foreignOrder) && !empty($foreignOrder))
+				? " ORDER BY $foreignOrder"
+				: " ORDER BY ".$db->escape($foreignLabel)." ASC";
+			if (isset($foreignLimit) && !empty($foreignLimit)) $foreignSQL .= " LIMIT $foreignLimit";
+		}
+
+		// Run the SQL
+		$sqlResult = $db->query($foreignSQL);
+		if($sqlResult->errorCode()){
+			errorHandle::newError(__METHOD__."() SQL Error: {$sqlResult->errorCode()}:{$sqlResult->errorMsg()} (SQL: $foreignSQL)", errorHandle::DEBUG);
+			return FALSE;
+		}
+
+
+		// Format the result into a usable array
+		$options = array();
+		while ($row = $sqlResult->fetch()) {
+			$foreignKey           = array_shift($row); // The key is always the 1st col
+			$val                  = array_shift($row); // The key is always the 2nd col
+			$options[$foreignKey] = $val;
+		}
+
+		return $options;
 	}
 
 }
