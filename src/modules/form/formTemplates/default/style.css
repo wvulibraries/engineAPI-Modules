@@ -83,13 +83,14 @@ iframe{
 .formBuilder.insertUpdateForm ul.formFields > li{
 	margin-bottom: 15px;
 }
-.formBuilder.insertUpdateForm .radioGroup{
+.formBuilder.insertUpdateForm .radioGroup, .formBuilder.insertUpdateForm .checkboxGroup{
 	display: inline-block;
 }
-.formBuilder.insertUpdateForm .radioLabel{
+.formBuilder.insertUpdateForm .radioLabel, .formBuilder.insertUpdateForm .checkboxLabel{
 	display: block;
 	cursor: pointer;
 	text-align: left;
+	width: 100%;
 }
 .formBuilder.insertUpdateForm.checkboxLabel{
 	display: block;
