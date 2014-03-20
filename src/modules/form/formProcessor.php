@@ -73,6 +73,12 @@ class formProcessor extends formFields{
 		$this->dbTable = $this->db->escape($dbTableName);
 	}
 
+	private function getFormScope(){
+		return ($this->formBuilder instanceof formBuilder)
+			? $this->formBuilder->formName.'_'.$this->processorType
+			: $this->processorType;
+	}
+
 	/**
 	 * Record a new form error
 	 * @param string $msg
@@ -93,7 +99,7 @@ class formProcessor extends formFields{
 
 		// Add error to formErrors (if we can)
 		if($this->formBuilder instanceof formBuilder){
-			$this->formBuilder->formError($msg, $type, $this->formBuilder->formName.'_'.$this->processorType);
+			$this->formBuilder->formError($msg, $type, $this->getFormScope());
 		}
 	}
 
@@ -248,22 +254,60 @@ class formProcessor extends formFields{
 		// Process field validation rules
 		if(!$this->validate($data)) return self::ERR_VALIDATION;
 
-		$fields = array();
-		foreach($data as $field => $value){
-			$field = $this->getField($field);
-			$fields[ $field->name ] = $data[ $field->name ];
+		// Start database transaction
+		$this->db->beginTransaction();
+
+		try{
+			$fields = array();
+			$deferredLinkedToFields = array();
+			foreach($data as $field => $value){
+				$field = $this->getField($field);
+
+				if($field->usesLinkTable()){
+					// Process the link table, no local field to process
+					$deferredLinkedToFields[] = $field;
+				}else{
+					// Field doesn't use a link field, normalize arrays for single query
+					$fields[ $field->name ] = is_array($data[ $field->name ])
+						? implode($field->valueDelimiter, $data[ $field->name ])
+						: $data[ $field->name ];
+				}
+			}
+
+			$sql = sprintf('INSERT INTO `%s` (`%s`) VALUES (%s)',
+				$this->dbTable,
+				implode('`,`',array_keys($fields)),
+				implode(',',array_fill(0,sizeof($fields),'?')));
+			$stmt = $this->db->query($sql, $fields);
+			if($stmt->errorCode()){
+				errorHandle::newError(__METHOD__."() SQL Error! {$stmt->errorCode()}:{$stmt->errorMsg()} ($sql)", errorHandle::HIGH);
+				throw new Exception("Internal database error!", self::ERR_SYSTEM);
+			}
+
+			if(sizeof($deferredLinkedToFields)){
+				$primaryField = array_shift($this->listPrimaryFields()); // Shift 1st item off the array, ensures we get the 1st defined primary field
+				$data[ $primaryField ] = $stmt->insertId();
+
+				foreach($deferredLinkedToFields as $deferredLinkedToField){
+					$this->processLinkedField($deferredLinkedToField, $data);
+				}
+			}
+
+			// Commit the transaction
+			$this->db->commit();
+
+		}catch(Exception $e){
+			// Record the error
+			$this->formError($e->getMessage(), errorHandle::ERROR);
+
+			// Rollback the transaction
+			$this->db->rollback();
+
+			// Return the error code
+			return $e->getCode();
 		}
 
-		$sql = sprintf('INSERT INTO `%s` (`%s`) VALUES (%s)',
-			$this->dbTable,
-			implode('`,`',array_keys($fields)),
-			implode(',',array_fill(0,sizeof($fields),'?')));
-		$stmt = $this->db->query($sql, $fields);
-		if($stmt->errorCode()){
-			errorHandle::newError(__METHOD__."() SQL Error! {$stmt->errorCode()}:{$stmt->errorMsg()} ($sql)", errorHandle::HIGH);
-			return self::ERR_SYSTEM;
-		}
-
+		// If we're here then all went well!
 		return self::ERR_OK;
 	}
 
@@ -290,32 +334,211 @@ class formProcessor extends formFields{
 			return self::ERR_INCOMPLETE_DATA;
 		}
 
-		$updateFields = array();
-		$whereFields  = array();
-		foreach($data as $field => $value){
-			$field = $this->getField($field);
-			if($this->isPrimaryField($field->name)){
-				if(is_empty($value)){
-					errorHandle::newError(__METHOD__."() Cannot update record! (primary field '{$field->name}' is empty)", errorHandle::DEBUG);
-					return self::ERR_INCOMPLETE_DATA;
+		// Start database transaction
+		$this->db->beginTransaction();
+
+		try{
+			$updateFields = array();
+			$whereFields  = array();
+			foreach($data as $field => $value){
+				$field = $this->getField($field);
+
+				if($field->usesLinkTable()){
+					// Process the link table, no local field to process
+					$this->processLinkedField($field, $data);
+				}else{
+					// Field doesn't use a link field, normalize arrays for single query
+
+					// If value is an array, we need to implode it down to a string for storage
+					$value = is_array($value) ? implode($field->valueDelimiter, $value) : $value;
+
+					// Put this field in the WHERE clause or in with the fields?
+					if($this->isPrimaryField($field->name)){
+						if(is_empty($value)){
+							errorHandle::newError(__METHOD__."() Cannot update record! (primary field '{$field->name}' is empty)", errorHandle::DEBUG);
+							return self::ERR_INCOMPLETE_DATA;
+						}
+						$whereFields[ $field->toSqlSnippet() ] = $value;
+					}else{
+						$updateFields[ $field->toSqlSnippet() ] = $value;
+					}
 				}
-				$whereFields[ $field->toSqlSnippet() ] = $value;
-			}else{
-				$updateFields[ $field->toSqlSnippet() ] = $value;
+			}
+
+			// Are there local fields to update?
+			if(sizeof($updateFields) && sizeof($whereFields)){
+				$sql = sprintf('UPDATE `%s` SET %s WHERE %s LIMIT 1',
+					$this->dbTable,
+					implode(',', array_keys($updateFields)),
+					implode(' AND ', array_keys($whereFields)));
+				$stmt = $this->db->query($sql, array_merge(array_values($updateFields), array_values($whereFields)));
+				if($stmt->errorCode()){
+					errorHandle::newError(__METHOD__."() SQL Error! {$stmt->errorCode()}:{$stmt->errorMsg()} ($sql)", errorHandle::HIGH);
+					throw new Exception("Internal database error!", self::ERR_SYSTEM);
+				}
+			}
+
+			// Commit the transaction
+			$this->db->commit();
+
+		}catch(Exception $e){
+			// Record the error
+			$this->formError($e->getMessage(), errorHandle::ERROR);
+
+			// Rollback the transaction
+			$this->db->rollback();
+
+			// Return the error code
+			return $e->getCode();
+		}
+
+		// If we're here then all went well!
+		return self::ERR_OK;
+	}
+
+	/**
+	 * @param fieldBuilder $field
+	 * @param              $formData
+	 * @return int
+	 * @throws Exception
+	 */
+	private function processLinkedField(fieldBuilder $field, $formData){
+		// Make sure there is only 1 primary field (TODO: Add multi-key support)
+		if(sizeof($this->listPrimaryFields()) > 1){
+			errorHandle::newError(__METHOD__."() Cannot process linked field! (multiple primary fields not yet supported)", errorHandle::HIGH);
+			throw new Exception('Internal configuration error!', self::ERR_SYSTEM);
+		}
+
+		// Get the field's linkedTo metadata and it's data
+		$linkedTo         = $field->linkedTo;
+		$db               = isset($linkedTo['dbConnection'])     ? db::get($linkedTo['dbConnection']) : $this->db;
+		$linkTable        = isset($linkedTo['linkTable'])        ? $linkedTo['linkTable']             : '';
+		$linkLocalField   = isset($linkedTo['linkLocalField'])   ? $linkedTo['linkLocalField']        : '';
+		$linkForeignField = isset($linkedTo['linkForeignField']) ? $linkedTo['linkForeignField']      : '';
+
+		// Make sure we have the linkTable metadata
+		if(isnull($linkTable) || isnull($linkLocalField) || isnull($linkForeignField)){
+			errorHandle::newError(__METHOD__."() Missing required many-to-many link metadata! (Required: linkTable, linkForeignField, linkLocalField)", errorHandle::HIGH);
+			throw new Exception('Internal configuration error!', self::ERR_SYSTEM);
+		}
+
+		// Get this field's data and the form's primary key
+		$fieldData    = (array)$formData[ $field->name ];
+		$primaryField = array_shift($this->listPrimaryFields()); // Shift 1st item off the array, ensures we get the 1st defined primary field
+		$primaryValue = $formData[$primaryField];
+
+		// Clean linkedTo's table name (we'll be using it a lot)
+		$linkTable = $db->escape($linkTable);
+
+		// Get all current assignments
+		$sql = sprintf('SELECT `%s` FROM `%s` WHERE `%s`=?',
+			$db->escape($linkForeignField),
+			$db->escape($linkTable),
+			$db->escape($linkLocalField));
+		$selectStmt = $db->query($sql, array($primaryValue));
+		if($selectStmt->errorCode()){
+			errorHandle::newError(__METHOD__."() SQL Error: {$selectStmt->errorCode()}:{$selectStmt->errorMsg()}! (SQL: $sql)", errorHandle::DEBUG);
+			throw new Exception('Internal database error!', self::ERR_SYSTEM);
+		}
+		$currentValues = $selectStmt->fetchFieldAll();
+
+		// Figure out what's been added and add them
+		$added = array_diff($fieldData, $currentValues);
+		$insertSQL = sprintf('INSERT INTO `%s` (%s,%s) VALUES(?,?)',
+			$db->escape($linkTable),
+			$db->escape($linkLocalField),
+			$db->escape($linkForeignField));
+		foreach($added as $addedValue){
+			$addedStmt = $db->query($insertSQL, array($primaryValue, $addedValue));
+			if($addedStmt->errorCode()){
+				errorHandle::newError(__METHOD__."() SQL Error: {$addedStmt->errorCode()}:{$addedStmt->errorMsg()}! (SQL: $insertSQL)", errorHandle::DEBUG);
+				throw new Exception('Internal database error!', self::ERR_SYSTEM);
 			}
 		}
 
-		$sql = sprintf('UPDATE `%s` SET %s WHERE %s LIMIT 1',
-			$this->dbTable,
-			implode(',', array_keys($updateFields)),
-			implode(' AND ', array_keys($whereFields)));
-		$stmt = $this->db->query($sql, array_merge(array_values($updateFields), array_values($whereFields)));
-		if($stmt->errorCode()){
-			errorHandle::newError(__METHOD__."() SQL Error! {$stmt->errorCode()}:{$stmt->errorMsg()} ($sql)", errorHandle::HIGH);
-			return self::ERR_SYSTEM;
+		// Figure out what's been removed and remove them
+		$removed = array_diff($currentValues, $fieldData);
+		$deleteSQL = sprintf('DELETE FROM `%s` WHERE `%s`=? AND `%s`=? LIMIT 1',
+			$db->escape($linkTable),
+			$db->escape($linkLocalField),
+			$db->escape($linkForeignField));
+		foreach($removed as $removedValue){
+			$removedStmt = $db->query($deleteSQL, array($primaryValue, $removedValue));
+			if($removedStmt->errorCode()){
+				errorHandle::newError(__METHOD__."() SQL Error: {$removedStmt->errorCode()}:{$removedStmt->errorMsg()}! (SQL: $deleteSQL)", errorHandle::DEBUG);
+				throw new Exception('Internal database error!', self::ERR_SYSTEM);
+			}
 		}
 
+		// If we get here, then all is well
 		return self::ERR_OK;
+
+		/*
+		 * TODO: This is a start to supporting multi-keys. Hopefully we'll revisit this someday
+		 * -------------------------------------------------------------------------------------
+		 *
+		// Build up the local field mappings
+		$localFieldMapping = array();
+		$localValueMapping = array();
+		if(is_string($linkedTo['linkLocalField'])){
+			$linkLocalField = $this->db->escape($linkedTo['linkForeignField']);
+			$primaryFields = $this->getPrimaryFields();
+			if(sizeof($primaryFields) > 1){
+				errorHandle::newError(__METHOD__."() More than 1 primary field defined in form definition", errorHandle::DEBUG);
+				throw new Exception('Internal configuration error!', self::ERR_SYSTEM);
+			}else{
+				$fieldName = $primaryFields[0]->name;
+				$localFieldMapping[$linkLocalField] = "$linkLocalField = :$fieldName";
+				$localValueMapping[":$fieldName"] = $formData[$fieldName];
+			}
+		}else{
+			foreach($linkedTo['linkLocalField'] as $fieldName => $linkLocalField){
+				if($this->isPrimaryField($fieldName)){
+					errorHandle::newError(__METHOD__."() '$fieldName' is not a primary field!", errorHandle::DEBUG);
+					throw new Exception('Internal configuration error!', self::ERR_SYSTEM);
+				}
+				$localFieldMapping[$linkLocalField] = "$linkLocalField = :$fieldName";
+				$localValueMapping[":$fieldName"] = $formData[$fieldName];
+			}
+		}
+
+		// Build up the foreign field mappings
+		$foreignFieldMapping = array();
+		$foreignValueMapping = array();
+		if(is_string($linkedTo['linkForeignField'])){
+			$linkForeignField = $this->db->escape($linkedTo['linkForeignField']);
+			$foreignFieldMapping[$linkForeignField] = "$linkForeignField = :$linkForeignField";
+			foreach($fieldData as $fieldDataValue){
+				$foreignValueMapping[][":$linkForeignField"] = $fieldDataValue;
+			}
+		}else{
+		}
+
+		// Wipe all links
+		$sql = sprintf("DELETE FROM `%s` WHERE %s",
+			$linkTable,
+			implode(' AND ', array_values($localFieldMapping)));
+		$deleteAllStmt = $pdo->prepare($sql);
+		if(!$deleteAllStmt->execute($localValueMapping)){
+			$errorInfo = $deleteAllStmt->errorInfo();
+			errorHandle::newError(__METHOD__."() SQL Error! {$errorInfo[1]}:{$errorInfo[2]} ($sql)", errorHandle::HIGH);
+			throw new Exception('Internal database error!', self::ERR_SYSTEM);
+		}
+
+
+		// Loop through submission and re-add links
+		$addLinkStmt = $pdo->prepare(sprintf('INSERT INTO `%s` (%s) VALUE(%s)',
+			$linkTable,
+			array_merge(array_keys($localFieldMapping), array_keys($foreignFieldMapping)),
+			array_merge(array_keys($localValueMapping), array_keys($foreignValueMapping))));
+		foreach($foreignValueMapping as $foreignValueMappingRow){
+			if(!$addLinkStmt->execute($foreignValueMappingRow)){
+				$errorInfo = $addLinkStmt->errorInfo();
+				errorHandle::newError(__METHOD__."() SQL Error! {$errorInfo[1]}:{$errorInfo[2]} ($sql)", errorHandle::HIGH);
+				throw new Exception('Internal database error!', self::ERR_SYSTEM);
+			}
+		}
+		*/
 	}
 
 	/**
@@ -328,7 +551,7 @@ class formProcessor extends formFields{
 		if(!session::has('POST')){
 			if(sizeof($_POST)){
 				// Save the POST in the session and redirect back to the same URL (this time w/o POST data)
-				session::set('POST', $_POST, TRUE);
+				session::set('POST', $_POST, array('location' => 'flash'));
 				http::redirect($_SERVER['REQUEST_URI'], 303, TRUE);
 			}else{
 				errorHandle::newError(__METHOD__."() Cannot find saved POST data!", errorHandle::DEBUG);
@@ -345,8 +568,9 @@ class formProcessor extends formFields{
 		 */
 		$_POST = session::get('POST');
 		session::destroy('POST');
+		$result = $this->process($_POST['RAW']);
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
-		return $this->process($_POST['RAW']);
+		return $result;
 	}
 
 	/**
@@ -437,7 +661,10 @@ class formProcessor extends formFields{
 			if($field->disabled) continue;
 
 			// Skip fields not set
-			if(!isset($data[ $field->name ])) continue;
+			if(!isset($data[ $field->name ])){
+				if($field->usesLinkTable()) $updateData[ $field->name ] = array();
+				continue;
+			}
 
 			// Revert read-only fields to their original state
 			if($field->readonly) $data[ $field->name ] = $field->renderedValue;

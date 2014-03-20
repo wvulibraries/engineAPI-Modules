@@ -200,19 +200,24 @@ class formBuilderTemplate {
 		if($this->counterRows){
 			while($dbRow = $sqlResult->fetch()){
 				$rowBlock = $block;
-				$rowID    = uniqid();
-				$deferedFields = array();
+				$deferredFields = array();
+
+				/*
+				 * We need to generate a unique ID for this row. This is done by hashing the row's primary values and using that as the key
+				 * This is done to create the needed looping array for the processor as well and keep POST data organized should we need
+				 * to re-render the form
+				 */
+				$primaryFields = array();
+				foreach($this->formBuilder->listPrimaryFields() as $field){
+					$primaryFields[$field] = $dbRow[$field];
+				}
+				$rowID = md5(implode('|', $primaryFields));
+
+				// Save this row's primary fields for later (like during processing)
+				$this->formBuilder->editTableRowData[$rowID] = $primaryFields;
 
 				// Global replacements
 				$rowBlock = str_replace('{rowLoopID}', $rowID, $rowBlock);
-
-				// Save this row's primary fields for later (like during processing)
-				$rowData = array();
-				foreach($this->formBuilder->listPrimaryFields() as $field){
-					$rowData[$field] = $dbRow[$field];
-				}
-				$this->formBuilder->editTableRowData[$rowID] = $rowData;
-
 
 				// Regex grabbing all fields
 				preg_match_all('/{field.*?name="(\w+)".*?}/', $rowBlock, $matches);
@@ -225,23 +230,28 @@ class formBuilderTemplate {
 
 					// If this is a plaintext field, defer it till later
 					if($field->type == 'plaintext'){
-						$deferedFields[] = array('fieldTag' => $fieldTag, 'field' => $field);
+						$deferredFields[] = array('fieldTag' => $fieldTag, 'field' => $field);
 						continue;
 					}
 
+					// Restore value from POST
+					$value = is_array($_POST['HTML'][$fieldName]) && isset($_POST['HTML'][$fieldName][$rowID])
+						? $_POST['HTML'][$fieldName][$rowID]
+						: $dbRow[$fieldName];
+
 					// Render the field tag!
-					$renderedField = $this->__renderFieldTag($fieldTag, $field, $dbRow[$fieldName], $fieldTag);
+					$renderedField = $this->__renderFieldTag($fieldTag, $field, $value, $fieldTag);
 
 					// Replace the field tag with it's fully rendered version
 					$rowBlock = str_replace($fieldTag, $renderedField, $rowBlock);
 				}
 
 				// Now process any deferred fields
-				foreach($deferedFields as $deferedField){
-					$fieldTag      = $deferedField['fieldTag'];
-					$field         = $deferedField['field'];
+				foreach($deferredFields as $deferredField){
+					$fieldTag      = $deferredField['fieldTag'];
+					$field         = $deferredField['field'];
 					$renderedField = $this->__renderFieldTag($fieldTag, $field, NULL, $fieldTag);
-					$rowBlock         = str_replace($fieldTag, $renderedField, $rowBlock);
+					$rowBlock      = str_replace($fieldTag, $renderedField, $rowBlock);
 				}
 
 				$output .= $rowBlock;
@@ -289,7 +299,12 @@ class formBuilderTemplate {
 		preg_match('/^{\w+(.+)}$/', $tag, $matches);
 		$attrPairs = attPairs($matches[1]);
 
-		if(isset($value)) $attrPairs['value'] = $value;
+		// Restore value from POST if we weren't given it
+		if(isset($value)) {
+			$attrPairs['value'] = $value;
+		}elseif (isset($_POST['HTML'][ $field->name ]) && !is_array($_POST['HTML'][ $field->name ])) {
+			$attrPairs['value'] = $_POST['HTML'][ $field->name ];
+		}
 
 		$display  = isset($attrPairs['display'])
 			? trim(strtolower($attrPairs['display']))

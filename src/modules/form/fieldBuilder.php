@@ -115,10 +115,26 @@ class fieldBuilder{
 	}
 
 	/**
+	 * Returns TRUE if this field is using a link table
+	 * @return bool
+	 */
+	public function usesLinkTable(){
+		if(!sizeof($this->field['linkedTo'])) return FALSE;
+
+		$linkedTo = $this->field['linkedTo'];
+		if(!isset($linkedTo['linkTable']))        return FALSE;
+		if(!isset($linkedTo['linkForeignField'])) return FALSE;
+		if(!isset($linkedTo['linkLocalField']))   return FALSE;
+
+		return TRUE;
+	}
+
+	/**
 	 * [Factory] Create a fieldBuilder object. (Returns FALSE on error)
 	 *
 	 * @param array|string $field
-	 * @return bool|fieldBuilder
+	 * @param formFields   $formFields
+	 * @return array|bool|fieldBuilder
 	 */
 	public static function createField($field, formFields $formFields){
 		// If given a string, make it a valid array
@@ -224,13 +240,12 @@ class fieldBuilder{
 	 * Looks in renderOptions first, then falls back to the field definition.
 	 * All else fails, return NULL
 	 *
-	 * @param string $name
+	 * @param string $optionName
 	 * @return mixed
 	 */
-	private function getFieldOption($name){
-		if($name == 'value' && isset($_POST['HTML'][$this->name])) return $_POST['HTML'][$this->name];
-		if (isset($this->renderOptions[$name])) return $this->renderOptions[$name];
-		if (isset($this->field[$name])) return $this->field[$name];
+	private function getFieldOption($optionName){
+		if (isset($this->renderOptions[$optionName])) return $this->renderOptions[$optionName];
+		if (isset($this->field[$optionName])) return $this->field[$optionName];
 		return NULL;
 	}
 
@@ -789,14 +804,14 @@ class fieldBuilder{
 		}
 
 		// Loop, and build the options
-		foreach ($options as $foreignKey => $val) {
-			$selected = in_array($foreignKey, (array)$this->field['value'], TRUE)
+		foreach ($options as $key => $label) {
+			$selected = in_array($key, $this->getFieldOption('value'))
 				? ' selected'
 				: '';
 			$output .= sprintf('<option value="%s"%s>%s</option>',
-				$foreignKey,
+				$key,
 				$selected,
-				htmlSanitize($val));
+				htmlSanitize($label));
 		}
 		return $output;
 
@@ -823,9 +838,9 @@ class fieldBuilder{
 		$foreignWhere     = isset($linkedTo['foreignWhere'])     ? $linkedTo['foreignWhere']     : NULL;
 		$foreignLimit     = isset($linkedTo['foreignLimit'])     ? $linkedTo['foreignLimit']     : NULL;
 		$foreignSQL       = isset($linkedTo['foreignSQL'])       ? $linkedTo['foreignSQL']       : NULL;
-//		$linkTable        = isset($linkedTo['linkTable'])        ? $linkedTo['linkTable']        : NULL;
-//		$linkForeignField = isset($linkedTo['linkForeignField']) ? $linkedTo['linkForeignField'] : NULL;
-//		$linkLocalField   = isset($linkedTo['linkLocalField'])   ? $linkedTo['linkLocalField']   : NULL;
+		$linkTable        = isset($linkedTo['linkTable'])        ? $linkedTo['linkTable']        : NULL;
+		$linkLocalField   = isset($linkedTo['linkLocalField'])   ? $linkedTo['linkLocalField']   : NULL;
+		$linkForeignField = isset($linkedTo['linkForeignField']) ? $linkedTo['linkForeignField'] : NULL;
 
 		// Get the db connection we'll be talking to
 		$db = db::getInstance()->$dbConnection;
@@ -854,13 +869,36 @@ class fieldBuilder{
 			return FALSE;
 		}
 
-
 		// Format the result into a usable array
 		$options = array();
 		while ($row = $sqlResult->fetch()) {
-			$foreignKey           = array_shift($row); // The key is always the 1st col
-			$val                  = array_shift($row); // The key is always the 2nd col
-			$options[$foreignKey] = $val;
+			$key           = array_shift($row); // The key is always the 1st col
+			$label         = array_shift($row); // The key is always the 2nd col
+			$options[$key] = $label;
+		}
+
+
+		// Is this a linked field? If so, we need to extract its values
+		if($linkTable){
+			// Get the primary field
+			$primaryField = array_shift($this->formFields->getPrimaryFields()); // Shift 1st item off the array, ensures we get the 1st defined primary field
+			$primaryValue = $primaryField->value;
+
+
+
+			// Grab the values from the link table
+			$sql = sprintf('SELECT `%s` FROM `%s` WHERE `%s`=?',
+				$db->escape($linkForeignField),
+				$db->escape($linkTable),
+				$db->escape($linkLocalField));
+			$sqlResult = $db->query($sql, array($primaryValue));
+			if($sqlResult->errorCode()){
+				errorHandle::newError(__METHOD__."() SQL Error: {$sqlResult->errorCode()}:{$sqlResult->errorMsg()} (SQL: $sql)", errorHandle::DEBUG);
+				return FALSE;
+			}
+
+			// Get the list of foreign values which is the values for this field's options
+			$this->renderOptions['value'] = $sqlResult->fetchFieldAll();
 		}
 
 		return $options;
