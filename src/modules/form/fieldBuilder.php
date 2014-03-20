@@ -228,6 +228,7 @@ class fieldBuilder{
 	 * @return mixed
 	 */
 	private function getFieldOption($name){
+		if($name == 'value' && isset($_POST['HTML'][$this->name])) return $_POST['HTML'][$this->name];
 		if (isset($this->renderOptions[$name])) return $this->renderOptions[$name];
 		if (isset($this->field[$name])) return $this->field[$name];
 		return NULL;

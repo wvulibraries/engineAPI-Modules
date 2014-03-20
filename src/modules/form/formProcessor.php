@@ -343,10 +343,10 @@ class formProcessor extends formFields{
 		 * This may happen because the developer will use process() to handle his own raw data
 		 * Since the database module uses prepared statements, manually escaping the POST data is not necessary
 		 */
-		$post = session::get('POST');
+		$_POST = session::get('POST');
 		session::destroy('POST');
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
-		return $this->process($post['RAW']);
+		return $this->process($_POST['RAW']);
 	}
 
 	/**
