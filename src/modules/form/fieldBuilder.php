@@ -27,7 +27,7 @@ class fieldBuilder{
 		'labelID'         => '',
 		'options'         => array(),
 		'multiple'        => FALSE,
-		'showInEditStrip' => FALSE,
+		'showInEditStrip' => TRUE,
 		'primary'         => FALSE,
 		'valueDelimiter'  => ',',
 	);
@@ -558,11 +558,8 @@ class fieldBuilder{
 			? $this->getFieldOption('options')
 			: $this->getLinkedToOptions();
 
-		// If still no options, we don't have any and should return an empty string
-		if(!$options){
-			errorHandle::newError(__METHOD__.'() You must provide options to render a radio field!', errorHandle::LOW);
-			return '';
-		}
+		// If still no options, we don't have any and should return static message
+		if(!$options) return 'No options available';
 
 		foreach($options as $value => $label){
 			// Append the value to fieldID for uniqueness
@@ -591,15 +588,12 @@ class fieldBuilder{
 			? $this->getFieldOption('options')
 			: $this->getLinkedToOptions();
 
+		// If still no options, we don't have any and should return static message
+		if(!$options) return 'No options available';
+
 		// Make the given values an array (may be a CSV)
 		$values = $this->getFieldOption('value');
 		if(is_string($values)) $values = explode($this->getFieldOption('valueDelimiter'), $values);
-
-		// If still no options, we don't have any and should return an empty string
-		if(!$options){
-			errorHandle::newError(__METHOD__.'() You must provide options to render a checkbox field!', errorHandle::LOW);
-			return '';
-		}
 
 		if(sizeof($options) > 1){
 			// Make the name checkbox array friendly
