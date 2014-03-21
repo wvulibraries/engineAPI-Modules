@@ -2,7 +2,7 @@
 
 class formBuilder extends formFields{
 	const DEFAULT_FORM_NAME       = '';
-	const DEFAULT_FORM_TIMEOUT    = 300;
+	const DEFAULT_FORM_TIMEOUT    = 900;
 	const SESSION_SAVED_FORMS_KEY = 'formBuilderForms';
 	const TYPE_UNKNOWN = 0;
 	const TYPE_INSERT  = 1;
