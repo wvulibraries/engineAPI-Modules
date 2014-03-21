@@ -242,7 +242,7 @@ class formBuilderTemplate {
 					// Restore value from POST
 					$value = (isset($_POST['HTML'][$fieldName][$rowID]) && is_array($_POST['HTML'][$fieldName]))
 						? $_POST['HTML'][$fieldName][$rowID]
-						: $dbRow[$fieldName];
+						: (isset($dbRow[$fieldName]) ? $dbRow[$fieldName] : '');
 
 					// Render the field tag!
 					$renderedField = $this->__renderFieldTag($fieldTag, $field, $value, $fieldTag);
