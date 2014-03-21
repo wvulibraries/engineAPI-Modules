@@ -353,7 +353,7 @@ class formProcessor{
 	 */
 	public function update($data){
 		// Process field validation rules
-		if(! $this->fields->validate($data)) return self::ERR_VALIDATION;
+		if(! $this->validate($data)) return self::ERR_VALIDATION;
 
 		// Get the list of primary fields
 		$primaryFields =  $this->fields->listPrimaryFields();
@@ -627,7 +627,7 @@ class formProcessor{
 				errorHandle::newError(__METHOD__."() Invalid formType! (engineAPI bug)", errorHandle::DEBUG);
 				return self::ERR_SYSTEM;
 		}
-		if($result === self::ERR_OK) errorHandle::successMsg('Form submission successful!');
+		if($result === self::ERR_OK) $this->formError('Form submission successful!', errorHandle::SUCCESS);
 		return $result;
 	}
 
