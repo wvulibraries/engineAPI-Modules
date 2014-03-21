@@ -49,6 +49,7 @@ var formBuilder = {
 		$target.closest('.expandable').slideUp(function(){
 			$this.removeClass('icon-expand').addClass('icon-collapse');
 			if(!formBuilder.$form.find('.icon-expand').length) formBuilder.$form.find(':submit:last').removeAttr('disabled');
+			$target.closest('.expandable').html('');
 		});
 	},
 	submitExpandedForm: function(e){
