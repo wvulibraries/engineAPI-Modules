@@ -840,7 +840,7 @@ class formBuilder extends formFields{
 			foreach($this->fields as $field){
 				if($field->showInEditStrip) $editStripFieldCount++;
 			}
-			if($editStripFieldCount == sizeof($this->fields)) $options['expandable'] = FALSE;
+			if($editStripFieldCount >= $this->countVisible()) $options['expandable'] = FALSE;
 		}
 
 		// Add a submit button if one does not exist

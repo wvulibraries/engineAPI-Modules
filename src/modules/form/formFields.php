@@ -38,8 +38,20 @@ abstract class formFields implements Countable{
 	 *
 	 * @return int
 	 */
-	function count(){
+	public function count(){
 		return sizeof($this->fields);
+	}
+
+	/**
+	 * Returns the number of visible (non-hidden) fields
+	 * @return int
+	 */
+	public function countVisible(){
+		$count = 0;
+		foreach($this->fields as $field){
+			if($field->type != 'hidden') $count++;
+		}
+		return $count;
 	}
 
 	/**
