@@ -1,27 +1,38 @@
 <?php
 
-abstract class formFields implements Countable{
+class formFields implements Countable, Iterator{
 	const DEFAULT_ORDER = '_z_';
+
+	/**
+	 * Internal position for Iterator interface methods
+	 * @var int
+	 */
+	private $position = 0;
 
 	/**
 	 * @var fieldBuilder[]
 	 */
-	protected $fields = array();
+	private $fields = array();
+
+	/**
+	 * @var string[] Array of field names in the order in which they were added
+	 */
+	private $fieldNames = array();
 
 	/**
 	 * @var array Index of field labels (to maintain uniqueness)
 	 */
-	protected $fieldLabels = array();
+	private $fieldLabels = array();
 
 	/**
 	 * @var array Index of all field IDs (to maintain uniqueness)
 	 */
-	protected $fieldIDs = array();
+	private $fieldIDs = array();
 
 	/**
 	 * @var array Store the ordering of the fields
 	 */
-	protected $fieldOrdering = array();
+	private $fieldOrdering = array();
 
 	/**
 	 * @var array[] Array of field names in sorted order
@@ -31,10 +42,10 @@ abstract class formFields implements Countable{
 	/**
 	 * @var fieldBuilder[] Array of all primary fields
 	 */
-	protected $primaryFields = array();
+	private $primaryFields = array();
 
 	/**
-	 * Returns the number of fields
+	 * [Countable] Returns the number of fields
 	 *
 	 * @return int
 	 */
@@ -52,6 +63,55 @@ abstract class formFields implements Countable{
 			if($field->type != 'hidden') $count++;
 		}
 		return $count;
+	}
+	/**
+	 * Returns the number of primary fields
+	 * @return int
+	 */
+	public function countPrimary(){
+		return sizeof($this->primaryFields);
+	}
+
+
+	/**
+	 * [Iterator] Returns the field at the current position
+	 * @return fieldBuilder
+	 */
+	public function current(){
+		$n         = $this->position;
+		$fieldName = $this->fieldNames[$n];
+		return $this->fields[$fieldName];
+	}
+
+	/**
+	 * [Iterator] Returns the current position
+	 * @return int
+	 */
+	public function key(){
+		return $this->position;
+	}
+
+	/**
+	 * [Iterator] Advanced to the next position
+	 */
+	public function next(){
+		++$this->position;
+	}
+
+	/**
+	 * [Iterator] Reset internal position
+	 */
+	public function rewind(){
+		$this->position = 0;
+	}
+
+	/**
+	 * [Iterator] Returns TRUE if the current position is a valid one
+	 * @return bool
+	 */
+	public function valid(){
+		$n         = $this->position;
+		return isset($this->fieldNames[$n]);
 	}
 
 	/**
@@ -89,7 +149,7 @@ abstract class formFields implements Countable{
 		}
 
 		// If this field is set to be a primary field, add it
-		if($field->primary) $this->addPrimaryFields($field->name);
+		if($field->primary) $this->primaryFields[] = $field->name;
 
 		// If this field is a primary field, disable it (to prevent the user from munging it)
 		if($this->isPrimaryField($field->name)){
@@ -98,9 +158,10 @@ abstract class formFields implements Countable{
 		}
 
 		// If we're here, then all is well. Save the field and return
-		if (!is_empty($field->fieldID)) $this->fieldIDs[$field->name] = $field->fieldID;
+		if (!is_empty($field->fieldID)) $this->fieldIDs[$field->name]  = $field->fieldID;
 		if (!is_empty($field->label)) $this->fieldLabels[$field->name] = $field->label;
 		$this->fields[$field->name] = $field;
+		$this->fieldNames[]         = $field->name;
 
 		// Record the sort-order for this field
 		$order                         = !is_empty($field->order) ? $field->order : self::DEFAULT_ORDER;
@@ -123,6 +184,7 @@ abstract class formFields implements Countable{
 			unset($this->fields[$fieldName]);
 			unset($this->fieldLabels[$fieldName]);
 			unset($this->fieldIDs[$fieldName]);
+			unset($this->fieldNames[ array_search($fieldName, $this->fieldNames) ]);
 
 			return TRUE;
 		} else {
@@ -133,21 +195,31 @@ abstract class formFields implements Countable{
 	/**
 	 * Modify a specific field option on the given field
 	 *
-	 * @param fieldBuilder|string $fieldName
+	 * @param fieldBuilder|string $field
 	 * @param string              $option
 	 * @param mixed               $value
 	 * @return bool
 	 */
-	public function modifyField($fieldName, $option, $value){
+	public function modifyField($field, $option, $value){
 		// If we're changing the order, clear the orderedFields cache
 		if($option == 'order') $this->orderedFields = array();
 
-		if ($fieldName instanceof fieldBuilder) {
-			$fieldName->$option = $value;
+		if(is_string($field)) $field = $this->getField($field);
+		if($field instanceof fieldBuilder) {
+			$field->$option = $value;
 
-			return TRUE;
-		} elseif (is_string($fieldName) && isset($this->fields[$fieldName])) {
-			$this->fields[$fieldName]->$option = $value;
+			// Special cases
+			if($option == 'primary'){
+				if($value){
+					if(!in_array($field->name, $this->primaryFields)){
+						$this->primaryFields[] = $field->name;
+					}
+				}else{
+					if(in_array($field->name, $this->primaryFields)){
+						unset($this->primaryFields[ array_search($field->name, $this->primaryFields) ]);
+					}
+				}
+			}
 
 			return TRUE;
 		} else {
@@ -279,6 +351,7 @@ abstract class formFields implements Countable{
 	 * @param string|fieldBuilder ...
 	 * @return bool
 	 */
+	/*
 	public function addPrimaryFields(){
 		$returnStatus = TRUE;
 
@@ -298,7 +371,7 @@ abstract class formFields implements Countable{
 
 		return $returnStatus;
 	}
-
+	*/
 	/**
 	 * Returns an array of primary fields
 	 *

@@ -1,6 +1,6 @@
 <?php
 
-class formBuilder extends formFields{
+class formBuilder{
 	const DEFAULT_FORM_NAME       = '';
 	const DEFAULT_FORM_TIMEOUT    = 900;
 	const SESSION_SAVED_FORMS_KEY = 'formBuilderForms';
@@ -8,6 +8,11 @@ class formBuilder extends formFields{
 	const TYPE_INSERT  = 1;
 	const TYPE_UPDATE  = 2;
 	const TYPE_EDIT    = 3;
+
+	/**
+	 * @var formFields
+	 */
+	private $fields;
 
 	/**
 	 * @var string The base URL where our form assets are located at
@@ -33,6 +38,11 @@ class formBuilder extends formFields{
 	 * @var string The name given to this form
 	 */
 	private $formName;
+
+	/**
+	 * @var string the enctype for the generated form
+	 */
+	public $formEncoding;
 
 	/**
 	 * @var string The public title to apply to insert forms
@@ -107,6 +117,8 @@ class formBuilder extends formFields{
 	 * @param string $formName
 	 */
 	public function __construct($formName){
+		$this->fields = new formFields($this);
+
 		// Set default template vars
 		$this->templateDir   = __DIR__.DIRECTORY_SEPARATOR.'formTemplates';
 		$this->template      = 'default';
@@ -187,17 +199,20 @@ class formBuilder extends formFields{
 	}
 
 	/**
-	 * @inheritdoc
+	 * Add a field to the form
 	 *
 	 * @param array|fieldBuilder $field
 	 * @return bool
 	 */
 	public function addField($field){
-		$result = parent::addField($field);
+		// Add the field
+		$result = $this->fields->addField($field);
+
+		// If we added it successfully, handle any special cases
 		if ($result) {
-			$field = array_peak($this->fields, 'end');
+			if(is_array($field)) $field = $this->fields->getField($field['name']);
 			if ($field->type == 'file') {
-				$this->formEncoding = '';
+				$this->formEncoding = 'multipart/form-data';
 			}
 		}
 		return $result;
@@ -230,7 +245,7 @@ class formBuilder extends formFields{
 
 						// Set field values
 						foreach ($rowData as $field => $value) {
-							$savedForm->modifyField($field,'value',$value);
+							$savedForm->fields->modifyField($field,'value',$value);
 						}
 
 						// Return the form
@@ -371,12 +386,11 @@ class formBuilder extends formFields{
 			// Set the processorType
 			$formProcessor->setProcessorType($savedFormType);
 
-			// Set the primary fields
-			call_user_func_array(array($formProcessor, 'addPrimaryFields'), $savedFormBuilder->listPrimaryFields());
+			// Save editTable metadata (the primary field values) for processing stage
 			if($savedFormType == self::TYPE_EDIT) $formProcessor->primaryFieldsValues = $savedFormBuilder->editTableRowData;
 
 			// Add our fields to the form processor
-			foreach ($savedFormBuilder->fields as $field) {
+			foreach ($savedFormBuilder->fields as $id => $field) {
 				$formProcessor->addField($field);
 			}
 
@@ -465,9 +479,7 @@ class formBuilder extends formFields{
 	 * Remove all fields, and reset back to initial state
 	 */
 	public function reset(){
-		$this->fields      = array();
-		$this->fieldLabels = array();
-		$this->fieldIDs    = array();
+		$this->fields = new formFields();
 	}
 
 	/**
@@ -535,18 +547,10 @@ class formBuilder extends formFields{
 	 */
 	private function ensurePrimaryFieldsSet(){
 		// Make sure there is at least 1 primary field set
-		if(!sizeof($this->primaryFields)){
-			errorHandle::newError(__METHOD__."() No primary fields set! (see formBuilder::addPrimaryFields())", errorHandle::DEBUG);
+		if(!$this->fields->countPrimary()){
+			errorHandle::newError(__METHOD__."() No primary fields defined!", errorHandle::DEBUG);
 			return FALSE;
 		}
-
-		// Make sure that all primary fields have a full field definition
-		$missingFieldDefinitions = array_diff($this->primaryFields, array_keys($this->fields));
-		if(sizeof($missingFieldDefinitions)){
-			errorHandle::newError(__METHOD__."() Primary field(s) ".implode(',', $missingFieldDefinitions)." missing their definitions!", errorHandle::DEBUG);
-			return FALSE;
-		}
-
 		return TRUE;
 	}
 
@@ -688,7 +692,7 @@ class formBuilder extends formFields{
 	 */
 	public function displayForm($options = array()){
 		// If no primary fields set, display insertForm
-		if(!sizeof($priFields = $this->getPrimaryFields())) return $this->displayInsertForm($options);
+		if(!sizeof($priFields = $this->fields->getPrimaryFields())) return $this->displayInsertForm($options);
 
 		// If any primary field has no value, display insertForm
 		foreach($priFields as $field){
@@ -731,7 +735,7 @@ class formBuilder extends formFields{
 		$output = $template->render();
 
 		// Remove any submit button which we added (must be before form is saved)
-		if($submitAdded) $this->removeField('submit');
+		if($submitAdded) $this->fields->removeField('submit');
 
 		// Save the form to the session
 		$this->saveForm($template->formID, $template->formType);
@@ -749,7 +753,7 @@ class formBuilder extends formFields{
 	public function displayUpdateForm($options = array()){
 		// Make sure there's primary fields set, and get a list of them
 		if(!$this->ensurePrimaryFieldsSet()) return 'Misconfigured formBuilder!';
-		$primaryFields = $this->getPrimaryFields();
+		$primaryFields = $this->fields->getPrimaryFields();
 
 		// Make sure we have dbOptions
 		if (!isset($this->dbOptions)) {
@@ -785,7 +789,7 @@ class formBuilder extends formFields{
 		 */
 		$row = $stmt->fetch();
 		foreach ($row as $field => $value) {
-			$this->modifyField($field, 'value', $value);
+			$this->fields->modifyField($field, 'value', $value);
 		}
 
 		// Add a submit button if one does not exist
@@ -813,7 +817,7 @@ class formBuilder extends formFields{
 		$output = $template->render();
 
 		// Remove any submit button which we added (must be before form is saved)
-		if($submitAdded) $this->removeField('submit');
+		if($submitAdded) $this->fields->removeField('submit');
 
 		// Save the form to the session
 		$this->saveForm($template->formID, $template->formType);
@@ -840,7 +844,7 @@ class formBuilder extends formFields{
 			foreach($this->fields as $field){
 				if($field->showInEditStrip) $editStripFieldCount++;
 			}
-			if($editStripFieldCount >= $this->countVisible()) $options['expandable'] = FALSE;
+			if($editStripFieldCount >= $this->fields->countVisible()) $options['expandable'] = FALSE;
 		}
 
 		// Add a submit button if one does not exist
@@ -874,7 +878,7 @@ class formBuilder extends formFields{
 		$output = $template->render();
 
 		// Remove any submit button which we added (must be before form is saved)
-		if($submitAdded) $this->removeField('submit');
+		if($submitAdded) $this->fields->removeField('submit');
 
 		// Save the form to the session
 		$this->saveForm($template->formID, $template->formType);

@@ -72,8 +72,8 @@ class formBuilderTemplate {
 		$this->fieldsRendered = array();
 
 		// Set all primary fields as disabled for security
-		foreach($this->formBuilder->listPrimaryFields() as $primaryField){
-			$this->formBuilder->modifyField($primaryField,'disabled',TRUE);
+		foreach($this->formBuilder->fields->listPrimaryFields() as $primaryField){
+			$this->formBuilder->fields->modifyField($primaryField,'disabled',TRUE);
 		}
 
 		// Make a local copy of the template's source to work with
@@ -83,25 +83,44 @@ class formBuilderTemplate {
 		$patterns = array('|{ifFormErrors}(.+?){/ifFormErrors}|ism', '|{formErrors}|i');
 		$templateText = preg_replace_callback($patterns, array($this, '__renderFormErrors'), $templateText);
 
-		// Process {ifExpandable}
-		if(isset($this->renderOptions['expandable']) && $this->renderOptions['expandable']){
-			// Expandable enabled: only remove the {ifExpandable} and {/ifExpandable} tags
-			$templateText = preg_replace('|{/?ifExpandable}|i', '', $templateText);
-		}else{
-			// Expandable disabled: remove entire {ifExpandable} block
-			$templateText = preg_replace('|{ifExpandable(.*?)}(.+?){/ifExpandable}|ism', '', $templateText);
-		}
-
-		// Process {fieldsLoop}
-		$templateText = preg_replace_callback('|{fieldsLoop(.*?)}(.+?){/fieldsLoop}|ism', array($this, '__renderFieldLoop'), $templateText);
-
-		// Process {rowLoop}
-		$templateText = preg_replace_callback('|{rowLoop(.*?)}(.+?){/rowLoop}|ism', array($this, '__renderRowLoop'), $templateText);
+		// Render the {form}...{/form} block
+		$templateText = preg_replace_callback('|{form(\s.*?)?}(.+?){/form}|ism', array($this, '__renderFormBlock'), $templateText);
 
 		// Process general tags
 		$templateText = preg_replace_callback('|{([/\w]+)\s?(.*?)}|ism', array($this, '__renderGeneralTags'), $templateText);
 
 		return $templateText;
+	}
+
+	/**
+	 * [PREG Callback] Render the {form}...{/form} block
+	 * @param array $matches
+	 * @return string
+	 */
+	function __renderFormBlock($matches){
+		$block = $matches[0];
+		try{
+			// Process {ifExpandable}
+			if(isset($this->renderOptions['expandable']) && $this->renderOptions['expandable']){
+				// Expandable enabled: only remove the {ifExpandable} and {/ifExpandable} tags
+				$block = preg_replace('|{/?ifExpandable}|i', '', $block);
+			}else{
+				// Expandable disabled: remove entire {ifExpandable} block
+				$block = preg_replace('|{ifExpandable(.*?)}(.+?){/ifExpandable}|ism', '', $block);
+			}
+
+			// Process {fieldsLoop}
+			$block = preg_replace_callback('|{fieldsLoop(.*?)}(.+?){/fieldsLoop}|ism', array($this, '__renderFieldLoop'), $block);
+
+			// Process {rowLoop}
+			$block = preg_replace_callback('|{rowLoop(.*?)}(.+?){/rowLoop}|ism', array($this, '__renderRowLoop'), $block);
+
+			return $block;
+
+		}catch(Exception $e){
+			return $e->getMessage();
+		}
+
 	}
 
 	/**
@@ -114,12 +133,12 @@ class formBuilderTemplate {
 		$output     = '';
 		$options    = attPairs($matches[1]);
 		$block      = trim($matches[2]);
-		$list       = isset($options['list'])       ? explode(',', $options['list'])   : $this->formBuilder->listFields();
+		$list       = isset($options['list'])       ? explode(',', $options['list'])   : $this->formBuilder->fields->listFields();
 		$editStrip  = isset($options['editStrip'])  ? str2bool($options['editStrip'])  : NULL;
 		$showHidden = isset($options['showHidden']) ? str2bool($options['showHidden']) : TRUE;
 
 		if ($showHidden || $showHidden === NULL) {
-			foreach ($this->formBuilder->getFields() as $field) {
+			foreach ($this->formBuilder->fields->getFields() as $field) {
 				// Skip the field if it's not in the list
 				if (!in_array($field->name, $list)) continue;
 				// Skip fields that have already been rendered
@@ -132,7 +151,7 @@ class formBuilderTemplate {
 			}
 		}
 
-		foreach ($this->formBuilder->getSortedFields($editStrip) as $field) {
+		foreach ($this->formBuilder->fields->getSortedFields($editStrip) as $field) {
 			// Skip fields that have already been rendered
 			if (in_array($field->name, $this->fieldsRendered)) continue;
 
@@ -154,6 +173,7 @@ class formBuilderTemplate {
 	 *
 	 * @param array $matches
 	 * @return string
+	 * @throws Exception
 	 */
 	private function __renderRowLoop($matches){
 		$output  = '';
@@ -197,70 +217,73 @@ class formBuilderTemplate {
 
 		// Save the number of rows for {rowCount}
 		$this->counterRows = $sqlResult->rowCount();
-		if($this->counterRows){
-			while($dbRow = $sqlResult->fetch()){
-				$rowBlock = $block;
-				$deferredFields = array();
 
-				/*
-				 * We need to generate a unique ID for this row. This is done by hashing the row's primary values and using that as the key
-				 * This is done to create the needed looping array for the processor as well and keep POST data organized should we need
-				 * to re-render the form
-				 */
-				$primaryFields = array();
-				foreach($this->formBuilder->listPrimaryFields() as $field){
-					$primaryFields[$field] = $dbRow[$field];
-				}
-				$rowID = md5(implode('|', $primaryFields));
+		// If there's no rows, bail out!
+		if(!$this->counterRows) throw new Exception('No records found');
 
-				// Save this row's primary fields for later (like during processing)
-				$this->formBuilder->editTableRowData[$rowID] = $primaryFields;
+		// Start looping
+		while($dbRow = $sqlResult->fetch()){
+			$rowBlock = $block;
+			$deferredFields = array();
 
-				// Global replacements
-				$rowBlock = str_replace('{rowLoopID}', $rowID, $rowBlock);
-
-				// Regex grabbing all fields
-				preg_match_all('/{field.*?name="(\w+)".*?}/', $rowBlock, $matches);
-
-				// Save the number of fields for {fieldCount}
-				$this->counterFields = sizeof($matches[0]);
-
-				// Loop through each field
-				foreach($matches[1] as $matchID => $fieldName){
-					$fieldTag = $matches[0][$matchID];
-					$field = $this->formBuilder->getField($fieldName);
-
-					// Append the rowID onto the field's name
-					list($fieldTag, $rowBlock) = str_replace('name="'.$fieldName.'"', 'name="'.$fieldName.'['.$rowID.']"', array($fieldTag, $rowBlock));
-
-					// If this is a plaintext field, defer it till later
-					if($field->type == 'plaintext'){
-						$deferredFields[] = array('fieldTag' => $fieldTag, 'field' => $field);
-						continue;
-					}
-
-					// Restore value from POST
-					$value = (isset($_POST['HTML'][$fieldName][$rowID]) && is_array($_POST['HTML'][$fieldName]))
-						? $_POST['HTML'][$fieldName][$rowID]
-						: (isset($dbRow[$fieldName]) ? $dbRow[$fieldName] : '');
-
-					// Render the field tag!
-					$renderedField = $this->__renderFieldTag($fieldTag, $field, $value, $fieldTag);
-
-					// Replace the field tag with it's fully rendered version
-					$rowBlock = str_replace($fieldTag, $renderedField, $rowBlock);
-				}
-
-				// Now process any deferred fields
-				foreach($deferredFields as $deferredField){
-					$fieldTag      = $deferredField['fieldTag'];
-					$field         = $deferredField['field'];
-					$renderedField = $this->__renderFieldTag($fieldTag, $field, NULL, $fieldTag);
-					$rowBlock      = str_replace($fieldTag, $renderedField, $rowBlock);
-				}
-
-				$output .= $rowBlock;
+			/*
+			 * We need to generate a unique ID for this row. This is done by hashing the row's primary values and using that as the key
+			 * This is done to create the needed looping array for the processor as well and keep POST data organized should we need
+			 * to re-render the form
+			 */
+			$primaryFields = array();
+			foreach($this->formBuilder->fields->listPrimaryFields() as $field){
+				$primaryFields[$field] = $dbRow[$field];
 			}
+			$rowID = md5(implode('|', $primaryFields));
+
+			// Save this row's primary fields for later (like during processing)
+			$this->formBuilder->editTableRowData[$rowID] = $primaryFields;
+
+			// Global replacements
+			$rowBlock = str_replace('{rowLoopID}', $rowID, $rowBlock);
+
+			// Regex grabbing all fields
+			preg_match_all('/{field.*?name="(\w+)".*?}/', $rowBlock, $matches);
+
+			// Save the number of fields for {fieldCount}
+			$this->counterFields = sizeof($matches[0]);
+
+			// Loop through each field
+			foreach($matches[1] as $matchID => $fieldName){
+				$fieldTag = $matches[0][$matchID];
+				$field = $this->formBuilder->fields->getField($fieldName);
+
+				// Append the rowID onto the field's name
+				list($fieldTag, $rowBlock) = str_replace('name="'.$fieldName.'"', 'name="'.$fieldName.'['.$rowID.']"', array($fieldTag, $rowBlock));
+
+				// If this is a plaintext field, defer it till later
+				if($field->type == 'plaintext'){
+					$deferredFields[] = array('fieldTag' => $fieldTag, 'field' => $field);
+					continue;
+				}
+
+				// Restore value from POST
+				$value = (isset($_POST['HTML'][$fieldName][$rowID]) && is_array($_POST['HTML'][$fieldName]))
+					? $_POST['HTML'][$fieldName][$rowID]
+					: (isset($dbRow[$fieldName]) ? $dbRow[$fieldName] : '');
+
+				// Render the field tag!
+				$renderedField = $this->__renderFieldTag($fieldTag, $field, $value, $fieldTag);
+
+				// Replace the field tag with it's fully rendered version
+				$rowBlock = str_replace($fieldTag, $renderedField, $rowBlock);
+			}
+
+			// Now process any deferred fields
+			foreach($deferredFields as $deferredField){
+				$fieldTag      = $deferredField['fieldTag'];
+				$field         = $deferredField['field'];
+				$renderedField = $this->__renderFieldTag($fieldTag, $field, NULL, $fieldTag);
+				$rowBlock      = str_replace($fieldTag, $renderedField, $rowBlock);
+			}
+
+			$output .= $rowBlock;
 		}
 
 		// Replace any field or row count tags inside our block
@@ -388,7 +411,7 @@ class formBuilderTemplate {
 
 				// Add any hidden fields (if needed)
 				if($showHidden){
-					foreach($this->formBuilder->getFields() as $field){
+					foreach($this->formBuilder->fields->getFields() as $field){
 						if (in_array($field->name, $this->fieldsRendered)) continue;
 						if($field->type == 'hidden') {
 							$output .= $field->render();
@@ -411,7 +434,7 @@ class formBuilderTemplate {
 					? trim(strtolower($attrPairs['display']))
 					: 'full';
 
-				foreach ($this->formBuilder->getFields() as $field) {
+				foreach ($this->formBuilder->fields->getFields() as $field) {
 					if (in_array($field->name, $this->fieldsRendered)) continue;
 
 					switch ($display) {
@@ -447,7 +470,7 @@ class formBuilderTemplate {
 					return '';
 				}
 
-				$field = $this->formBuilder->getField($attrPairs['name']);
+				$field = $this->formBuilder->fields->getField($attrPairs['name']);
 				if (isnull($field)) {
 					errorHandle::newError(__METHOD__."() No field defined for '{$attrPairs['name']}'!", errorHandle::DEBUG);
 					return '';

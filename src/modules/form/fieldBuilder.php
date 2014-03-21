@@ -153,6 +153,11 @@ class fieldBuilder{
 			return FALSE;
 		}
 
+		// Set a default label if it doesn't exist
+		if (!isset($field['label']) || is_empty($field['label'])) {
+			$field['label'] = $field['name'];
+		}
+
 		// Return a new fieldBuilder object
 		$field = new self($field);
 		if ($formFields instanceof formFields) $field->formFields = $formFields;
@@ -426,9 +431,7 @@ class fieldBuilder{
 		if (isset($options['display'])) unset($options['display']);
 
 		// Determine label
-		$label = $this->getFieldOption('label')
-			? $this->getFieldOption('label')
-			: $this->getFieldOption('name');
+		$label = $this->getFieldOption('label');
 
 		$this->renderOptions = $options;
 		$output = isset($options['valueOnly']) && str2bool($options['valueOnly'])

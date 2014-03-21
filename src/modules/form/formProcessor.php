@@ -1,6 +1,6 @@
 <?php
 
-class formProcessor extends formFields{
+class formProcessor{
 	const ERR_OK              = 0;
 	const ERR_NO_POST         = 1;
 	const ERR_NO_ID           = 2;
@@ -66,11 +66,40 @@ class formProcessor extends formFields{
 	 */
 	public $primaryFieldsValues;
 
+	/**
+	 * @var formFields
+	 */
+	private $fields;
+
 	public function __construct($dbTableName, $dbConnection=NULL){
 		$this->db = ($dbConnection instanceof dbDriver)
 			? $dbConnection
 			: db::get('appDB');
 		$this->dbTable = $this->db->escape($dbTableName);
+		$this->fields = new formFields();
+	}
+
+	/**
+	 * Add a field to the processor
+	 *
+	 * @param array|fieldBuilder $field
+	 * @return bool
+	 */
+	public function addField($field){
+		// Add the field
+		$result = $this->fields->addField($field);
+		if (!$result) {
+			errorHandle::newError(__METHOD__."() Failed to add field!", errorHandle::DEBUG);
+			return $result;
+		}
+
+		// Get the field we just added
+		if(is_array($field)) $field = $this->fields->getField($field['name']);
+
+		// If we added it successfully, handle any special cases
+		if ($field->type == 'file') $this->formEncoding = 'multipart/form-data';
+
+		return $result;
 	}
 
 	private function getFormScope(){
@@ -261,7 +290,7 @@ class formProcessor extends formFields{
 			$fields = array();
 			$deferredLinkedToFields = array();
 			foreach($data as $field => $value){
-				$field = $this->getField($field);
+				$field =  $this->fields->getField($field);
 
 				if($field->usesLinkTable()){
 					// Process the link table, no local field to process
@@ -274,22 +303,24 @@ class formProcessor extends formFields{
 				}
 			}
 
-			$sql = sprintf('INSERT INTO `%s` (`%s`) VALUES (%s)',
-				$this->dbTable,
-				implode('`,`',array_keys($fields)),
-				implode(',',array_fill(0,sizeof($fields),'?')));
-			$stmt = $this->db->query($sql, $fields);
-			if($stmt->errorCode()){
-				errorHandle::newError(__METHOD__."() SQL Error! {$stmt->errorCode()}:{$stmt->errorMsg()} ($sql)", errorHandle::HIGH);
-				throw new Exception("Internal database error!", self::ERR_SYSTEM);
-			}
+			if(sizeof($fields)){
+				$sql = sprintf('INSERT INTO `%s` (`%s`) VALUES (%s)',
+					$this->dbTable,
+					implode('`,`',array_keys($fields)),
+					implode(',',array_fill(0,sizeof($fields),'?')));
+				$stmt = $this->db->query($sql, $fields);
+				if($stmt->errorCode()){
+					errorHandle::newError(__METHOD__."() SQL Error! {$stmt->errorCode()}:{$stmt->errorMsg()} ($sql)", errorHandle::HIGH);
+					throw new Exception("Internal database error!", self::ERR_SYSTEM);
+				}
 
-			if(sizeof($deferredLinkedToFields)){
-				$primaryField = array_shift($this->listPrimaryFields()); // Shift 1st item off the array, ensures we get the 1st defined primary field
-				$data[ $primaryField ] = $stmt->insertId();
+				if(sizeof($deferredLinkedToFields)){
+					$primaryField = array_shift( $this->fields->listPrimaryFields()); // Shift 1st item off the array, ensures we get the 1st defined primary field
+					$data[ $primaryField ] = $stmt->insertId();
 
-				foreach($deferredLinkedToFields as $deferredLinkedToField){
-					$this->processLinkedField($deferredLinkedToField, $data);
+					foreach($deferredLinkedToFields as $deferredLinkedToField){
+						$this->processLinkedField($deferredLinkedToField, $data);
+					}
 				}
 			}
 
@@ -322,10 +353,10 @@ class formProcessor extends formFields{
 	 */
 	public function update($data){
 		// Process field validation rules
-		if(!$this->validate($data)) return self::ERR_VALIDATION;
+		if(! $this->fields->validate($data)) return self::ERR_VALIDATION;
 
 		// Get the list of primary fields
-		$primaryFields = $this->listPrimaryFields();
+		$primaryFields =  $this->fields->listPrimaryFields();
 
 		// Make sure we have all primary fields accounted for in $data
 		$missingPrimaryKeys = array_diff($primaryFields, array_keys($data));
@@ -341,7 +372,7 @@ class formProcessor extends formFields{
 			$updateFields = array();
 			$whereFields  = array();
 			foreach($data as $field => $value){
-				$field = $this->getField($field);
+				$field =  $this->fields->getField($field);
 
 				if($field->usesLinkTable()){
 					// Process the link table, no local field to process
@@ -353,7 +384,7 @@ class formProcessor extends formFields{
 					$value = is_array($value) ? implode($field->valueDelimiter, $value) : $value;
 
 					// Put this field in the WHERE clause or in with the fields?
-					if($this->isPrimaryField($field->name)){
+					if( $this->fields->isPrimaryField($field->name)){
 						if(is_empty($value)){
 							errorHandle::newError(__METHOD__."() Cannot update record! (primary field '{$field->name}' is empty)", errorHandle::DEBUG);
 							return self::ERR_INCOMPLETE_DATA;
@@ -404,7 +435,7 @@ class formProcessor extends formFields{
 	 */
 	private function processLinkedField(fieldBuilder $field, $formData){
 		// Make sure there is only 1 primary field (TODO: Add multi-key support)
-		if(sizeof($this->listPrimaryFields()) > 1){
+		if(sizeof( $this->fields->listPrimaryFields()) > 1){
 			errorHandle::newError(__METHOD__."() Cannot process linked field! (multiple primary fields not yet supported)", errorHandle::HIGH);
 			throw new Exception('Internal configuration error!', self::ERR_SYSTEM);
 		}
@@ -424,7 +455,7 @@ class formProcessor extends formFields{
 
 		// Get this field's data and the form's primary key
 		$fieldData    = (array)$formData[ $field->name ];
-		$primaryField = array_shift($this->listPrimaryFields()); // Shift 1st item off the array, ensures we get the 1st defined primary field
+		$primaryField = array_shift( $this->fields->listPrimaryFields()); // Shift 1st item off the array, ensures we get the 1st defined primary field
 		$primaryValue = $formData[$primaryField];
 
 		// Clean linkedTo's table name (we'll be using it a lot)
@@ -482,7 +513,7 @@ class formProcessor extends formFields{
 		$localValueMapping = array();
 		if(is_string($linkedTo['linkLocalField'])){
 			$linkLocalField = $this->db->escape($linkedTo['linkForeignField']);
-			$primaryFields = $this->getPrimaryFields();
+			$primaryFields =  $this->fields->getPrimaryFields();
 			if(sizeof($primaryFields) > 1){
 				errorHandle::newError(__METHOD__."() More than 1 primary field defined in form definition", errorHandle::DEBUG);
 				throw new Exception('Internal configuration error!', self::ERR_SYSTEM);
@@ -493,7 +524,7 @@ class formProcessor extends formFields{
 			}
 		}else{
 			foreach($linkedTo['linkLocalField'] as $fieldName => $linkLocalField){
-				if($this->isPrimaryField($fieldName)){
+				if( $this->fields->isPrimaryField($fieldName)){
 					errorHandle::newError(__METHOD__."() '$fieldName' is not a primary field!", errorHandle::DEBUG);
 					throw new Exception('Internal configuration error!', self::ERR_SYSTEM);
 				}
@@ -652,7 +683,7 @@ class formProcessor extends formFields{
 			if($field->isSystem() || $field->isSpecial()) continue;
 
 			// If this is a primary field, reset its value back to the saved one (dropping any user munging)
-			if($this->isPrimaryField($field)){
+			if( $this->fields->isPrimaryField($field)){
 				$updateData[ $field->name ] = $field->value;
 				continue;
 			}
@@ -699,7 +730,7 @@ class formProcessor extends formFields{
 		// Normalize data
 		$updateRowData = array();
 		foreach($data as $fieldName => $fieldRows){
-			$field = $this->getField($fieldName);
+			$field =  $this->fields->getField($fieldName);
 
 			// Skip undefined fields, or system/special fields
 			if($field === NULL || $field->isSystem() || $field->isSpecial()) continue;
@@ -845,8 +876,8 @@ class formProcessor extends formFields{
 	 */
 	public function delete($data){
 		$primaryFieldsSQL = array();
-		foreach ($this->listPrimaryFields() as $fieldName) {
-			$fieldSQL = $this->getField($fieldName)->toSqlSnippet();
+		foreach ( $this->fields->listPrimaryFields() as $fieldName) {
+			$fieldSQL =  $this->fields->getField($fieldName)->toSqlSnippet();
 			$primaryFieldsSQL[$fieldSQL] = $data[$fieldName];
 		}
 
