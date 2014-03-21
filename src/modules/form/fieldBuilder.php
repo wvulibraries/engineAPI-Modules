@@ -586,14 +586,14 @@ class fieldBuilder{
 	private function __render_checkbox(){
 		$output = '';
 
-		// Make the given values an array (may be a CSV)
-		$values = $this->getFieldOption('value');
-		if(is_string($values)) $values = explode($this->getFieldOption('valueDelimiter'), $values);
-
 		// Make sure there's options
 		$options = $this->getFieldOption('options')
 			? $this->getFieldOption('options')
 			: $this->getLinkedToOptions();
+
+		// Make the given values an array (may be a CSV)
+		$values = $this->getFieldOption('value');
+		if(is_string($values)) $values = explode($this->getFieldOption('valueDelimiter'), $values);
 
 		// If still no options, we don't have any and should return an empty string
 		if(!$options){
@@ -885,8 +885,6 @@ class fieldBuilder{
 			// Get the primary field
 			$primaryField = array_shift($this->formFields->getPrimaryFields()); // Shift 1st item off the array, ensures we get the 1st defined primary field
 			$primaryValue = $primaryField->value;
-
-
 
 			// Grab the values from the link table
 			$sql = sprintf('SELECT `%s` FROM `%s` WHERE `%s`=?',
