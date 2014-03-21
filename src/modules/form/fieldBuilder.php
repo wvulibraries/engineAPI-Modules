@@ -29,6 +29,7 @@ class fieldBuilder{
 		'multiple'        => FALSE,
 		'showInEditStrip' => FALSE,
 		'primary'         => FALSE,
+		'valueDelimiter'  => ',',
 	);
 
 	/**
@@ -585,8 +586,8 @@ class fieldBuilder{
 		$output = '';
 
 		// Make the given values an array (may be a CSV)
-		$values = (array)$this->getFieldOption('value');
-		if(is_string($values)) $values = explode(',', $values);
+		$values = $this->getFieldOption('value');
+		if(is_string($values)) $values = explode($this->getFieldOption('valueDelimiter'), $values);
 
 		// Make sure there's options
 		$options = $this->getFieldOption('options')
@@ -601,7 +602,8 @@ class fieldBuilder{
 
 		if(sizeof($options) > 1){
 			// Make the name checkbox array friendly
-			$this->renderOptions['name'] = $this->field['name'].'[]';
+			if(is_empty($this->renderOptions['name'])) $this->renderOptions['name'] = $this->field['name'];
+			$this->renderOptions['name'] .= '[]';
 
 			foreach($options as $value => $label){
 				// Append the value to fieldID for uniqueness

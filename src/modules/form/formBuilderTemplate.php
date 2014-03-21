@@ -302,8 +302,15 @@ class formBuilderTemplate {
 		// Restore value from POST if we weren't given it
 		if(isset($value)) {
 			$attrPairs['value'] = $value;
-		}elseif (isset($_POST['HTML'][ $field->name ]) && !is_array($_POST['HTML'][ $field->name ])) {
-			$attrPairs['value'] = $_POST['HTML'][ $field->name ];
+		}elseif (isset($_POST['HTML'][ $field->name ])) {
+			if(is_array($_POST['HTML'][ $field->name ])){
+				$keys = array_keys($_POST['HTML'][ $field->name ]);
+				if(strlen($keys[0]) != 32){
+					$attrPairs['value'] = $_POST['HTML'][ $field->name ];
+				}
+			}else{
+				$attrPairs['value'] = $_POST['HTML'][ $field->name ];
+			}
 		}
 
 		$display  = isset($attrPairs['display'])
