@@ -95,7 +95,7 @@ class fieldBuilder{
 	 * Return a SQL-ready string snippet for this field
 	 * @return string
 	 */
-	function toSqlSnippet(){
+	public function toSqlSnippet(){
 		return "`{$this->name}`=?";
 	}
 
@@ -103,7 +103,7 @@ class fieldBuilder{
 	 * Returns TRUE if this is a 'special' field like a button
 	 * @return bool
 	 */
-	function isSpecial(){
+	public function isSpecial(){
 		return in_array($this->type, array('submit','reset','button'));
 	}
 
@@ -111,8 +111,16 @@ class fieldBuilder{
 	 * Returns TRUE is this is a 'system' field that begins with '__'
 	 * @return bool
 	 */
-	function isSystem(){
+	public function isSystem(){
 		return (0 === strpos($this->name, '__'));
+	}
+
+	/**
+	 * Returns TRUE if this is a primary field
+	 * @return bool
+	 */
+	public function isPrimary(){
+		return str2bool($this->field['primary']);
 	}
 
 	/**
@@ -202,7 +210,7 @@ class fieldBuilder{
 	 * @return array
 	 */
 	public function __sleep(){
-		return array('field');
+		return array('field','formFields');
 	}
 
 	/**

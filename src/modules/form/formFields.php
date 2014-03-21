@@ -64,6 +64,7 @@ class formFields implements Countable, Iterator{
 		}
 		return $count;
 	}
+
 	/**
 	 * Returns the number of primary fields
 	 * @return int
@@ -71,7 +72,6 @@ class formFields implements Countable, Iterator{
 	public function countPrimary(){
 		return sizeof($this->primaryFields);
 	}
-
 
 	/**
 	 * [Iterator] Returns the field at the current position
@@ -149,7 +149,7 @@ class formFields implements Countable, Iterator{
 		}
 
 		// If this field is set to be a primary field, add it
-		if($field->primary) $this->primaryFields[] = $field->name;
+		if($field->isPrimary()) $this->primaryFields[] = $field->name;
 
 		// If this field is a primary field, disable it (to prevent the user from munging it)
 		if($this->isPrimaryField($field->name)){

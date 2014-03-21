@@ -223,18 +223,25 @@ class formBuilderTemplate {
 
 		// Start looping
 		while($dbRow = $sqlResult->fetch()){
-			$rowBlock = $block;
+			$rowBlock       = $block;
 			$deferredFields = array();
+			$primaryFields  = array();
+
+			// Set rendered value of each field, needed or not, so that plaintext can tap into it
+			foreach ($dbRow as $dbField => $dbValue) {
+				$field = $this->formBuilder->fields->getField($dbField);
+				if ($field) {
+					// If it's a primary field, save it for use in rowID
+					if ($field->isPrimary()) $primaryFields[$dbField] = $dbValue;
+					$field->setRenderedValue($dbValue);
+				}
+			}
 
 			/*
 			 * We need to generate a unique ID for this row. This is done by hashing the row's primary values and using that as the key
 			 * This is done to create the needed looping array for the processor as well and keep POST data organized should we need
 			 * to re-render the form
 			 */
-			$primaryFields = array();
-			foreach($this->formBuilder->fields->listPrimaryFields() as $field){
-				$primaryFields[$field] = $dbRow[$field];
-			}
 			$rowID = md5(implode('|', $primaryFields));
 
 			// Save this row's primary fields for later (like during processing)
