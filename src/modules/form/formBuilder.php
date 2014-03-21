@@ -12,7 +12,7 @@ class formBuilder{
 	/**
 	 * @var formFields
 	 */
-	private $fields;
+	public $fields;
 
 	/**
 	 * @var string The base URL where our form assets are located at
@@ -226,7 +226,33 @@ class formBuilder{
 		try {
 			// If this isn't an AJAX request, we don't care
 			if (!isAJAX()) return NULL;
-			if (isset($_GET['MYSQL']) && sizeof($_GET['MYSQL'])) {
+			if (isset($_POST['MYSQL']) && sizeof($_POST['MYSQL'])) {
+				// If there's no formID, we don't care
+				if (!isset($_POST['MYSQL']['__formID'])) return NULL;
+
+				/*
+				 * Extract the RAW data from _POST and pass it to process() for processing
+				 *
+				 * We use RAW here to avoid double-escaping when we process the data in process()
+				 * This may happen because the developer will use process() to handle his own raw data
+				 * Since the database module uses prepared statements, manually escaping the POST data is not necessary
+				 */
+				$errorCode = self::process($_POST['RAW']);
+
+				// Handle the results of process()
+				if($errorCode == formProcessor::ERR_OK){
+					die(json_encode(array(
+						'success'     => TRUE,
+						'prettyPrint' => errorHandle::prettyPrint(),
+					)));
+				}else{
+					die(json_encode(array(
+						'success'     => FALSE,
+						'errorMsg'    => formProcessor::$errorMessages[$errorCode],
+						'prettyPrint' => errorHandle::prettyPrint(),
+					)));
+				}
+			}elseif (isset($_GET['MYSQL']) && sizeof($_GET['MYSQL'])) {
 				// If there's no formID, we don't care
 				if (!isset($_GET['MYSQL']['formID'])) return NULL;
 
@@ -254,32 +280,6 @@ class formBuilder{
 							'form'    => $savedForm->display($formType, $displayOptions)
 						)));
 				}
-			} elseif (isset($_POST['MYSQL']) && sizeof($_POST['MYSQL'])) {
-				// If there's no formID, we don't care
-				if (!isset($_POST['MYSQL']['__formID'])) return NULL;
-
-				/*
-				 * Extract the RAW data from _POST and pass it to process() for processing
-				 *
-				 * We use RAW here to avoid double-escaping when we process the data in process()
-				 * This may happen because the developer will use process() to handle his own raw data
-				 * Since the database module uses prepared statements, manually escaping the POST data is not necessary
-				 */
-				$errorCode = self::process($_POST['RAW']);
-
-				// Handle the results of process()
-				if($errorCode == formProcessor::ERR_OK){
-					die(json_encode(array(
-						'success'     => TRUE,
-						'prettyPrint' => errorHandle::prettyPrint(),
-					)));
-				}else{
-					die(json_encode(array(
-						'success'     => FALSE,
-						'errorMsg'    => formProcessor::$errorMessages[$errorCode],
-						'prettyPrint' => errorHandle::prettyPrint(),
-					)));
-				}
 			}
 			return NULL;
 
@@ -299,18 +299,6 @@ class formBuilder{
 	 */
 	private static function getSavedForm($formID=NULL){
 		if (!isset($formID)) return formProcessor::ERR_NO_ID;
-		/*
-		if (!isset($formID)) {
-			$sessionPost = session::get('POST');
-			if (isset($sessionPost['MYSQL']) && isset($sessionPost['MYSQL']['__formID'])) {
-				$formID = $sessionPost['MYSQL']['__formID'];
-			} elseif (isset($_POST['MYSQL']['__formID'])) {
-				$formID = $_POST['MYSQL']['__formID'];
-			} else {
-				return formProcessor::ERR_NO_ID;
-			}
-		}
-		*/
 
 		$savedForm = session::get(self::SESSION_SAVED_FORMS_KEY.".$formID");
 		if (!$savedForm) return formProcessor::ERR_INVALID_ID;
@@ -328,7 +316,7 @@ class formBuilder{
 	 */
 	public static function process($formID = NULL){
 		// If there's no POST, return
-		if(!sizeof($_POST) && !session::has('POST')) return NULL;
+		if(!sizeof($_POST) && !session::has('POST') && !is_array($formID)) return NULL;
 
 		// Catch the case where you pass an array of data in manually
 		if (is_array($formID)) {
