@@ -136,7 +136,7 @@ class fieldBuilder{
 	 * @param formFields   $formFields
 	 * @return array|bool|fieldBuilder
 	 */
-	public static function createField($field, formFields $formFields){
+	public static function createField($field, formFields $formFields=NULL){
 		// If given a string, make it a valid array
 		if (is_string($field)) $field = array('name' => $field);
 
@@ -154,7 +154,7 @@ class fieldBuilder{
 
 		// Return a new fieldBuilder object
 		$field = new self($field);
-		$field->formFields = $formFields;
+		if ($formFields instanceof formFields) $field->formFields = $formFields;
 		return $field;
 	}
 
@@ -805,7 +805,7 @@ class fieldBuilder{
 
 		// Loop, and build the options
 		foreach ($options as $key => $label) {
-			$selected = in_array($key, $this->getFieldOption('value'))
+			$selected = in_array($key, (array)$this->getFieldOption('value'))
 				? ' selected'
 				: '';
 			$output .= sprintf('<option value="%s"%s>%s</option>',

@@ -40,7 +40,7 @@ class formBuilder extends formFields{
 	public $insertTitle;
 
 	/**
-	 * @var string The public tile to apply to update forms
+	 * @var string The public title to apply to update forms
 	 */
 	public $updateTitle;
 
@@ -123,7 +123,6 @@ class formBuilder extends formFields{
 		$engineVars          = enginevars::getInstance();
 		$this->formAssetsURL = $engineVars->get('formAssetsURL', $engineVars->get('engineInc').DIRECTORY_SEPARATOR.'formBuilderAssets');
 
-//		errorHandle::registerPrettyPrintCallback(array($this, 'prettyPrintFormErrors'));
 		templates::defTempPatterns('/\{form\s+(.+?)\}/', __CLASS__.'::templateMatches', $this);
 	}
 
@@ -770,7 +769,6 @@ class formBuilder extends formFields{
 
 		$db  = $this->dbOptions['connection'];
 		$sql = sprintf('SELECT * FROM `%s` WHERE %s LIMIT 1',
-//			implode('`,`', $this->listFields()),
 			$db->escape($this->dbOptions['table']),
 			implode(' AND ', array_keys($primaryFieldsSQL)));
 		$stmt = $db->query($sql, array_values($primaryFieldsSQL));

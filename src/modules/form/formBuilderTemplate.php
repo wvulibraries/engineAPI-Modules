@@ -235,7 +235,7 @@ class formBuilderTemplate {
 					}
 
 					// Restore value from POST
-					$value = is_array($_POST['HTML'][$fieldName]) && isset($_POST['HTML'][$fieldName][$rowID])
+					$value = (isset($_POST['HTML'][$fieldName][$rowID]) && is_array($_POST['HTML'][$fieldName]))
 						? $_POST['HTML'][$fieldName][$rowID]
 						: $dbRow[$fieldName];
 

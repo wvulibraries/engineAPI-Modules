@@ -32,7 +32,7 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 	function testDefaultValues(){
 		$field = fieldBuilder::createField(array('name' => 'foo'));
 		$this->assertFalse($field->disabled);
-		$this->assertFalse($field->duplicates);
+		$this->assertTrue($field->duplicates);
 		$this->assertFalse($field->readonly);
 		$this->assertFalse($field->dragDrop);
 		$this->assertFalse($field->required);

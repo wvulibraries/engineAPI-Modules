@@ -27,13 +27,17 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_formTitle(){
-		$template = '{formTitle}';
+		$this->form->template = '{formTitle}';
+		$this->assertEquals('foo', $this->form->display('insert', array('title'=>'foo')));
 
-		$this->assertEquals('', $this->formTemplate->render($template));
+		$this->assertEquals(' Insert', $this->form->display('insert'));
 
-		$form         = formBuilder::createForm('foo');
-		$formTemplate = new formBuilderTemplate($form);
-		$this->assertEquals('foo', $formTemplate->render($template));
+		$this->form->insertTitle = 'bar';
+		$this->assertEquals('bar', $this->form->display('insert'));
+
+		$form = formBuilder::createForm('foo');
+		$form->template = '{formTitle}';
+		$this->assertEquals('foo Insert', $form->display('insert'));
 	}
 
 	function test_formBegin(){
