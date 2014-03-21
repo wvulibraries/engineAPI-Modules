@@ -566,7 +566,8 @@ class fieldBuilder{
 
 		foreach($options as $value => $label){
 			// Append the value to fieldID for uniqueness
-			$this->renderOptions['fieldID'] = $this->field['fieldID']."_".str_replace(' ','_',$value);
+			$this->renderOptions['fieldID'] = $this->getFieldOption('fieldID')."_".str_replace(' ','_',$value);
+
 			// Render time
 			$output .= sprintf('<label class="radioLabel"><input type="radio" value="%s" %s%s> %s</label>',
 				$value,
@@ -602,12 +603,11 @@ class fieldBuilder{
 
 		if(sizeof($options) > 1){
 			// Make the name checkbox array friendly
-			if(is_empty($this->renderOptions['name'])) $this->renderOptions['name'] = $this->field['name'];
-			$this->renderOptions['name'] .= '[]';
+			$this->renderOptions['name'] = $this->getFieldOption('name').'[]';
 
 			foreach($options as $value => $label){
 				// Append the value to fieldID for uniqueness
-				$this->renderOptions['fieldID'] = $this->field['fieldID']."_".str_replace(' ','_',$value);
+				$this->renderOptions['fieldID'] = $this->getFieldOption('fieldID')."_".str_replace(' ','_',$value);
 
 				// Render time
 				$output .= sprintf('<label class="checkboxLabel"><input type="checkbox" value="%s" %s%s> %s</label>',
@@ -668,7 +668,7 @@ class fieldBuilder{
 	private function __render_textarea(){
 		return sprintf('<textarea %s%s>%s</textarea>',
 			$this->buildFieldAttributes(),
-			(!is_empty($this->field['placeholder']) ? ' placeholder="'.$this->field['placeholder'].'"' : ''),
+			(!is_empty($this->getFieldOption('placeholder')) ? ' placeholder="'.$this->getFieldOption('placeholder').'"' : ''),
 			$this->getFieldOption('value')
 		);
 	}
@@ -714,11 +714,11 @@ class fieldBuilder{
 	 * @return string
 	 */
 	private function buildLabelAttributes(){
-		$attributes = (array)$this->field['labelMetadata'];
+		$attributes = (array)$this->getFieldOption('labelMetadata');
 
-		if (!$this->field['disableStyling']) {
-			if (!is_empty($this->field['labelCSS'])) $attributes['style'] = $this->field['labelCSS'];
-			if (!is_empty($this->field['labelClass'])) $attributes['class'] = $this->field['labelClass'];
+		if (!$this->getFieldOption('disableStyling')) {
+			if (!is_empty($this->getFieldOption('labelCSS'))) $attributes['style'] = $this->getFieldOption('labelCSS');
+			if (!is_empty($this->getFieldOption('labelClass'))) $attributes['class'] = $this->getFieldOption('labelClass');
 		}
 
 		return $this->__buildAttributes($attributes);
@@ -730,7 +730,7 @@ class fieldBuilder{
 	 * @return string
 	 */
 	private function buildFieldAttributes(){
-		$attributes         = (array)$this->field['fieldMetadata'];
+		$attributes         = (array)$this->getFieldOption('fieldMetadata');
 		$attributes['name'] = $this->getFieldOption('name');
 
 		if (str2bool($this->getFieldOption('disabled'))) $attributes['bool'][] = 'disabled';
@@ -739,7 +739,7 @@ class fieldBuilder{
 		if (str2bool($this->getFieldOption('multiple'))) $attributes['bool'][] = 'multiple';
 
 		if ($fieldID = $this->getFieldOption('fieldID')) $attributes['id'] = $fieldID;
-		if (!$this->field['disableStyling']) {
+		if (!$this->getFieldOption('disableStyling')) {
 			if ($fieldCSS = $this->getFieldOption('fieldCSS')) $attributes['style'] = $fieldCSS;
 			if ($fieldClass = $this->getFieldOption('fieldClass')) $attributes['class'] = $fieldClass;
 		}
