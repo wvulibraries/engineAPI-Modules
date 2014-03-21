@@ -63,8 +63,20 @@ var formBuilder = {
 				var $editStrip = $('[data-row_id='+rowID+']');
 
 				$formInputs.each(function(i,n){
-					$updateField = $(n);
-					$editStrip.find(':input[name^="'+$updateField.attr('name')+'['+rowID+']"]').val($updateField.val());
+					var $updateField = $(n);
+					var fieldName    = $updateField.attr('name').replace(/\[|\]/g, '');
+					var value        = $updateField.attr('value');
+
+					if($updateField.is(':checkbox,:radio')){
+						var $target = $editStrip.find(':input[name^="'+fieldName+'['+rowID+']"][value="'+value+'"]');
+						if($updateField.is(':checked')){
+							$target.attr('checked','checked');
+						}else{
+							$target.removeAttr('checked');
+						}
+					}else{
+						$editStrip.find(':input[name^="'+fieldName+'['+rowID+']"]').val($updateField.val());
+					}
 				});
 
 				$form.slideUp(function(){

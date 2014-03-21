@@ -195,7 +195,7 @@ class formBuilderTemplate {
 			die('Internal database error!');
 		}
 
-		// Save the number of rows
+		// Save the number of rows for {rowCount}
 		$this->counterRows = $sqlResult->rowCount();
 		if($this->counterRows){
 			while($dbRow = $sqlResult->fetch()){
@@ -221,6 +221,11 @@ class formBuilderTemplate {
 
 				// Regex grabbing all fields
 				preg_match_all('/{field.*?name="(\w+)".*?}/', $rowBlock, $matches);
+
+				// Save the number of fields for {fieldCount}
+				$this->counterFields = sizeof($matches[0]);
+
+				// Loop through each field
 				foreach($matches[1] as $matchID => $fieldName){
 					$fieldTag = $matches[0][$matchID];
 					$field = $this->formBuilder->getField($fieldName);

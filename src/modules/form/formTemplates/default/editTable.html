@@ -10,7 +10,7 @@
 	{/ifFormErrors}
 
 	{form}
-	<table>
+	<table border="1">
 		<thead>
 		<tr>
 			{ifExpandable}<th></th>{/ifExpandable}
@@ -31,7 +31,7 @@
 		</tr>
 		{ifExpandable}
 		<tr>
-			<td></td>
+			<td colspan="2"></td>
 			<td colspan="{fieldCount}"><div class="expandable" id="updateForm_{rowLoopID}"></div></td>
 		</tr>
 		{/ifExpandable}
