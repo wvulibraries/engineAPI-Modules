@@ -297,9 +297,7 @@ class formProcessor{
 					$deferredLinkedToFields[] = $field;
 				}else{
 					// Field doesn't use a link field, normalize arrays for single query
-					$fields[ $field->name ] = is_array($data[ $field->name ])
-						? implode($field->valueDelimiter, $data[ $field->name ])
-						: $data[ $field->name ];
+					$fields[ $field->name ] = $field->formatValue($data[ $field->name ]);
 				}
 			}
 
@@ -380,8 +378,8 @@ class formProcessor{
 				}else{
 					// Field doesn't use a link field, normalize arrays for single query
 
-					// If value is an array, we need to implode it down to a string for storage
-					$value = is_array($value) ? implode($field->valueDelimiter, $value) : $value;
+					// Format the value accorting to the field
+					$value = $field->formatValue($value);
 
 					// Put this field in the WHERE clause or in with the fields?
 					if( $this->fields->isPrimaryField($field->name)){

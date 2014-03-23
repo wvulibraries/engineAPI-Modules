@@ -30,6 +30,8 @@ class fieldBuilder{
 		'showInEditStrip' => TRUE,
 		'primary'         => FALSE,
 		'valueDelimiter'  => ',',
+		'dateFormat'      => 'Y-m-d',
+		'timeFormat'      => 'H:i:s', // TODO: Decide on time format
 	);
 
 	/**
@@ -170,6 +172,24 @@ class fieldBuilder{
 		$field = new self($field);
 		if ($formFields instanceof formFields) $field->formFields = $formFields;
 		return $field;
+	}
+
+	/**
+	 * Formats the given input into a format suitable for storage in the database
+	 * @param mixed $value
+	 * @return mixed
+	 */
+	public function formatValue($value){
+		if(is_array($value)) $value = implode($this->valueDelimiter, $value);
+		switch($this->type){
+			case 'date':
+				return strtotime($value);
+			case 'time':
+				$date = date_parse($value);
+				return ( (3600*$date['hour'])+(60*$date['minute'])+$date['second'] );  // TODO: Decide on time format
+			default:
+				return $value;
+		}
 	}
 
 	/**
@@ -506,9 +526,22 @@ class fieldBuilder{
 	 * @return string
 	 */
 	private function __render_input(){
+		// Get the value we'll be using
+		$value = $this->getFieldOption('value');
+
+		// Catch spacial cases
+		switch($this->type){
+			case 'date':
+				if(is_numeric($value)) $value = date($this->getFieldOption('dateFormat'), $value);
+				break;
+			case 'time':
+				if(is_numeric($value)) $value = date($this->getFieldOption('timeFormat'), $value);
+				break;
+		}
+
 		return sprintf('<input type="%s" value="%s" %s%s>',
 			$this->field['type'],
-			$this->getFieldOption('value'),
+			$value,
 			$this->buildFieldAttributes(),
 			(!is_empty($this->getFieldOption('placeholder')) ? ' placeholder="'.$this->getFieldOption('placeholder').'"' : '')
 		);
