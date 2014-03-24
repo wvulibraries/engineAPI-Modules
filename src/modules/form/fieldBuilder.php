@@ -584,11 +584,18 @@ class fieldBuilder{
 	 * @return string
 	 */
 	private function __render_wysiwyg(){
-		//		$fieldClass = $this->getFieldOption('class');
-//		if(FALSE === strpos('ckeditor', $fieldClass)) $this->renderOptions['class'] = "$fieldClass ckeditor";
+		$wysiwygBaseURL = $this->getFieldOption('baseURL');
+		if(isnull($wysiwygBaseURL)) $wysiwygBaseURL = '/wysiwyg';
 
-		$output = $this->__render_textarea();
-//		$output .= sprintf("<script>CKEDITOR.replace(%s, { customConfig: '' } );</script>", $this->getFieldOption('fieldID'));
+		// Require our asset javascript
+		$output = "<script src='$wysiwygBaseURL/ckeditor.js'></script>";
+
+		// Make sure the textarea will have the class 'ckeditor' on it
+		$fieldClass = $this->getFieldOption('class');
+		if(FALSE === strpos('ckeditor', $fieldClass)) $this->renderOptions['class'] = "$fieldClass ckeditor";
+
+		// Render the textarea w/ wrapping <div> and return the output
+		$output .= sprintf('<div class="wysiwygEditor">%s</div>', $this->__render_textarea());
 		return $output;
 	}
 

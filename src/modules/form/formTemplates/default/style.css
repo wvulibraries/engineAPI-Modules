@@ -105,3 +105,8 @@ pre {
 .formBuilder.editTable .expandable{
 	display: none;
 }
+
+/* WYSIWYG CSS */
+.wysiwygEditor{
+	display: inline-block;
+}
