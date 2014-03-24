@@ -1,0 +1,10 @@
+################################################################################################
+# Sample .htaccess file for WYSIWYG module
+# The idea is that you set a mod_rewrite rule to redirect all /wysiwyg/* requests
+# to this module through a central 'handler' file (ex: wysiwyg.php)
+################################################################################################
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+	RewriteRule ^wysiwyg/ /wysiwyg.php [L]
+</IfModule>
