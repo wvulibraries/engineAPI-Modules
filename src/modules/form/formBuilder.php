@@ -45,6 +45,11 @@ class formBuilder{
 	public $formEncoding;
 
 	/**
+	 * @var bool Boolean flag controlling if browser-side validation should be performed
+	 */
+	public $browserValidation = TRUE;
+
+	/**
 	 * @var string The public title to apply to insert forms
 	 */
 	public $insertTitle;

@@ -394,6 +394,10 @@ class formBuilderTemplate {
 
 				// Build the <form> tag
 				if(!isset($this->renderOptions['noFormTag']) || !$this->renderOptions['noFormTag']){
+
+					// If we have browser validation turned off, add the attribute to <form>
+					if(!$this->formBuilder->browserValidation) $attrPairs['novalidate'] = '';
+
 					// Compile form attributes
 					$attrs = array();
 					foreach(array_merge($this->formAttributes, $attrPairs) as $attr => $value){
