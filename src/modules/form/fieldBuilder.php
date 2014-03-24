@@ -927,8 +927,8 @@ class fieldBuilder{
 		}
 
 
-		// Is this a linked field? If so, we need to extract its values
-		if($linkTable){
+		// If this is a linkTable field AND there are no currently set values (like from POST) then we need to set them
+		if(!isset($this->renderOptions['value']) && $linkTable){
 			// Get the primary field
 			$primaryField = array_shift($this->formFields->getPrimaryFields()); // Shift 1st item off the array, ensures we get the 1st defined primary field
 			$primaryValue = $primaryField->value;
