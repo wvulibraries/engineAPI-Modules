@@ -243,11 +243,6 @@ class fieldBuilder{
 
 		// Add assets for specific field types
 		switch($this->field['type']){
-			case 'wysiwyg':
-				return array(
-					// __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'ckeditor'.DIRECTORY_SEPARATOR.'ckeditor.js',
-					// __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'wysiwyg.js',
-				);
 			case 'multiselect':
 				$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multi-select.css';
 				$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multi-select.js';
