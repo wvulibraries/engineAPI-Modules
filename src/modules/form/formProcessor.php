@@ -38,17 +38,20 @@ class formProcessor{
 	 * @var array List of callbacks
 	 */
 	private $callbacks = array(
-		'beforeInsert'    => NULL,
-		'doInsert'        => NULL,
-		'beforeUpdate'    => NULL,
-		'doUpdate'        => NULL,
-		'beforeEdit'      => NULL,
-		'doEdit'          => NULL,
-		'beforeDelete'    => NULL,
-		'doDelete'        => NULL,
-		'onSuccess'       => NULL,
-		'onFailure'       => NULL,
-		'onValidateError' => NULL,
+		'beforeInsert' => NULL,
+		'doInsert'     => NULL,
+		'afterInsert'  => NULL,
+		'beforeUpdate' => NULL,
+		'doUpdate'     => NULL,
+		'afterUpdate'  => NULL,
+		'beforeEdit'   => NULL,
+		'doEdit'       => NULL,
+		'afterEdit'    => NULL,
+		'beforeDelete' => NULL,
+		'doDelete'     => NULL,
+		'afterDelete'  => NULL,
+		'onSuccess'    => NULL,
+		'onFailure'    => NULL,
 	);
 
 	/**
@@ -60,6 +63,11 @@ class formProcessor{
 	 * @var string The database table
 	 */
 	private $dbTable;
+
+	/**
+	 * @var string The insertID from the last insert() operation
+	 */
+	public $insertID;
 
 	/**
 	 * @var array Array of primary key values (used in self::__processEdit())
@@ -130,6 +138,8 @@ class formProcessor{
 		if($this->formBuilder instanceof formBuilder){
 			$this->formBuilder->formError($msg, $type, $this->getFormScope());
 		}
+
+		// TODO: Add onError callback logic
 	}
 
 	/**
@@ -195,7 +205,7 @@ class formProcessor{
 	 * @return mixed
 	 */
 	private function triggerCallback($trigger, $data=array(), $default=NULL){
-		if(!$this->callbacks[$trigger] && isnull($default)) return NULL;
+		if(!$this->triggerPresent($trigger)) return $default;
 		$fn = $this->callbacks[$trigger]
 			? $this->callbacks[$trigger]
 			: array($this, $default);
@@ -247,7 +257,6 @@ class formProcessor{
 				errorHandle::newError(__METHOD__."() Error occurred during validation for field '{$field->name}'! (possible regex error: ".preg_last_error().")", errorHandle::DEBUG);
 			}elseif($result === FALSE){
 				$isValid = FALSE;
-				// TODO: Trigger onValidateError event
 				$this->formError($validator->getErrorMessage($field->validate, $fieldData), errorHandle::ERROR);
 			}
 
@@ -312,9 +321,13 @@ class formProcessor{
 					throw new Exception("Internal database error!", self::ERR_SYSTEM);
 				}
 
+				// Save the insertID for later usage
+				$this->insertID = $stmt->insertId();
+
+				// If there's any deferred linkedTo fields, process them
 				if(sizeof($deferredLinkedToFields)){
 					$primaryField = array_shift( $this->fields->listPrimaryFields()); // Shift 1st item off the array, ensures we get the 1st defined primary field
-					$data[ $primaryField ] = $stmt->insertId();
+					$data[ $primaryField ] = $this->insertID;
 
 					foreach($deferredLinkedToFields as $deferredLinkedToField){
 						$this->processLinkedField($deferredLinkedToField, $data);
@@ -651,8 +664,10 @@ class formProcessor{
 			if(isset($data[ $field->name ])) $insertData[ $field->name ] = $data[ $field->name ];
 		}
 
-		// Trigger beforeInsert and doInsert events
+		// Trigger beforeInsert event
 		if($this->triggerPresent('beforeInsert')) $insertData = $this->triggerCallback('beforeInsert', array($insertData));
+
+		// Trigger doInsert event
 		$doInsert = $this->triggerCallback('doInsert', array($insertData), '__insertRow');
 		if($doInsert !== self::ERR_OK) {
 			if ($this->triggerPresent('onFailure')) {
@@ -662,6 +677,9 @@ class formProcessor{
 				return $doInsert;
 			}
 		}
+
+		// Trigger afterInsert event
+		$this->triggerCallback('afterInsert', array($this->insertID, $insertData));
 
 		// Trigger onSuccess event
 		return $this->triggerPresent('onSuccess')
@@ -703,7 +721,10 @@ class formProcessor{
 			$updateData[ $field->name ] = $data[ $field->name ];
 		}
 
+		// Trigger beforeUpdate event
 		if($this->triggerPresent('beforeUpdate')) $updateData = $this->triggerCallback('beforeUpdate', array($updateData));
+
+		// Trigger doUpdate event
 		$doUpdate = $this->triggerCallback('doUpdate', array($updateData), '__updateRow');
 		if($doUpdate !== self::ERR_OK) {
 			if ($this->triggerPresent('onFailure')) {
@@ -713,6 +734,9 @@ class formProcessor{
 				return $doUpdate;
 			}
 		}
+
+		// Trigger afterUpdate event
+		$this->triggerCallback('afterUpdate', array($updateData));
 
 		// Trigger onSuccess event
 		return $this->triggerPresent('onSuccess')
@@ -765,8 +789,10 @@ class formProcessor{
 		// Strip rowID off updatedRows now that deletedRows is build (as it's no longer needed)
 		$updateRowData = array_values($updateRowData);
 
-		// Trigger beforeDelete and doDelete events
+		// Trigger beforeDelete event
 		if($this->triggerPresent('beforeDelete')) $deletedRows = $this->triggerCallback('beforeDelete', array($deletedRows));
+
+		// Trigger doDelete event
 		$doDelete = $this->triggerCallback('doDelete', array($deletedRows), '__deleteRows');
 		if($doDelete !== self::ERR_OK) {
 			if ($this->triggerPresent('onFailure')) {
@@ -777,8 +803,13 @@ class formProcessor{
 			}
 		}
 
-		// Trigger beforeEdit and doEdit events
+		// Trigger afterDelete event
+		$this->triggerCallback('afterDelete', array($deletedRows));
+
+		// Trigger beforeEdit event
 		if($this->triggerPresent('beforeEdit')) $updateRowData = $this->triggerCallback('beforeEdit', array($updateRowData));
+
+		// Trigger doEdit event
 		$doEdit = $this->triggerCallback('doEdit', array($updateRowData), '__updateRows');
 		if($doEdit !== self::ERR_OK) {
 			if ($this->triggerPresent('onFailure')) {
@@ -788,6 +819,9 @@ class formProcessor{
 				return $doEdit;
 			}
 		}
+
+		// Trigger afterEdit event
+		$this->triggerCallback('afterEdit', array($updateRowData));
 
 		// Trigger onSuccess event
 		return $this->triggerPresent('onSuccess')
