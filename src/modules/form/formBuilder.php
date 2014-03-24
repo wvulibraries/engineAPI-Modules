@@ -667,7 +667,7 @@ class formBuilder{
 					$cssAssetBlob .= minifyCSS($file);
 					break;
 				case 'js':
-					// $jsAssetBlob .= minifyJS($file);
+					// $jsAssetBlob .= minifyJS($file);  @TODO: Fix this function to not rely on ob_start() which doesn't work from engine tags
 					$jsAssetBlob .= file_get_contents($file);
 					break;
 				default:
