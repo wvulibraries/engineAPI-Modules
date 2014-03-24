@@ -447,6 +447,12 @@ class formBuilder{
 	public static function templateMatches($matches){
 		$attrPairs = attPairs($matches[1]);
 
+		// Make sure we have a 'display' option
+		if (!isset($attrPairs['display'])) $attrPairs['display'] = '';
+
+		// If we're looking for assets, display them
+		if($attrPairs['display'] == 'assets') return self::displayAssets();
+
 		// Determine form name
 		$formName = isset($attrPairs['name']) ? $attrPairs['name'] : self::DEFAULT_FORM_NAME;
 		$formName = trim(strtolower($formName));
@@ -459,7 +465,6 @@ class formBuilder{
 			return '';
 		}
 
-		if (!isset($attrPairs['display'])) $attrPairs['display'] = '';
 		return $form->display($attrPairs['display'], $attrPairs);
 	}
 
@@ -616,40 +621,6 @@ class formBuilder{
 			case 'form':
 				return $this->displayForm($options);
 
-			case 'assets':
-				$assetFiles = $this->getAssets();
-				foreach (self::$formObjects as $form) {
-					$assetFiles = array_merge($assetFiles, $form->getAssets());
-				}
-				$assetFiles = array_unique($assetFiles);
-
-				$jsAssetBlob  = '';
-				$cssAssetBlob = '';
-				foreach ($assetFiles as $file) {
-					$ext = pathinfo($file, PATHINFO_EXTENSION);
-					switch ($ext) {
-						case 'less':
-							// TODO
-						case 'sass':
-							// TODO
-						case 'css':
-							$cssAssetBlob .= minifyCSS($file);
-							break;
-						case 'js':
-							// $jsAssetBlob .= minifyJS($file);
-							$jsAssetBlob .= file_get_contents($file);
-							break;
-						default:
-							errorHandle::newError(__METHOD__."() Unknown asset file type '$ext'. Ignoring file!", errorHandle::DEBUG);
-							break;
-					}
-				}
-
-				$output = "<!-- engine Instruction displayTemplateOff -->\n";
-				if (!is_empty($jsAssetBlob)) $output .= "<script class='formBuilderScriptAssets'>".$jsAssetBlob."</script>";
-				if (!is_empty($cssAssetBlob)) $output .= "<style class='formBuilderStyleAssets'>".$cssAssetBlob."</style>";
-				return $output."<!-- engine Instruction displayTemplateOn -->\n";
-
 			case 'errors':
 				return errorHandle::prettyPrint();
 
@@ -670,6 +641,45 @@ class formBuilder{
 						return '';
 				}
 		}
+	}
+
+	/**
+	 * Render all assets for all formBuilders
+	 * @return string
+	 */
+	public static function displayAssets(){
+		$assetFiles = array();
+		foreach (self::$formObjects as $form) {
+			$assetFiles = array_merge($assetFiles, $form->getAssets());
+		}
+		$assetFiles = array_unique($assetFiles);
+
+		$jsAssetBlob  = '';
+		$cssAssetBlob = '';
+		foreach ($assetFiles as $file) {
+			$ext = pathinfo($file, PATHINFO_EXTENSION);
+			switch ($ext) {
+				case 'less':
+					// TODO
+				case 'sass':
+					// TODO
+				case 'css':
+					$cssAssetBlob .= minifyCSS($file);
+					break;
+				case 'js':
+					// $jsAssetBlob .= minifyJS($file);
+					$jsAssetBlob .= file_get_contents($file);
+					break;
+				default:
+					errorHandle::newError(__METHOD__."() Unknown asset file type '$ext'. Ignoring file!", errorHandle::DEBUG);
+					break;
+			}
+		}
+
+		$output = "<!-- engine Instruction displayTemplateOff -->\n";
+		if (!is_empty($jsAssetBlob)) $output .= "<script class='formBuilderScriptAssets'>".$jsAssetBlob."</script>";
+		if (!is_empty($cssAssetBlob)) $output .= "<style class='formBuilderStyleAssets'>".$cssAssetBlob."</style>";
+		return $output."<!-- engine Instruction displayTemplateOn -->\n";
 	}
 
 	/**
