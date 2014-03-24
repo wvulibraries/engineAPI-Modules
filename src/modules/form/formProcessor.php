@@ -200,15 +200,15 @@ class formProcessor{
 	/**
 	 * [Internal helper] Trigger a callback
 	 * @param string $trigger
-	 * @param string $default
-	 * @param array $data
+	 * @param array  $data
+	 * @param string $defaultMethod
 	 * @return mixed
 	 */
-	private function triggerCallback($trigger, $data=array(), $default=NULL){
-		if(!$this->triggerPresent($trigger)) return $default;
+	private function triggerCallback($trigger, $data=array(), $defaultMethod=NULL){
+		if(!$this->triggerPresent($trigger) && isnull($defaultMethod)) return NULL;
 		$fn = $this->callbacks[$trigger]
 			? $this->callbacks[$trigger]
-			: array($this, $default);
+			: array($this, $defaultMethod);
 
 		// Make sure this object gets added as the 1st param of the callback
 		array_unshift($data, $this);
