@@ -69,7 +69,7 @@ class formProcessor{
 	/**
 	 * @var formFields
 	 */
-	private $fields;
+	public $fields;
 
 	public function __construct($dbTableName, $dbConnection=NULL){
 		$this->db = ($dbConnection instanceof dbDriver)
@@ -370,7 +370,8 @@ class formProcessor{
 			$updateFields = array();
 			$whereFields  = array();
 			foreach($data as $field => $value){
-				$field =  $this->fields->getField($field);
+				$field = $this->fields->getField($field);
+				if(!($field instanceof fieldBuilder)) continue;
 
 				if($field->usesLinkTable()){
 					// Process the link table, no local field to process
