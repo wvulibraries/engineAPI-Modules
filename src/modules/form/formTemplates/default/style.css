@@ -9,6 +9,10 @@ label{
 iframe{
 	width: 100%;
 }
+pre {
+	white-space: pre-wrap;
+}
+
 .errorPrettyPrint .successMessage{
 	color: darkgreen;
 }

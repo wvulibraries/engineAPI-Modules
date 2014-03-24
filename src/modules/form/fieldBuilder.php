@@ -488,8 +488,9 @@ class fieldBuilder{
 			case 'modal':
 				if(isset($help['text'])){
 					$value = $help['text'];
-				}elseif(isset($help['path'])){
-					$value = file_get_contents($help['path']);
+				}elseif(isset($help['file'])){
+					$value = file_get_contents($help['file']);
+					if(get_file_mime_type($help['file']) == 'text/plain') $value = "<pre>$value</pre>";
 				}elseif(isset($help['url'])){
 					// Get the source of the URL page
 					$value = file_get_contents($help['url']);
