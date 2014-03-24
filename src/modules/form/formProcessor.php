@@ -857,6 +857,8 @@ class formProcessor{
 			switch($field->type){
 				case 'boolean':
 				case 'checkbox':
+					// If this field uses linkTable, DON'T ALTER ITS VALUE!
+					if($field->usesLinkTable()) break;
 					if(!isset($data[ $field->name ])) $data[ $field->name ] = '';
 					break;
 			}
@@ -874,20 +876,55 @@ class formProcessor{
 	 * @return int
 	 */
 	public function delete($data){
-		$primaryFieldsSQL = array();
-		foreach ( $this->fields->listPrimaryFields() as $fieldName) {
-			$fieldSQL =  $this->fields->getField($fieldName)->toSqlSnippet();
-			$primaryFieldsSQL[$fieldSQL] = $data[$fieldName];
+
+		try{
+			$this->db->beginTransaction();
+
+			$linkPrimaryValue = NULL;
+			$primaryFieldsSQL = array();
+			foreach($this->fields as $field){
+				// If this is a primary field
+				if($field->isPrimary()){
+					// If this is the 1st primary value, save it for the linkTable stuff below
+					if(sizeof($primaryFieldsSQL) == 0) $linkPrimaryValue = $data[ $field->name ];
+					// Add this field to the list for the final SQL
+					$primaryFieldsSQL[ $field->toSqlSnippet() ] = $data[ $field->name ];
+				}
+
+				// If this field uses a linkTable (many-to-many) then we need to delete the links as well
+				if($field->usesLinkTable()){
+					$linkedTo       = $field->linkedTo;
+					$db             = isset($linkedTo['dbConnection']) ? db::get($linkedTo['dbConnection']) : $this->db;
+					$linkTable      = isset($linkedTo['linkTable']) ? $linkedTo['linkTable'] : '';
+					$linkLocalField = isset($linkedTo['linkLocalField']) ? $linkedTo['linkLocalField'] : '';
+					$deleteLinkSQL  = sprintf('DELETE FROM `%s` WHERE `%s`=?',
+						$db->escape($linkTable),
+						$db->escape($linkLocalField));
+					$deleteLinkSTMT = $db->query($deleteLinkSQL, array($linkPrimaryValue));
+					if($deleteLinkSTMT->errorCode()){
+						errorHandle::newError(__METHOD__."() SQL Error! ({$deleteLinkSTMT->errorCode()}:{$deleteLinkSTMT->errorMsg()})", errorHandle::HIGH);
+						throw new Exception('Internal database error!', self::ERR_SYSTEM);
+					}
+				}
+			}
+
+			// Now delete the record itself
+			$sql = sprintf('DELETE FROM `%s` WHERE %s LIMIT 1',
+				$this->dbTable,
+				implode(' AND ', array_keys($primaryFieldsSQL)));
+			$stmt = $this->db->query($sql, array_values($primaryFieldsSQL));
+			if($stmt->errorCode()){
+				errorHandle::newError(__METHOD__."() SQL Error! ({$stmt->errorCode()}:{$stmt->errorMsg()})", errorHandle::HIGH);
+				throw new Exception('Internal database error!', self::ERR_SYSTEM);
+			}
+
+			$this->db->commit();
+		}catch(Exception $e){
+			$this->db->rollback();
+			$this->formError($e->getMessage(), errorHandle::ERROR);
+			return $e->getCode();
 		}
 
-		$sql = sprintf('DELETE FROM `%s` WHERE %s LIMIT 1',
-			$this->dbTable,
-			implode(' AND ', array_keys($primaryFieldsSQL)));
-		$stmt = $this->db->query($sql, array_values($primaryFieldsSQL));
-		if($stmt->errorCode()){
-			errorHandle::newError(__METHOD__."() SQL Error! ({$stmt->errorCode()}:{$stmt->errorMsg()})", errorHandle::HIGH);
-			return self::ERR_SYSTEM;
-		}
 		return self::ERR_OK;
 	}
 }
