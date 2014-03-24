@@ -849,7 +849,7 @@ class fieldBuilder{
 		// Prepend a 'blank option'?
 		if($blankOption = $this->getFieldOption('blankOption')){
 			$blankOption = ($blankOption !== TRUE) ? $blankOption : '';
-			$output .= sprintf('<option>%s</option>', $blankOption);
+			$output .= sprintf('<option value="NULL">%s</option>', $blankOption);
 		}
 
 		// Loop, and build the options
