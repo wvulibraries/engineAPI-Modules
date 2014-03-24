@@ -639,7 +639,7 @@ class fieldBuilder{
 		$values = $this->getFieldOption('value');
 		if(is_string($values)) $values = explode($this->getFieldOption('valueDelimiter'), $values);
 
-		if(sizeof($options) > 1){
+		if($this->type != 'boolean'){
 			// Make the name checkbox array friendly
 			$this->renderOptions['name'] = $this->getFieldOption('name').'[]';
 
