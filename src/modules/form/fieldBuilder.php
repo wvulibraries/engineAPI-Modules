@@ -30,8 +30,6 @@ class fieldBuilder{
 		'showInEditStrip' => TRUE,
 		'primary'         => FALSE,
 		'valueDelimiter'  => ',',
-		'dateFormat'      => 'Y-m-d',
-		'timeFormat'      => 'H:i:s', // TODO: Decide on time format
 	);
 
 	/**
@@ -185,8 +183,8 @@ class fieldBuilder{
 			case 'date':
 				return strtotime($value);
 			case 'time':
-				$date = date_parse($value);
-				return ( (3600*$date['hour'])+(60*$date['minute'])+$date['second'] );  // TODO: Decide on time format
+				$time = new time;
+				return $time->toSeconds($value);
 			default:
 				return $value;
 		}
@@ -535,10 +533,11 @@ class fieldBuilder{
 		// Catch spacial cases
 		switch($this->type){
 			case 'date':
-				if(is_numeric($value)) $value = date($this->getFieldOption('dateFormat'), $value);
+				if(is_numeric($value)) $value = date('Y-m-d', $value);
 				break;
 			case 'time':
-				if(is_numeric($value)) $value = date($this->getFieldOption('timeFormat'), $value);
+				$time = new time;
+				if(is_numeric($value)) $value = $time->toTime($value);
 				break;
 		}
 
