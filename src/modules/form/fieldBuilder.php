@@ -260,7 +260,8 @@ class fieldBuilder{
 		if(sizeof($help)){
 			switch(@$help['type']){
 				case 'modal':
-					$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'jquery.leanModal.min.js';
+					$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'modal_colorBox.min.js';
+					$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'modal_colorBox.css';
 					break;
 			}
 		}
@@ -484,28 +485,32 @@ class fieldBuilder{
 
 		// Okay, render the help
 		$help = $this->field['help'];
+		$fieldID = $this->getFieldOption('fieldID');
 		switch(@$help['type']) {
 			case 'modal':
-				if(isset($help['text'])){
-					$value = $help['text'];
-				}elseif(isset($help['file'])){
-					$value = file_get_contents($help['file']);
-					if(get_file_mime_type($help['file']) == 'text/plain') $value = "<pre>$value</pre>";
-				}elseif(isset($help['url'])){
+				if(isset($help['url']) && !is_empty($help['url'])){
 					// Get the source of the URL page
-					$value = sprintf('<iframe src="%s" seamless onload="formBuilder.iFrameLoaded(this)"></iframe>', $help['url']);
-				}else{
-					errorHandle::newError(__METHOD__."() Warning: No valid source provided for modal! (Please use text, url, or path)", errorHandle::DEBUG);
-					$value = '';
-				}
+					return sprintf('<a href="%s" id="modalWindow_%s"><i class="icon-help"></i></a><script>$("#modalWindow_%s").colorbox({iframe:true, width:"80%%", height:"80%%"});</script>',
+						$help['url'],
+						$fieldID,
+						$fieldID);
 
-				return sprintf('<a href="#modalWindow_%s" id="modalTrigger_%s"><i class="icon-help"></i></a><div id="modalWindow_%s" class="modalWindow">%s</div><script>$(\'#modalTrigger_%s\').leanModal()</script>',
-					$this->getFieldOption('fieldID'),
-					$this->getFieldOption('fieldID'),
-					$this->getFieldOption('fieldID'),
-					$value,
-					$this->getFieldOption('fieldID')
-				);
+				}else{
+					if ((!isset($help['text']) || is_empty($help['text'])) && (!isset($help['file']) || is_empty($help['file']))) {
+						errorHandle::newError(__METHOD__."() Warning: No valid source provided for modal! (Please use text, url, or file)", errorHandle::DEBUG);
+						return '';
+					}
+
+					if(isset($help['file'])){
+						$help['text'] = file_get_contents($help['file']);
+						if(get_file_mime_type($help['file']) == 'text/plain') $help['text'] = "<pre>{$help['text']}</pre>";
+					}
+
+					$contentDiv = sprintf('<div style="display: none;"><div id="modalWindowContent_%s">%s</div></div>', $fieldID, $help['text']);
+					$link       = sprintf('<a href="#modalWindowContent_%s" id="modalWindow_%s"><i class="icon-help"></i></a>', $fieldID, $fieldID);
+					$script     = sprintf('<script>$("#modalWindow_%s").colorbox({inline:true, width:"50%%"});</script>', $fieldID);
+					return $contentDiv.$link.$script;
+				}
 
 			case 'newWindow':
 				return sprintf('<a href="%s" target="_blank"><i class="icon-help"></i></a>', $help['url']);
