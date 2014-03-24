@@ -341,38 +341,6 @@ class formFields implements Countable, Iterator{
 	}
 
 	/**
-	 * Add field(s) to the internal list of primary fields
-	 * Fields should be specified either as their name or as a fully instantiated fieldBuilder object
-	 *
-	 * Example Usage:
-	 * `$formBuilder->addPrimaryFields('id');`
-	 * `$formBuilder->addPrimaryFields('id', 'username');`
-	 *
-	 * @param string|fieldBuilder ...
-	 * @return bool
-	 */
-	/*
-	public function addPrimaryFields(){
-		$returnStatus = TRUE;
-
-		// Get all the fields passed in and loop on each
-		foreach (func_get_args() as $field) {
-			// If we got a fieldBuilder, add it (if needed) and then use its name
-			if($field instanceof fieldBuilder){
-				$fieldName = $field->name;
-				if(!$this->fieldExists($fieldName)) $this->addField($field);
-				$field->disabled = TRUE;
-				$field = $fieldName;
-			}
-
-			// Save the new field to the list if it's no already there
-			if (!$this->isPrimaryField($field)) $this->primaryFields[] = $field;
-		}
-
-		return $returnStatus;
-	}
-	*/
-	/**
 	 * Returns an array of primary fields
 	 *
 	 * @return fieldBuilder[]
