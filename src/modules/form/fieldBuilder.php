@@ -493,10 +493,7 @@ class fieldBuilder{
 					if(get_file_mime_type($help['file']) == 'text/plain') $value = "<pre>$value</pre>";
 				}elseif(isset($help['url'])){
 					// Get the source of the URL page
-					$value = file_get_contents($help['url']);
-					// If the page is plain-text, wrap the source in <pre> tags to preserve formatting
-					$headers = get_headers($help['url'], 1);
-					if($headers['Content-Type'] == 'text/plain') $value = "<pre>$value</pre>";
+					$value = sprintf('<iframe src="%s" seamless onload="formBuilder.iFrameLoaded(this)"></iframe>', $help['url']);
 				}else{
 					errorHandle::newError(__METHOD__."() Warning: No valid source provided for modal! (Please use text, url, or path)", errorHandle::DEBUG);
 					$value = '';

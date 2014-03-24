@@ -1,3 +1,11 @@
+function iframeLoaded() {
+	var iFrameID = document.getElementById('idIframe');
+	if(iFrameID) {
+		// here you can make the height, I delete it first, then I make it again
+		iFrameID.height = "";
+		iFrameID.height = iFrameID.contentWindow.document.body.scrollHeight + "px";
+	}
+}
 var formBuilder = {
 	initialized: false,
 	disabledFields: {},
@@ -24,6 +32,12 @@ var formBuilder = {
 		this.$editTable.on('click', '.deleteRow', this.deleteRow);
 	},
 
+	iFrameLoaded: function(iFrame){
+		console.log(iFrame)
+		// here you can make the height, I delete it first, then I make it again
+		iFrame.height = "";
+		iFrame.height = iFrame.contentWindow.document.body.scrollHeight + "px";
+	},
 	showForm: function(e){
 		e.stopPropagation();
 		var $this = $(this);
