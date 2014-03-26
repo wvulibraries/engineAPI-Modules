@@ -15,7 +15,7 @@ Vagrant.configure(API_VERSION) do |config|
 
 		config.vm.network :forwarded_port, guest: 80, host: 8080
 		config.vm.network :forwarded_port, guest: 10000, host: 10000
-		config.vm.synced_folder "htdocs/", "/var/www/html", create: true, owner: "apache", group: "apache"
+		config.vm.synced_folder "htdocs/", "/var/www/html", create: true
 
 		config.vm.provision "shell", path: "bootstrap.sh"
 	end
