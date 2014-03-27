@@ -1,5 +1,23 @@
 <?php
 
+/**
+ * Class formBuilder
+ *
+ * formBuilder Options:
+ *  - formEncoding       [str]  Optional form encoding (sets the enctype attribute on the <form> tag for example with file fields)
+ *  - browserValidation  [bool] Set to false to disable browser-side form validation (default: true)
+ *  - insertTitle        [str]  Form title for insertForm (default: $formName as passed to formBuilder::createForm())
+ *  - updateTitle        [str]  Form title for updateForm (default: $formName as passed to formBuilder::createForm())
+ *  - editTitle          [str]  Form title for editTable (default: $formName as passed to formBuilder::createForm())
+ *  - templateDir        [str]  The directory where our form templates live (default: 'formTemplates' next to the module)
+ *  - template           [str]  The template name to load for this template (default: 'default')
+ *  - ajaxHandlerURL     [str]  URL for formBuilder ajax handler (default: the current URL)
+ *  - insertFormCallback [str]  Custom JavaScript function name to call to retrieve the updateForm in an expandable editTable (default: none)
+ * 	- submitTextInsert   [str]  Button text for submit button on insertForm (default: 'Insert')
+ *  - submitTextUpdate   [str]  Button text for submit button on updateForm (default: 'Update')
+ *  - submitTextEdit     [str]  Button text for submit button on editTable (default: 'Update')
+ *  - expandable         [bool] Sets editTable as an 'expandable' editTable with drop-down update form (default: true)
+ */
 class formBuilder{
 	const DEFAULT_FORM_NAME       = '';
 	const DEFAULT_FORM_TIMEOUT    = 86400;
