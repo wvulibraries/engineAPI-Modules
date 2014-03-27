@@ -1,11 +1,93 @@
 <?php
 
+/**
+ * Class fieldBuilder
+ *
+ * Field Options:
+ *  - blankOption         [bool|str] Include a blank option on 'select' field. If it's a string, will be the label for the blank options (default: false)
+ *  - disabled            [bool]     Disable the field
+ *  - disableStyling      [bool]     If true, then ignores all CSS styling (ie fieldClass, fieldCSS, labelClass, & fieldCSS) (default: falsE)
+ *  - duplicates          [bool]     Allow duplicated (default: true)
+ *  - fieldClass          [str]      CSS Classes to add to the field
+ *  - fieldCSS            [str]      CSS Style to add to the field
+ *  - fieldID             [str]      id attribute for the field
+ *  - fieldMetadata       [array]    Array of key->value pairs to be added to the field through data-* attributes
+ *  - help                [array]    Array of field help options
+ *     - type             [str]      The type of help: modal, newWindow, hover, tooltip (default: tooltip)
+ *     - text             [str]      Plaintext to display
+ *     - url              [str]      URL of content
+ *     - file             [str]      Local file to pull content from
+ *  - label               [str]      The label for the field (default: {} to field's name)
+ *  - labelClass          [str]      CSS Classes to add to the label
+ *  - labelCSS            [str]      CSS Classes to add to the label
+ *  - labelID             [str]      id attribute for the label
+ *  - labelMetadata       [array]    Array of key->value pairs to be added to the label through data-* attributes
+ *  - linkedTo            [array]    Array of metadata denoting either a one-to-many or many-to-many relationship
+ *     - foreignTable     [str]      The table where the values for this field live
+ *     - foreignKey       [str]      The column on the foreignTable which contains the value
+ *     - foreignLabel     [str]      The column on the foreignTable which contains the label
+ *     - foreignOrder     [str]      Optional ORDER BY clause (default: '{foreignLabel} ASC')
+ *     - foreignWhere     [str]      Optional WHERE clause
+ *     - foreignLimit     [str]      Optional LIMIT clause
+ *     - foreignSQL       [str]      Option raw SELECT SQL to be used. (1st column is treated as foreignKey and 2nd as foreignLabel)
+ *     - linkTable        [str]      many-to-many: Linking table name
+ *     - linkLocalField   [str]      many-to-many: Linking table column where the local key lives
+ *     - linkForeignField [str]      many-to-many: Linking table column where the foreign key lives
+ *  - multiple            [bool]     Sets 'multiple' on a select field (default: false)
+ *  - options             [array]    Array of field options for select, checkbox, radio, and boolean
+ *  - placeholder         [str]      Text to put in field's placeholder="*" attribute
+ *  - primary             [bool]     Sets the field as a primary field (multiple primary fields are allowed*) (default: false)
+ *  - readonly            [bool]     Sets the field to be read-only (default: false)
+ *  - required            [bool]     Sets the field as required (default: false)
+ *  - showInEditStrip     [bool]     Show/Hide the field in the edit table's editStrip (default: true)
+ *  - type                [str]      The type of field (see list of field types below)
+ *  - validate            [str]      The validate method to check the value against
+ *  - value               [str]      The initial value for this field
+ *
+ * Field types:
+ *  - bool        Alias for 'boolean'
+ *  - boolean     Boolean (Yes/No) field
+ *    - options
+ *      - type    [string] Type of boolean field: check, checkbox, radio, select (default: select)
+ *      - labels  [array]  Labels to use for 'Yes' and 'No' (default: ['NO_LABEL','YES_LABEL'])
+ *  - button      Standard button
+ *  - checkbox    Checkbox group
+ *    - options   Array of value->label pairs to be displayed
+ *  - color       HTML5 color picker    *dependant on browser support*
+ *  - date        HTML5 date picker     *dependant on browser support*
+ *  - datetime    HTML5 datetime picker *dependant on browser support*
+ *  - dropdown    Alias for 'select'
+ *  - email       HTML5 email field
+ *  - file        File field
+ *  - hidden      Hidden field (will be rendered just below <form> tag)
+ *  - image       HTML5 image field *dependant on browser support*
+ *  - month       HTML5 month picker *dependant on browser support*
+ *  - multiSelect multiSelect field *requires linkedTo be defined*
+ *  - number      HTML5 number field *dependant on browser support*
+ *  - password    Password field (will render a confirmation field as well)
+ *  - plaintext   Plaintext field with support for text-replacements *note: replacements are case sensitive*
+ *  - range       HTML5 range field *dependant on browser support*
+ *  - radio       Radio group
+ *    - options   Array of value->label pairs to be displayed
+ *  - reset       Form reset button
+ *  - search      HTML5 search field
+ *  - select      <select> field
+ *    - options   Array of value->label pairs to be displayed
+ *  - string      Alias for 'text'
+ *  - submit      Sorm submit button
+ *  - text        simple <input> field
+ *  - textarea    Full <textarea>
+ *  - tel         HTML5 tel field
+ *  - time        HTML5 time picker *dependant on browser support*
+ *  - url         HTML5 url field
+ *  - week        HTML5 week picker *dependant on browser support*
+ *  - wysiwyg     Full WYSIWYG editor
+ */
 class fieldBuilder{
 	/** @var array An array with all default field options */
 	private static $fieldDefaults = array(
 		'disabled'        => FALSE,
 		'disableStyling'  => FALSE,
-		'dragDrop'        => FALSE,
 		'duplicates'      => TRUE,
 		'fieldClass'      => '',
 		'fieldCSS'        => '',
@@ -25,7 +107,6 @@ class fieldBuilder{
 		'readonly'        => FALSE,
 		'required'        => FALSE,
 		'showInEditStrip' => TRUE,
-		'size'            => 40,
 		'type'            => 'text',
 		'validate'        => NULL,
 		'value'           => '',
