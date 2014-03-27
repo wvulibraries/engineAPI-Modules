@@ -40,13 +40,6 @@ class formFieldsTest extends PHPUnit_Framework_TestCase{
 		$this->assertCount(1, $this->formFields);
 	}
 
-	function test_addFieldThatIsPrimaryField(){
-		$this->assertCount(0, $this->formFields);
-		$this->formFields->addPrimaryFields('foo');
-		$this->assertTrue($this->formFields->addField(fieldBuilder::createField('foo')));
-		$this->assertCount(1, $this->formFields);
-	}
-
 	function test_addFieldReturnsFalseOnError_noName(){
 		$test = $this->formFields->addField(array());
 		$this->assertFalse($test);
@@ -104,38 +97,34 @@ class formFieldsTest extends PHPUnit_Framework_TestCase{
 	function test_modifyField_acceptsFieldbuilder(){
 		$this->assertCount(0, $this->formFields);
 		$field = fieldBuilder::createField('foo');
-		$this->assertEquals('', $field->label);
-		$this->formFields->modifyField($field, 'label', 'foo');
+		$this->assertEquals('foo', $field->label);
+		$this->assertTrue($this->formFields->modifyField($field, 'label', 'foo'));
 		$this->assertEquals('foo', $field->label);
 		$this->assertCount(0, $this->formFields);
 	}
 
 	function test_modifyField_existingField(){
 		$this->assertCount(0, $this->formFields);
-		$field = fieldBuilder::createField('foo');
-		$this->formFields->addField($field);
+		$this->assertTrue($this->formFields->addField($field = fieldBuilder::createField('foo')));
 		$this->assertCount(1, $this->formFields);
-		$this->assertEquals('', $field->label);
-		$this->formFields->modifyField('foo', 'label', 'bar');
+		$this->assertEquals('foo', $field->label);
+		$this->assertTrue($this->formFields->modifyField('foo', 'label', 'bar'));
 		$this->assertEquals('bar', $field->label);
 	}
 
 	function test_modifyField_undefinedField(){
 		$this->assertCount(0, $this->formFields);
-		$test = $this->formFields->modifyField('foo', 'label', 'bar');
-		$this->assertFalse($test);
+		$this->assertFalse($this->formFields->modifyField('foo', 'label', 'bar'));
 	}
 
 	function test_modifyAllFields(){
 		$this->assertCount(0, $this->formFields);
-		$fieldA = fieldBuilder::createField('foo');
-		$fieldB = fieldBuilder::createField('bar');
-		$this->formFields->addField($fieldA);
-		$this->formFields->addField($fieldB);
+		$this->assertTrue($this->formFields->addField($fieldA = fieldBuilder::createField('foo')));
+		$this->assertTrue($this->formFields->addField($fieldB = fieldBuilder::createField('bar')));
 		$this->assertCount(2, $this->formFields);
-		$this->assertEquals('', $fieldA->label);
-		$this->assertEquals('', $fieldB->label);
-		$this->formFields->modifyAllFields('label', 'test');
+		$this->assertEquals($fieldA->name, $fieldA->label);
+		$this->assertEquals($fieldB->name, $fieldB->label);
+		$this->assertTrue($this->formFields->modifyAllFields('label', 'test'));
 		$this->assertEquals('test', $fieldA->label);
 		$this->assertEquals('test', $fieldB->label);
 	}
@@ -203,65 +192,23 @@ class formFieldsTest extends PHPUnit_Framework_TestCase{
 		$this->assertEquals(array('1', '2', '3', '4', '5'), $this->formFields->listFields());
 	}
 
-	function test_addPrimaryFields_byName(){
-		$this->formFields->addField($foo = fieldBuilder::createField('foo'));
-		$this->assertTrue($this->formFields->addPrimaryFields('foo'));
-		$this->assertAttributeEquals(array('foo'), 'primaryFields', $this->formFields);
-	}
-
-	function test_addPrimaryFields_byObject(){
-		$this->formFields->addField($foo = fieldBuilder::createField('foo'));
-		$this->assertTrue($this->formFields->addPrimaryFields($foo));
-		$this->assertAttributeEquals(array('foo'), 'primaryFields', $this->formFields);
-	}
-
 	function test_addPrimaryFields_appendsList(){
 		$this->assertAttributeEquals(array(), 'primaryFields', $this->formFields, "It starts off as a blank list");
 
-		$this->assertTrue($this->formFields->addPrimaryFields(fieldBuilder::createField('foo')));
+		$this->assertTrue($this->formFields->addField($foo = fieldBuilder::createField(array('name'=>'foo','primary'=>TRUE))));
 		$this->assertAttributeCount(1, 'primaryFields', $this->formFields);
 		$this->assertAttributeContains('foo', 'primaryFields', $this->formFields);
 
-		$this->assertTrue($this->formFields->addPrimaryFields(fieldBuilder::createField('bar')));
+		$this->assertTrue($this->formFields->addField($bar = fieldBuilder::createField(array('name'=>'bar','primary'=>TRUE))));
 		$this->assertAttributeCount(2, 'primaryFields', $this->formFields);
 		$this->assertAttributeContains('foo', 'primaryFields', $this->formFields);
 		$this->assertAttributeContains('bar', 'primaryFields', $this->formFields);
 	}
 
-	function test_addPrimaryFields_skipsExisting(){
-		$this->assertAttributeEquals(array(), 'primaryFields', $this->formFields, "It starts off as a blank list");
-		$foo = fieldBuilder::createField('foo');
-
-		$this->assertTrue($this->formFields->addPrimaryFields('foo'));
-		$this->assertAttributeCount(1, 'primaryFields', $this->formFields);
-		$this->assertAttributeContains('foo', 'primaryFields', $this->formFields);
-
-		$this->assertTrue($this->formFields->addPrimaryFields('foo'));
-		$this->assertAttributeCount(1, 'primaryFields', $this->formFields);
-		$this->assertAttributeContains('foo', 'primaryFields', $this->formFields);
-	}
-
-	function test_addPrimaryFields_itTakesAnUnknownNumberOfInputs(){
-		$foo = fieldBuilder::createField('foo');
-		$bar = fieldBuilder::createField('bar');
-		$baz = fieldBuilder::createField('baz');
-
-		$this->assertTrue($this->formFields->addPrimaryFields($foo));
-		$this->assertAttributeCount(1, 'primaryFields', $this->formFields);
-		$this->assertAttributeContains('foo', 'primaryFields', $this->formFields);
-
-		$this->assertTrue($this->formFields->addPrimaryFields($bar, $baz));
-		$this->assertAttributeCount(3, 'primaryFields', $this->formFields);
-		$this->assertAttributeContains('foo', 'primaryFields', $this->formFields);
-		$this->assertAttributeContains('bar', 'primaryFields', $this->formFields);
-		$this->assertAttributeContains('baz', 'primaryFields', $this->formFields);
-	}
-
 	function test_listPrimaryFields(){
-		$this->formFields->addField($foo = fieldBuilder::createField('foo'));
-		$this->formFields->addField($bar = fieldBuilder::createField('bar'));
-		$this->formFields->addField($cat = fieldBuilder::createField('cat'));
-		$this->formFields->addPrimaryFields('foo', 'cat');
+		$this->assertTrue($this->formFields->addField($foo = fieldBuilder::createField(array('name'=>'foo','primary'=>TRUE))));
+		$this->assertTrue($this->formFields->addField($bar = fieldBuilder::createField(array('name'=>'bar','primary'=>FALSE))));
+		$this->assertTrue($this->formFields->addField($cat = fieldBuilder::createField(array('name'=>'cat','primary'=>TRUE))));
 
 		$priFields = $this->formFields->listPrimaryFields();
 		$this->assertContains('foo', $priFields);
@@ -270,10 +217,10 @@ class formFieldsTest extends PHPUnit_Framework_TestCase{
 
 	function test_getPrimaryFields(){
 		$this->assertAttributeEquals(array(), 'primaryFields', $this->formFields, "It starts off as a blank list");
-		$this->formFields->addField($foo = fieldBuilder::createField('foo'));
-		$this->formFields->addField($bar = fieldBuilder::createField('bar'));
-		$this->formFields->addField($cat = fieldBuilder::createField('cat'));
-		$this->formFields->addPrimaryFields('foo', 'cat');
+
+		$this->assertTrue($this->formFields->addField($foo = fieldBuilder::createField(array('name'=>'foo','primary'=>TRUE))));
+		$this->assertTrue($this->formFields->addField($bar = fieldBuilder::createField(array('name'=>'bar','primary'=>FALSE))));
+		$this->assertTrue($this->formFields->addField($cat = fieldBuilder::createField(array('name'=>'cat','primary'=>TRUE))));
 
 		$priFields = $this->formFields->getPrimaryFields();
 		$this->assertContains($foo, $priFields);
@@ -281,9 +228,8 @@ class formFieldsTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_isPrimaryField(){
-		$this->formFields->addField($foo = fieldBuilder::createField('foo'));
-		$this->formFields->addField($bar = fieldBuilder::createField('bar'));
-		$this->formFields->addPrimaryFields('foo');
+		$this->assertTrue($this->formFields->addField($foo = fieldBuilder::createField(array('name'=>'foo','primary'=>TRUE))));
+		$this->assertTrue($this->formFields->addField($bar = fieldBuilder::createField(array('name'=>'bar','primary'=>FALSE))));
 
 		$this->assertTrue($this->formFields->isPrimaryField('foo'), "String 'foo' is True.");
 		$this->assertTrue($this->formFields->isPrimaryField($foo), "fieldBuilder 'foo' is True.");

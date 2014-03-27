@@ -46,33 +46,33 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 	// -------------------------------------------------
 
 	function test_itCountsTheNumberOfFields_noFields(){
-		$this->assertCount(0, $this->form);
+		$this->assertCount(0, $this->form->fields);
 	}
 
 	function test_itCountsTheNumberOfFields_withFields(){
-		$this->assertCount(0, $this->form);
+		$this->assertCount(0, $this->form->fields);
 
 		$this->form->addField(array('name' => 'foo'));
-		$this->assertCount(1, $this->form);
+		$this->assertCount(1, $this->form->fields);
 
 		$this->form->addField(array('name' => 'bar'));
-		$this->assertCount(2, $this->form);
+		$this->assertCount(2, $this->form->fields);
 	}
 
 	function test_reset(){
-		$this->assertCount(0, $this->form);
+		$this->assertCount(0, $this->form->fields);
 		$this->form->addField(array('name' => 'foo'));
 		$this->form->addField(array('name' => 'bar'));
-		$this->assertCount(2, $this->form);
+		$this->assertCount(2, $this->form->fields);
 		$this->form->reset();
-		$this->assertCount(0, $this->form);
-		$this->assertAttributeEmpty('fields', $this->form);
-		$this->assertAttributeEmpty('fieldLabels', $this->form);
-		$this->assertAttributeEmpty('fieldIDs', $this->form);
+		$this->assertCount(0, $this->form->fields);
+		$this->assertAttributeEmpty('fields', $this->form->fields);
+		$this->assertAttributeEmpty('fieldLabels', $this->form->fields);
+		$this->assertAttributeEmpty('fieldIDs', $this->form->fields);
 	}
 
 	function test_itStartsOffWithNoFields(){
-		$this->assertEmpty(sizeof($this->form));
+		$this->assertEmpty(sizeof($this->form->fields));
 	}
 
 	// absoluteTemplatePathDir
@@ -118,8 +118,7 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 	function test_display_edit_absoluteTemplatePathDir(){
 		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test');
 
-		$this->form->addField(fieldBuilder::createField('foo'));
-		$this->form->addPrimaryFields('foo');
+		$this->form->addField(fieldBuilder::createField(array('name'=>'foo','primary'=>TRUE)));
 
 		$formOutput = $this->form->display('edit', $options);
 		$this->assertEquals('Test Edit Table', $formOutput);
@@ -174,8 +173,7 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 	function test_display_edit_absoluteTemplatePathFile(){
 		$options    = array('template' => __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR.'test/editTable.html');
 
-		$this->form->addField(fieldBuilder::createField('foo'));
-		$this->form->addPrimaryFields('foo');
+		$this->form->addField(fieldBuilder::createField(array('name'=>'foo','primary'=>TRUE)));
 
 		$formOutput = $this->form->display('edit', $options);
 		$this->assertEquals('Test Edit Table', $formOutput);
@@ -232,8 +230,7 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
 		$options                 = array('template' => 'test');
 
-		$this->form->addField(fieldBuilder::createField('foo'));
-		$this->form->addPrimaryFields('foo');
+		$this->form->addField(fieldBuilder::createField(array('name'=>'foo','primary'=>TRUE)));
 
 		$formOutput = $this->form->display('edit', $options);
 		$this->assertEquals('Test Edit Table', $formOutput);
@@ -287,8 +284,7 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 	function test_display_edit_noParameters(){
 		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
 
-		$this->form->addField(fieldBuilder::createField('foo'));
-		$this->form->addPrimaryFields('foo');
+		$this->form->addField(fieldBuilder::createField(array('name'=>'foo','primary'=>TRUE)));
 
 		$formOutput = $this->form->display('edit');
 		$this->assertEquals('Edit Table Form', $formOutput);
@@ -342,8 +338,7 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 	function test_display_edit_nullTemplate(){
 		$this->form->templateDir = __DIR__.DIRECTORY_SEPARATOR.'formTemplates'.DIRECTORY_SEPARATOR;
 
-		$this->form->addField(fieldBuilder::createField('foo'));
-		$this->form->addPrimaryFields('foo');
+		$this->form->addField(fieldBuilder::createField(array('name'=>'foo','primary'=>TRUE)));
 
 		$formOutput = $this->form->display('edit', NULL);
 		$this->assertEquals('Edit Table Form', $formOutput);
@@ -398,8 +393,7 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 	function test_display_edit_templateBlob(){
 		$options    = array('template' => 'Test String');
 
-		$this->form->addField(fieldBuilder::createField('foo'));
-		$this->form->addPrimaryFields('foo');
+		$this->form->addField(fieldBuilder::createField(array('name'=>'foo','primary'=>TRUE)));
 
 		$formOutput = $this->form->display('edit', $options);
 		$this->assertEquals('Test String', $formOutput);
@@ -413,7 +407,7 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 
 
 	function test_display_assets() {
-		$output = $this->form->display('assets');
+		$output = formBuilder::displayAssets();
 		$this->assertStringStartsWith('<!-- engine Instruction displayTemplateOff -->', $output);
 		$this->assertStringEndsWith("<!-- engine Instruction displayTemplateOn -->\n", $output);
 	}
@@ -449,7 +443,7 @@ class formBuilderTest extends PHPUnit_Framework_TestCase{
 		$formOutput = $form->display('updateForm');
 		$this->assertEquals('Misconfigured formBuilder!', $formOutput);
 
-		$form->modifyField('ID', 'value', 9999);
+		$form->fields->modifyField('ID', 'value', 9999);
 		$formOutput = $form->display('updateForm');
 		$this->assertEquals('No record found!', $formOutput);
 	}

@@ -43,7 +43,7 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 		$this->assertEmpty($field->help);
 		$this->assertEmpty($field->value);
 		$this->assertEmpty($field->placeholder);
-		$this->assertEmpty($field->label);
+		$this->assertEquals($field->name, $field->label);
 		$this->assertEmpty($field->labelMetadata);
 		$this->assertEmpty($field->fieldMetadata);
 		$this->assertEmpty($field->fieldCSS);
@@ -353,7 +353,7 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'name'    => 'foo',
 			'type'    => 'radio',
 		));
-		$this->assertEquals('', $field->renderField());
+		$this->assertEquals('No options available', $field->renderField());
 	}
 
 	function testType_checkbox(){
@@ -371,15 +371,7 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'type'    => 'checkbox',
 			'options' => array('a')
 		));
-		$this->assertTag(array(
-			'children' => array(
-				'count' => 1,
-				'only' => array(
-					'tag' => 'input',
-					),
-				),
-			), $field->renderField()
-		);
+		$this->assertIsInputTag($field->renderField(), 'checkbox');
 	}
 
 	function testType_checkbox_noOptions(){
@@ -387,7 +379,7 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'name'    => 'foo',
 			'type'    => 'checkbox',
 		));
-		$this->assertEquals('', $field->renderField());
+		$this->assertEquals('No options available', $field->renderField());
 	}
 
 	function testType_plaintext(){
@@ -549,7 +541,7 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'tag' => 'option',
 			'content' => 'Foo Option',
 			'attributes' => array(
-				'value' => '',
+				'value' => 'NULL',
 			),
 		), $renderedField, "Select has a 'Blank' option");
 	}
@@ -587,7 +579,7 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 			'tag' => 'option',
 			'content' => '',
 			'attributes' => array(
-				'value' => '',
+				'value' => 'NULL',
 			),
 		), $renderedField, "Select has a 'Blank' option");
 	}
