@@ -41,9 +41,9 @@ class revisionControlSystem {
 	private $secondaryID = NULL;
 
 	/**
-	 * @var engineDB
+	 * @var dbDriver
 	 */
-	private $openDB          = NULL;
+	private $db              = NULL;
 	private $excludeFields   = array();
 	private $relatedMappings = array();
 
@@ -62,15 +62,7 @@ class revisionControlSystem {
 	 *        engineAPI database object to use instead of $this->openDB
 	 */
 	function __construct($productionTable,$revisionTable,$primaryID,$secondaryID,$database=NULL) {
-
-		$engine = EngineAPI::singleton();
-
-		if (!is_null($database) && $database instanceof engineDB) {
-			$this->openDB = $database;
-		}
-		else {
-			$this->openDB = $engine->openDB;
-		}
+		$this->set_database($database);
 
 		$this->revisionTable   = $revisionTable;
 		$this->productionTable = $productionTable;
@@ -81,6 +73,16 @@ class revisionControlSystem {
 
 	function __destruct() {
 
+	}
+
+	/**
+	 * Sets the internal database connection
+	 * @param string $database
+	 */
+	public function set_database($database='appDB'){
+		$this->db = $database instanceof dbDriver
+			? $database
+			: db::get($database);
 	}
 
 	/**
@@ -100,61 +102,53 @@ class revisionControlSystem {
 		// update button was clicked abut nothing was changed, the modified date wasn't updated)
 
 		// Get the value of the secondary key
-		$sql       = sprintf("SELECT %s FROM %s WHERE %s='%s'",
-			$this->openDB->escape($this->secondaryID),
-			$this->openDB->escape($this->productionTable),
-			$this->openDB->escape($this->primaryID),
-			$this->openDB->escape($primaryIDValue)
+		$sql       = sprintf("SELECT %s FROM %s WHERE %s=?",
+			$this->db->escape($this->secondaryID),
+			$this->db->escape($this->productionTable),
+			$this->db->escape($this->primaryID)
 			);
-		$sqlResult = $this->openDB->query($sql);
+		$sqlResult = $this->db->query($sql, array($primaryIDValue));
 
-		if (!$sqlResult['result']) {
+		if ($sqlResult->errorCode()) {
 			errorHandle::newError(__METHOD__."() - Error determing original secondary key value", errorHandle::DEBUG);
 			return(FALSE);
 		}
 
-		$row              = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
+		$row              = $sqlResult->fetch();
 		$secondaryIDValue = $row[$this->secondaryID];
 
 		// Check to see if the secondary / primary key pair exists in the revision table already
-		$sql = sprintf("SELECT COUNT(*) FROM %s WHERE `primaryID`='%s' AND `secondaryID`='%s'",
-			$this->openDB->escape($this->revisionTable),
-			$this->openDB->escape($primaryIDValue),
-			$this->openDB->escape($secondaryIDValue)
+		$sql = sprintf("SELECT COUNT(*) FROM %s WHERE `primaryID`=? AND `secondaryID`=?",
+			$this->db->escape($this->revisionTable)
 			);
-		$sqlResult = $this->openDB->query($sql);
+		$sqlResult = $this->db->query($sql, array($primaryIDValue, $primaryIDValue));
 
-		if (!$sqlResult['result']) {
-			errorHandle::newError(__METHOD__."() - Error determing revision duplication. ".$sqlResult['error'], errorHandle::DEBUG);
+		if ($sqlResult->errorCode()) {
+			errorHandle::newError(__METHOD__."() - Error determing revision duplication. ".$sqlResult->errorMsg(), errorHandle::DEBUG);
 			return(FALSE);
 		}
 
-		$row       = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
-
 		// they key already exists, so we return TRUE because nothing needs done
-		if ($row["COUNT(*)"] > 0) {
-			return(TRUE);
-		}
+		if ($sqlResult->fetchField()) return TRUE;
 
 		/* ** End Insert Check ** */
 
 		// Get all data from the primary table
-		$sql = sprintf("SELECT * FROM %s WHERE %s='%s' AND %s='%s'",
-			$this->openDB->escape($this->productionTable),
-			$this->openDB->escape($this->primaryID),
-			$this->openDB->escape($primaryIDValue),
-			$this->openDB->escape($this->secondaryID), // Selecting on secondary ID as well, to be sure
-			$this->openDB->escape($secondaryIDValue)   // that it hasn't been updated since requesting revision control
+		// Selecting on secondary ID as well, to be sure that it hasn't been updated since requesting revision control
+		$sql = sprintf("SELECT * FROM %s WHERE %s=? AND %s=?",
+			$this->db->escape($this->productionTable),
+			$this->db->escape($this->primaryID),
+			$this->db->escape($this->secondaryID)
 			);
 
-		$sqlResult = $this->openDB->query($sql);
+		$sqlResult = $this->db->query($sql, array($primaryIDValue, $secondaryIDValue));
 
-		if (!$sqlResult['result']) {
-			errorHandle::newError(__METHOD__."() -Error getting data from primary table, sql Error = ".$sqlResult['error'], errorHandle::CRITICAL);
+		if ($sqlResult->errorCode()) {
+			errorHandle::newError(__METHOD__."() -Error getting data from primary table, sql Error = ".$sqlResult->errorMsg(), errorHandle::CRITICAL);
 			return(FALSE);
 		}
 
-		$row = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
+		$row = $sqlResult->fetch();
 
 		// We don't need the primary and secondary fields in the array
 		unset($row[$this->primaryID]);
@@ -182,24 +176,18 @@ class revisionControlSystem {
 		if (count($this->relatedMappings) > 0) {
 			// Get the related data from other tables
 			foreach ($this->relatedMappings as $I=>$V) {
-				$sql       = sprintf("SELECT * FROM %s WHERE `%s`='%s'",
-					$this->openDB->escape($V['table']),
-					$this->openDB->escape($V['primaryKey']),
-					$this->openDB->escape($primaryIDValue)
+				$sql       = sprintf("SELECT * FROM %s WHERE `%s`=?",
+					$this->db->escape($V['table']),
+					$this->db->escape($V['primaryKey'])
 					);
-				$sqlResult = $this->openDB->query($sql);
+				$sqlResult = $this->db->query($sql, array($primaryIDValue));
 
-				if (!$sqlResult['result']) {
+				if ($sqlResult->errorCode()) {
 					errorHandle::newError(__METHOD__."() - error getting related data.", errorHandle::DEBUG);
 					return(FALSE);
 				}
 
-				$temp = array();
-				while($row = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC)) {
-					$temp[] = $row;
-				}
-
-				$relatedDataArray[$V['table']] = $temp;
+				$relatedDataArray[$V['table']] = $sqlResult->fetchAll();
 			}
 			$relatedDataArray = base64_encode(serialize($relatedDataArray));
 		}
@@ -213,78 +201,57 @@ class revisionControlSystem {
 		// Note: We don't care where the data comes from, if its the same its the same. 
 
 		// Find for metaDataArray
-		$sql       = sprintf("SELECT ID FROM %s WHERE metaData='%s' LIMIT 1",
-			$this->openDB->escape($this->revisionTable),
-			$this->openDB->escape($metaDataArray)
+		$sql       = sprintf("SELECT ID FROM %s WHERE metaData=? LIMIT 1",
+			$this->db->escape($this->revisionTable)
 			);
-		$sqlResult = $this->openDB->query($sql);
+		$sqlResult = $this->db->query($sql, array($metaDataArray));
 
-		if (!$sqlResult['result']) {
+		if ($sqlResult->errorCode()) {
 			errorHandle::newError(__METHOD__."() - Error finding duplicates for Metadata Array", errorHandle::DEBUG);
 			return(FALSE);
 		}
 
-		$row       = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
-
-		if (isset($row['ID']) && !is_empty($row['ID'])) {
-			$metaDataArray = $row['ID'];
-		}
+		if ($sqlResult->rowCount()) $metaDataArray = $sqlResult->fetchField();
 
 		// Find for digitalObjectArray
 		if (!is_empty($digitalObjectArray)) {
-			$sql       = sprintf("SELECT ID FROM %s WHERE digitalObjects='%s' LIMIT 1",
-				$this->openDB->escape($this->revisionTable),
-				$this->openDB->escape($digitalObjectArray)
+			$sql       = sprintf("SELECT ID FROM %s WHERE digitalObjects=? LIMIT 1",
+				$this->db->escape($this->revisionTable)
 				);
-			$sqlResult = $this->openDB->query($sql);
+			$sqlResult = $this->db->query($sql, array($digitalObjectArray));
 
-			if (!$sqlResult['result']) {
+			if ($sqlResult->errorCode()) {
 				errorHandle::newError(__METHOD__."() - Error finding duplicates for Data Object Array", errorHandle::DEBUG);
 				return(FALSE);
 			}
 
-			$row       = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
-
-			if (isset($row['ID']) && !is_empty($row['ID'])) {
-				$digitalObjectArray = $row['ID'];
-			}
-
+			if ($sqlResult->rowCount()) $digitalObjectArray = $sqlResult->fetchField();
 		}
 
 		// Find for relatedDataArray
 		if (!is_empty($relatedDataArray)) {
-			$sql       = sprintf("SELECT ID FROM %s WHERE relatedData='%s' LIMIT 1",
-				$this->openDB->escape($this->revisionTable),
-				$this->openDB->escape($relatedDataArray)
+			$sql       = sprintf("SELECT ID FROM %s WHERE relatedData=? LIMIT 1",
+				$this->db->escape($this->revisionTable)
 				);
-			$sqlResult = $this->openDB->query($sql);
+			$sqlResult = $this->db->query($sql, array($relatedDataArray));
 
-			if (!$sqlResult['result']) {
+			if ($sqlResult->errorCode()) {
 				errorHandle::newError(__METHOD__."() - Error finding duplicates for Related Data Array", errorHandle::DEBUG);
 				return(FALSE);
 			}
 
-			$row       = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
-
-			if (isset($row['ID']) && !is_empty($row['ID'])) {
-				$relatedDataArray = $row['ID'];
-			}
+			if ($sqlResult->rowCount()) $relatedDataArray = $sqlResult->fetchField();
 		}
 
-		$sql = sprintf("INSERT INTO %s (productionTable,primaryID,secondaryID,metaData,digitalObjects,relatedData) VALUES('%s','%s','%s','%s','%s','%s')",
-			$this->openDB->escape($this->revisionTable),
-			$this->openDB->escape($this->productionTable),
-			$this->openDB->escape($primaryIDValue),
-			$this->openDB->escape($secondaryIDValue),
-			$this->openDB->escape($metaDataArray),
-			$this->openDB->escape($digitalObjectArray),
-			$this->openDB->escape($relatedDataArray)
+		$sql = sprintf("INSERT INTO %s (productionTable,primaryID,secondaryID,metaData,digitalObjects,relatedData) VALUES(?,?,?,?,?,?)",
+			$this->db->escape($this->revisionTable)
 			);
 
-		$sqlResult  = $this->openDB->query($sql);
+		$data      = array($this->productionTable, $primaryIDValue, $secondaryIDValue, $metaDataArray, $digitalObjectArray, $relatedDataArray);
+		$sqlResult = $this->db->query($sql, $data);
 
-		if (!$sqlResult['result']) {
-			errorHandle::newError(__METHOD__."() - Error Inserting revision into revision table. ".$sqlResult['error'], errorHandle::DEBUG);
+		if ($sqlResult->errorCode()) {
+			errorHandle::newError(__METHOD__."() - Error Inserting revision into revision table. ".$sqlResult->errorMsg(), errorHandle::DEBUG);
 			return(FALSE);
 		}
 
@@ -301,7 +268,7 @@ class revisionControlSystem {
 	public function revert2Revision($primaryIDValue,$secondaryIDValue) {
 
 		//Begin database Transactions
-		$result = $this->openDB->transBegin($this->openDB->escape($this->productionTable));
+		$result = $this->db->beginTransaction();
 		if ($result !== TRUE) {
 			errorHandle::errorMsg("Database transactions could not begin.");
 			errorHandle::newError(__METHOD__."() - unable to start database transactions", errorHandle::DEBUG);
@@ -316,40 +283,34 @@ class revisionControlSystem {
 			errorHandle::errorMsg("Error reverting to previous revision.");
 
 			// roll back database transaction
-			$this->openDB->transRollback();
-			$this->openDB->transEnd();
+			$this->db->rollback();
 
 			return(FALSE);
 		}
 
-		$sql       = sprintf("SELECT * FROM `%s` WHERE `productionTable`='%s' AND `primaryID`='%s' AND `secondaryID`='%s'",
-			$this->openDB->escape($this->revisionTable),
-			$this->openDB->escape($this->productionTable),
-			$this->openDB->escape($primaryIDValue),
-			$this->openDB->escape($secondaryIDValue)
+		$sql       = sprintf("SELECT * FROM `%s` WHERE `productionTable`=? AND `primaryID`=? AND `secondaryID`=?",
+			$this->db->escape($this->revisionTable)
 			);
-		$sqlResult = $this->openDB->query($sql);
+		$sqlResult = $this->db->query($sql, array($this->productionTable, $primaryIDValue, $secondaryIDValue));
 
-		if (!$sqlResult['result']) {
+		if ($sqlResult->errorCode()) {
 			errorHandle::newError(__METHOD__."() - Error retrieving revision from table.", errorHandle::DEBUG);
 
 			// roll back database transaction
-			$this->openDB->transRollback();
-			$this->openDB->transEnd();
+			$this->db->rollback();
 
 			return(FALSE);
 		}
-		else if ($sqlResult['numrows'] < 1) {
+		else if ($sqlResult->rowCount() < 1) {
 			errorHandle::newError(__METHOD__."() - Requested Revision not found in system", errorHandle::DEBUG);
 
 			// roll back database transaction
-			$this->openDB->transRollback();
-			$this->openDB->transEnd();
+			$this->db->rollback();
 
 			return(FALSE);
 		}
 
-		$row       = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
+		$row = $sqlResult->fetch();
 
 		// $row['metadata']        = unserialize(base64_decode($row['metadata']));
 		$row['metadata']    = $this->getMetadataForID($row['ID']);
@@ -357,24 +318,22 @@ class revisionControlSystem {
 
 		// Retrieve digital object if it is a link
 		if (validate::integer($row['digitalObjects'])) {
-			$sql       = sprintf("SELECT `digitalObjects` FROM %s WHERE `ID`='%s'",
-				$this->openDB->escape($this->revisionTable),
-				$this->openDB->escape($row['digitalObjects'])
+			$sql       = sprintf("SELECT `digitalObjects` FROM %s WHERE `ID`=?",
+				$this->db->escape($this->revisionTable)
 				);
 
-			$sqlResult = $this->openDB->query($sql);
+			$sqlResult = $this->db->query($sql, array($row['digitalObjects']));
 
-			if (!$sqlResult['result']) {
+			if ($sqlResult->errorCode()) {
 				errorHandle::newError(__METHOD__."() - ", errorHandle::DEBUG);
 
 				// roll back database transaction
-				$this->openDB->transRollback();
-				$this->openDB->transEnd();
+				$this->db->rollback();
 
 				return(FALSE);
 			}
 
-			$row2               = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
+			$row2                  = $sqlResult->fetch();
 			$row['digitalObjects'] = $row2['digitalObjects'];
 
 		}
@@ -382,39 +341,38 @@ class revisionControlSystem {
 		$setString = array();
 		foreach ($row['metadata'] as $I=>$V) {
 			$setString[] = sprintf("%s='%s'",
-				$this->openDB->escape($I),
-				$this->openDB->escape($V)
+				$this->db->escape($I),
+				$this->db->escape($V)
 				);
 		}
 		$setString = implode(",",$setString);
 
 		if (!is_empty($row['digitalObjects'])) {
 			$setString .= sprintf(",`digitalObjects`='%s'",
-				$this->openDB->escape($row['digitalObjects'])
+				$this->db->escape($row['digitalObjects'])
 				);
 		}
 
 		// Add the primary and secondary fields back in
 		$setString .= sprintf(",`%s`='%s',`%s`='%s'",
-			$this->openDB->escape($this->primaryID),
-			$this->openDB->escape($primaryIDValue),
-			$this->openDB->escape($this->secondaryID),
-			$this->openDB->escape($secondaryIDValue)
+			$this->db->escape($this->primaryID),
+			$this->db->escape($primaryIDValue),
+			$this->db->escape($this->secondaryID),
+			$this->db->escape($secondaryIDValue)
 			);
 
 		// Restore into production table
 		$sql       = sprintf("REPLACE INTO %s SET %s",
-			$this->openDB->escape($this->productionTable),
+			$this->db->escape($this->productionTable),
 			$setString
 			);
-		$sqlResult = $this->openDB->query($sql);
+		$sqlResult = $this->db->query($sql);
 
-		if (!$sqlResult['result']) {
-			errorHandle::newError(__METHOD__."() - Restoring.". $sqlResult['error']."SQL: ".$sql, errorHandle::DEBUG);
+		if ($sqlResult->errorCode()) {
+			errorHandle::newError(__METHOD__."() - Restoring.". $sqlResult->errorMsg()."SQL: ".$sql, errorHandle::DEBUG);
 
 			// roll back database transaction
-			$this->openDB->transRollback();
-			$this->openDB->transEnd();
+			$this->db->rollback();
 
 			return(FALSE);
 		}
@@ -423,19 +381,17 @@ class revisionControlSystem {
 		foreach ($row['relatedData'] as $table=>$rows) {
 
 			// Delete the current set of data in the related table
-			$sql       = sprintf("DELETE FROM %s WHERE `%s`='%s'",
-				$this->openDB->escape($table),
-				$this->openDB->escape($this->relatedMappings[$table]['primaryKey']),
-				$this->openDB->escape($primaryIDValue)
+			$sql       = sprintf("DELETE FROM %s WHERE `%s`=?",
+				$this->db->escape($table),
+				$this->db->escape($this->relatedMappings[$table]['primaryKey'])
 				);
-			$sqlResult = $this->openDB->query($sql);
+			$sqlResult = $this->db->query($sql, array($primaryIDValue));
 
-			if (!$sqlResult['result']) {
-				errorHandle::newError(__METHOD__."() - Error deleting from related data table, ".$table.", with error: ".$sqlResult['error'], errorHandle::DEBUG);
+			if ($sqlResult->errorCode()) {
+				errorHandle::newError(__METHOD__."() - Error deleting from related data table, ".$table.", with error: ".$sqlResult->errorMsg(), errorHandle::DEBUG);
 
 				// roll back database transaction
-				$this->openDB->transRollback();
-				$this->openDB->transEnd();
+				$this->db->rollback();
 
 				return(FALSE);
 			}
@@ -446,21 +402,21 @@ class revisionControlSystem {
 
 				foreach ($row as $field=>$value) {
 					$temp[] = sprintf("`%s`='%s'",
-						$this->openDB->escape($field),
-						$this->openDB->escape($value)
+						$this->db->escape($field),
+						$this->db->escape($value)
 						);
 				}
 
 				$temp = implode(",",$temp);
 
 				$sql       = sprintf("INSERT INTO `%s` SET %s",
-					$this->openDB->escape($table),
+					$this->db->escape($table),
 					$temp
 					);
-				$sqlResult = $this->openDB->query($sql);
+				$sqlResult = $this->db->query($sql);
 
-				if (!$sqlResult['result']) {
-					errorHandle::newError(__METHOD__."() - Restoring related Data to table, ".$table.", with error: ".$sqlResult['error'], errorHandle::DEBUG);
+				if ($sqlResult->errorCode()) {
+					errorHandle::newError(__METHOD__."() - Restoring related Data to table, ".$table.", with error: ".$sqlResult->errorMsg(), errorHandle::DEBUG);
 					return(FALSE);
 				}
 
@@ -469,8 +425,7 @@ class revisionControlSystem {
 		}
 
 		// commit database transactions
-		$this->openDB->transCommit();
-		$this->openDB->transEnd();
+		$this->db->commit();
 
 		errorHandle::successMsg("Successfully reverted to revision.");
 
@@ -496,21 +451,19 @@ class revisionControlSystem {
 	 */
 	public function generateRevisionTable($primaryIDValue,$displayFields) {
 
-		$sql = sprintf("SELECT * FROM `%s` WHERE `productionTable`='%s' AND `primaryID`='%s'",
-			$this->openDB->escape($this->revisionTable),
-			$this->openDB->escape($this->productionTable),
-			$primaryIDValue
+		$sql = sprintf("SELECT * FROM `%s` WHERE `productionTable`=? AND `primaryID`=?",
+			$this->db->escape($this->revisionTable)
 			);
 
-		$sqlResult = $this->openDB->query($sql);
+		$sqlResult = $this->db->query($sql, array($this->productionTable, $primaryIDValue));
 
-		if (!$sqlResult['result']) {
-			errorHandle::newError("Error retrieving revision information. sql: ".$sql." SQL ERROR: ".$sqlResult['error'], errorHandle::DEBUG);
+		if ($sqlResult->errorCode()) {
+			errorHandle::newError("Error retrieving revision information. sql: ".$sql." SQL ERROR: ".$sqlResult->errorMsg(), errorHandle::DEBUG);
 			errorHandle::errorMsg("Error retrieving revision information.");
 			return(FALSE);
 		}
 
-		if ($sqlResult['numRows'] == 0) {
+		if (!$sqlResult->rowCount()) {
 			$error = TRUE;
 			errorHandle::errorMsg("No Revisions found for this item.");
 		}
@@ -528,7 +481,7 @@ class revisionControlSystem {
 			$tableHeaders[] = "Compare 2";
 		}
 
-		while ($row = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC)) {
+		while ($row = $sqlResult->fetch()) {
 
 			$metadata = $this->getMetadataForID($row['ID']);
 
@@ -613,39 +566,33 @@ class revisionControlSystem {
 	public function compare($primaryIDValue_1, $secondaryIDValue_1, $primaryIDValue_2, $secondaryIDValue_2, $fields=NULL) {
 
 		// Get the first item
-		$sql = sprintf("SELECT * FROM `%s` WHERE `productionTable`='%s' AND `primaryID`='%s' AND `secondaryID`='%s'",
-			$this->openDB->escape($this->revisionTable),
-			$this->openDB->escape($this->productionTable),
-			$primaryIDValue_1,
-			$secondaryIDValue_1
+		$sql = sprintf("SELECT * FROM `%s` WHERE `productionTable`=? AND `primaryID`=? AND `secondaryID`=?",
+			$this->db->escape($this->revisionTable)
 			);
-		$sqlResult = $this->openDB->query($sql);
+		$sqlResult = $this->db->query($sql, array($this->productionTable, $primaryIDValue_1, $secondaryIDValue_1));
 
-		if (!$sqlResult['result']) {
+		if ($sqlResult->errorCode()) {
 			errorHandle::newError(__METHOD__."() - Error retrieving first item", errorHandle::DEBUG);
 			return(FALSE);
 		}
 
-		$row_1                   = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
+		$row_1                   = $sqlResult->fetch();
 		$row_1['metadata']       = $this->getMetadataForID($row_1['ID']);
 		$row_1['relatedData']    = $this->getMetadataForID($row_1['ID'],"relatedData");
 		$row_1['digitalObjects'] = $this->getMetadataForID($row_1['ID'],"digitalObjects",FALSE);
 
 		// Get the second item
-		$sql = sprintf("SELECT * FROM `%s` WHERE `productionTable`='%s' AND `primaryID`='%s' AND `secondaryID`='%s'",
-			$this->openDB->escape($this->revisionTable),
-			$this->openDB->escape($this->productionTable),
-			$primaryIDValue_1,
-			$secondaryIDValue_2
+		$sql = sprintf("SELECT * FROM `%s` WHERE `productionTable`=? AND `primaryID`=? AND `secondaryID`=?",
+			$this->db->escape($this->revisionTable)
 			);
-		$sqlResult = $this->openDB->query($sql);
+		$sqlResult = $this->db->query($sql, array($this->productionTable, $primaryIDValue_1, $secondaryIDValue_2));
 
-		if (!$sqlResult['result']) {
+		if ($sqlResult->errorCode()) {
 			errorHandle::newError(__METHOD__."() - Error retrieving second item", errorHandle::DEBUG);
 			return(FALSE);
 		}
 
-		$row_2                   = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
+		$row_2                   = $sqlResult->fetch();
 		$row_2['metadata']       = $this->getMetadataForID($row_2['ID']);
 		$row_2['relatedData']    = $this->getMetadataForID($row_2['ID'],"relatedData");
 		$row_2['digitalObjects'] = $this->getMetadataForID($row_2['ID'],"digitalObjects",FALSE);
@@ -816,11 +763,11 @@ class revisionControlSystem {
 
 		// does the table exist?
 		$sql       = sprintf("select 1 from `%s`",
-			$this->openDB->escape($table)
+			$this->db->escape($table)
 			);
-		$sqlResult = $this->openDB->query($sql);
+		$sqlResult = $this->db->query($sql);
 
-		if (!$sqlResult['result']) {
+		if ($sqlResult->errorCode()) {
 			errorHandle::newError(__METHOD__."() - Invalid table", errorHandle::DEBUG);
 			return(FALSE);
 		}
@@ -871,20 +818,20 @@ class revisionControlSystem {
      */
     public function getRevisionID($primaryID,$secondaryID) {
 
-    	$sql = sprintf("SELECT `ID` FROM `%s` WHERE productionTable='%s' AND primaryID='%s' AND secondaryID='%s' LIMIT 1",
-            $this->openDB->escape($this->revisionTable),
-            $this->openDB->escape($this->productionTable),
-            $this->openDB->escape($primaryID),
-            $this->openDB->escape($secondaryID)
+    	$sql = sprintf("SELECT `ID` FROM `%s` WHERE productionTable=? AND primaryID=? AND secondaryID=? LIMIT 1",
+            $this->db->escape($this->revisionTable),
+            $this->db->escape($this->productionTable),
+            $this->db->escape($primaryID),
+            $this->db->escape($secondaryID)
         );
-        $sqlResult = $this->openDB->query($sql);
+        $sqlResult = $this->db->query($sql, array($this->productionTable, $primaryID, $secondaryID));
 
-        if(!$sqlResult['result']) {
-            errorHandle::newError(__METHOD__."() - SQL Error: ".$sqlResult['error'], errorHandle::DEBUG);
+		if($sqlResult->errorCode()){
+            errorHandle::newError(__METHOD__."() - SQL Error: ".$sqlResult->errorMsg(), errorHandle::DEBUG);
             return FALSE;
         }
         else {
-            $row = mysql_fetch_assoc($sqlResult['result']);
+            $row = $sqlResult->fetch();
             return $row['ID'];
         }
 
@@ -927,7 +874,6 @@ class revisionControlSystem {
      * @return array
      */
     public function getSecondaryIDs($primaryID,$orderByDirection='ASC',$where=NULL){
-        $results = array();
         $where   = (isset($where) and !empty($where)) ? " AND ($where)" : '';
 
         // Format and validate $orderByDirection
@@ -938,24 +884,20 @@ class revisionControlSystem {
         }
 
         // Build and run SQL
-        $sql = sprintf("SELECT secondaryID FROM `%s` WHERE (productionTable='%s' AND primaryID='%s') %s ORDER BY secondaryID %s",
-            $this->openDB->escape($this->revisionTable),
-            $this->openDB->escape($this->productionTable),
-            $this->openDB->escape($primaryID),
-            $this->openDB->escape($where),
-            $this->openDB->escape($orderByDirection)
+        $sql = sprintf("SELECT secondaryID FROM `%s` WHERE (productionTable=? AND primaryID=?) %s ORDER BY secondaryID %s",
+            $this->db->escape($this->revisionTable),
+            $this->db->escape($where),
+            $this->db->escape($orderByDirection)
         );
-        $sqlResult = $this->openDB->query($sql);
+        $sqlResult = $this->db->query($sql, array($this->productionTable, $primaryID));
 
         // Did it work?
-        if(!$sqlResult['result']){
-            errorHandle::newError(__METHOD__."() - SQL Error: ".$sqlResult['error'], errorHandle::DEBUG);
+		if ($sqlResult->errorCode()){
+            errorHandle::newError(__METHOD__."() - SQL Error: ".$sqlResult->errorMsg(), errorHandle::DEBUG);
+			return array();
         }else{
-            while($row = mysql_fetch_assoc($sqlResult['result'])){
-                $results[] = $row['secondaryID'];
-            }
+			return $sqlResult->fetchFieldAll();
         }
-        return $results;
     }
 
 	/**
@@ -973,41 +915,38 @@ class revisionControlSystem {
 			return(FALSE);
 		}
 
-		$sql       = sprintf("SELECT `%s` FROM `%s` WHERE `ID`='%s'",
-			$this->openDB->escape($type),
-			$this->openDB->escape($this->revisionTable),
-			$this->openDB->escape($revisionID)
+		$sql       = sprintf("SELECT `%s` FROM `%s` WHERE `ID`=?",
+			$this->db->escape($type),
+			$this->db->escape($this->revisionTable)
 			);
-		$sqlResult = $this->openDB->query($sql);
+		$sqlResult = $this->db->query($sql, array($revisionID));
 
-		if (!$sqlResult['result']) {
+		if ($sqlResult->errorCode()) {
 			errorHandle::newError(__METHOD__."() - retrieving row ".$type, errorHandle::DEBUG);
 			return(FALSE);
 		}
 
-		$row       = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
+		$row = $sqlResult->fetch();
 
 		// Retrieve metaData if it is a link
 		if (validate::integer($row[$type])) {
-			$sql       = sprintf("SELECT `%s` FROM %s WHERE `ID`='%s'",
-				$this->openDB->escape($type),
-				$this->openDB->escape($this->revisionTable),
-				$this->openDB->escape($row[$type])
+			$sql       = sprintf("SELECT `%s` FROM %s WHERE `ID`=?",
+				$this->db->escape($type),
+				$this->db->escape($this->revisionTable)
 				);
 
-			$sqlResult = $this->openDB->query($sql);
+			$sqlResult = $this->db->query($sql, array($row[$type]));
 
-			if (!$sqlResult['result']) {
+			if ($sqlResult->errorCode()) {
 				errorHandle::newError(__METHOD__."() - retrieving linked ".$type, errorHandle::DEBUG);
 
 				// roll back database transaction
-				$this->openDB->transRollback();
-				$this->openDB->transEnd();
+				$this->db->rollback();
 
 				return(FALSE);
 			}
 
-			$row2             = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
+			$row2        = $sqlResult->fetch();
 			$row[$type]  = $row2[$type];
 
 		}
