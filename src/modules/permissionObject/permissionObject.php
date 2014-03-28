@@ -14,16 +14,16 @@ class permissionObject {
 	 *  - value (int, unsigned) - Value that we are checking against
 	 * @var string
 	 */
-	private $table     = NULL;
-	/**
-	 * Instance of EngineAPI
-	 * @var EngineAPI
-	 */
-	private $engine    = NULL;
+	private $table;
 	/**
 	 * @var array
 	 */
 	private $permsList = array();
+
+	/**
+	 * @var dbDriver
+	 */
+	private $database;
 
 	/**
 	 * Class constructor
@@ -31,23 +31,28 @@ class permissionObject {
 	 * @todo Remove deprecated usage of webHelper_errorMsg()
 	 * @param string $table
 	 *        The database table the permissions are stored in
-	 * @param engineDB $database
+	 * @param dbDriver $database
 	 *        The database object to interact with
 	 */
 	function __construct($table,$database=NULL) {
-		$this->table    = $table;
-		$this->engine   = EngineAPI::singleton();
-		$this->database = ($database instanceof engineDB) ? $database : $this->engine->openDB;
+		// Set database
+		$this->set_database($database);
 
-		$sql = sprintf("SELECT value FROM `%s` ORDER BY value + 0",
-			$this->database->escape($this->table));
-		$sqlResult = $this->database->query($sql);
+		// Set the database table name
+		$this->table = $this->database->escape($table);
 
-		if(!$sqlResult['result']) return webHelper_errorMsg("Error pulling permissions from table in Constructor");
+		// Get all the values
+		$sqlResult = $this->database->query("SELECT value FROM `".$this->table."` ORDER BY value + 0");
+		if($sqlResult->errorCode()) return errorHandle::errorMsg("Error pulling permissions from table in Constructor");
+		$this->permsList = $sqlResult->fetchFieldAll();
+	}
 
-		while($row = mysql_fetch_array($sqlResult['result'],  MYSQL_NUM)){
-			$this->permsList[] = (string)$row[0];
-		}
+	/**
+	 * Sets the database connection
+	 * @param dbDriver|string $database
+	 */
+	public function set_database($database='appDB'){;
+		$this->database = ($database instanceof dbDriver) ? $database : db::get($database);
 	}
 
 	/**
@@ -58,31 +63,21 @@ class permissionObject {
 	 * @return bool
 	 */
 	public function insert($function) {
+		$function = $this->database->escape($function);
 
 		// Check for Duplicates
-		$sql = sprintf("SELECT * FROM `%s` WHERE name='%s'",
-			$this->engine->dbTables($this->table),
-			$this->database->escape($function));
-		$sqlResult = $this->database->query($sql);
-
-		if(!$sqlResult['result']) return(FALSE);
-		if(mysql_num_rows($sqlResult['result']) > 0) return(FALSE);
+		$sqlResult = $this->database->query("SELECT * FROM `".$this->table."` WHERE name=?", array($function));
+		if($sqlResult->errorCode() || $sqlResult->rowCount()) return FALSE;
 
 		// Make sure that only valid Strings are entered
-		$return = preg_match("/^[a-zA-Z0-9\-\_]+$/",$this->database->escape($function));
-		if($return == 0) return(FALSE);
+		if(!preg_match("/^[a-zA-Z0-9\-\_]+$/", $function)) return FALSE;
 
 		$value = $this->generateNextNumber();
 		if(empty($value)) return(FALSE);
 
-		$sql = sprintf("INSERT INTO `%s` (name,value) VALUES('%s','%s')",
-			$this->engine->dbTables($this->table),
-			$this->database->escape($function),
-			$this->database->escape($value));
-		$sqlResult = $this->database->query($sql);
-
-		if(!$sqlResult['result']) return(FALSE);
-		return(TRUE);
+		$sqlResult = $this->database->query("INSERT INTO `".$this->table."` (name,value) VALUES(?,?)", array($function, $value));
+		if($sqlResult->errorCode()) return FALSE;
+		return TRUE;
 	}
 
 	/**
@@ -119,11 +114,8 @@ class permissionObject {
 	 * @return string
 	 */
 	public function buildFormChecklist($permissions) {
-		$sql = sprintf("SELECT * FROM `%s`",
-			$this->database->escape($this->engine->dbTables("permissions")));
-		$sqlResult = $this->database->query($sql);
-
-		if(!$sqlResult['result']) return webHelper_errorMsg("Error pulling permissions from table.");
+		$sqlResult = $this->database->query("SELECT * FROM `".$this->table."`");
+		if($sqlResult->errorCode()) return errorHandle::errorMsg("Error pulling permissions from table.");
 
 		// This should be in a template instead of hard-coded HTML
 		$output = '<ul class="perissionsCheckBoxList">';
@@ -148,9 +140,8 @@ class permissionObject {
 	 * @return string
 	 */
 	private function generateNextNumber() {
-		$sql = sprintf("SELECT value FROM `%s`",
-			$this->database->escape($this->engine->dbTables($this->table)));
-		$sqlResult = $this->database->query($sql);
+		$sqlResult = $this->database->query("SELECT value FROM `".$this->table."`");
+		if($sqlResult->errorCode()) return errorHandle::errorMsg("Error pulling permissions from table.");
 
 		$count = "0";
 		while ($row = mysql_fetch_array($sqlResult['result'], MYSQL_NUM)) {
