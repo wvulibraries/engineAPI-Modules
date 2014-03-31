@@ -6,7 +6,11 @@
  * @package EngineAPI\modules\Snippet
  */
 class Snippet {
-	
+
+	/**
+	 * @var dbDriver
+	 */
+	private $db;
 	private $engine           = NULL;
 	private $table            = NULL;
 	private $field            = NULL;
@@ -28,13 +32,17 @@ class Snippet {
 	 *        Database table where snippets are stored
 	 * @param string $field
 	 *        Database table field where snippets are stored
+	 * @param dbDriver|string $db
+	 *        Database connect to use
 	 *
 	 */
-	function __construct($table,$field=NULL) {
+	function __construct($table,$field=NULL,$db=NULL) {
 		$this->engine    = EngineAPI::singleton();
-		
-		$this->table     = $this->engine->openDB->escape($table);
-		$this->field     = $this->engine->openDB->escape($field);
+
+		$this->set_database($db);
+
+		$this->table     = $this->db->escape($table);
+		$this->field     = $this->db->escape($field);
 		
 		templates::defTempPatterns($this->pattern,$this->function,$this);
 		
@@ -50,6 +58,17 @@ class Snippet {
 	}
 	
 	function __destruct() {
+	}
+
+	/**
+	 * Set the internal database connection
+	 * @param dbDriver|string $db
+	 */
+	public function set_database($db=NULL){
+		if(isnull($db)) $db = 'appDB';
+		$this->db = $db instanceof dbDriver
+			? $db
+			: db::get($db);
 	}
 
 	/**
@@ -90,17 +109,10 @@ class Snippet {
 	 * @return string
 	 */
 	public function insertSnippetList($class="we_snippetList",$type="ul",$collapse=FALSE,$showURL=FALSE) {
-		
-		
-		
-		$sql = sprintf("SELECT * FROM %s ORDER BY snippetName",
-			$this->table
-			);
-		$this->engine->openDB->sanitize = FALSE;
-		$sqlResult                      = $this->engine->openDB->query($sql);
-		
-		if (!$sqlResult['result']) {
-			errorHandle::newError(__METHOD__."() - ".$sqlResult['error'], errorHandle::DEBUG);
+		$sql       = sprintf("SELECT * FROM %s ORDER BY snippetName", $this->table);
+		$sqlResult = $this->db->query($sql);
+		if (!$sqlResult->errorCode()) {
+			errorHandle::newError(__METHOD__."() - ".$sqlResult->errorMsg(), errorHandle::DEBUG);
 			return webHelper_errorMsg("Error fetching snippets.");
 		}
 		
@@ -128,7 +140,7 @@ class Snippet {
 		// $jsOutput is built here and inserted in the javascript below
 		// we need each snippet entry to be in the array for the info toggle to work
 		$jsOutput = "snippetInfoArray['".$class."'] = new Array();\n";
-		while ($row = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC)) {
+		while ($row = $sqlResult->fetch()) {
 			
 			$jsOutput .= "snippetInfoArray['".$class."'][\"".$row['ID']."_snippet\"] = \"false\";\n";
 			
@@ -228,34 +240,27 @@ class Snippet {
 	 * @return string
 	 */
 	public function display($id,$field) {
-		
-		$sql = sprintf("SHOW INDEXES FROM %s",
-			$this->table
-			);
 
-		$this->engine->openDB->sanitize = FALSE;
-		$sqlResult                      = $this->engine->openDB->query($sql);
-		
-		if (!$sqlResult['result']) {
+		$sql       = sprintf("SHOW INDEXES FROM %s", $this->table);
+		$sqlResult = $this->db->query($sql);
+		if (!$sqlResult->errorCode()) {
 			return webHelper_errorMsg("Error fetching primary key.");
 		}
 		
-		$row = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
+		$row = $sqlResult->fetch();
 		$key = $row['Column_name'];
 		
 		$sql = sprintf("SELECT * FROM %s WHERE %s='%s'",
 			$this->table,
 			$key,
-			$this->engine->openDB->escape($id)
+			$this->db->escape($id)
 			);
-		$this->engine->openDB->sanitize = FALSE;
-		$sqlResult                      = $this->engine->openDB->query($sql);
-		
-		if (!$sqlResult['result']) {
+		$sqlResult = $this->db->query($sql);
+		if (!$sqlResult->errorCode()) {
 			return webHelper_errorMsg("Error fetching snippet.");
 		}
 		
-		$row = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
+		$row = $sqlResult->fetch();
 		
 		return($row[$field]);
 	}
@@ -270,18 +275,13 @@ class Snippet {
 	 */
 	public function delete($id) {
 
-		$sql = sprintf("SHOW INDEXES FROM %s",
-			$this->table
-			);
-
-		$this->engine->openDB->sanitize = FALSE;
-		$sqlResult                      = $this->engine->openDB->query($sql);
-		
-		if (!$sqlResult['result']) {
+		$sql       = sprintf("SHOW INDEXES FROM %s", $this->table);
+		$sqlResult = $this->db->query($sql);
+		if (!$sqlResult->errorCode()) {
 			return webHelper_errorMsg("Error fetching primary key.");
 		}
 		
-		$row = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
+		$row = $sqlResult->fetch();
 		$key = $row['Column_name'];
 		
 		$sql = sprintf("DELETE FROM %s WHERE %s='%s'",
@@ -290,10 +290,8 @@ class Snippet {
 			$id
 			);
 
-		$this->engine->openDB->sanitize = FALSE;
-		$sqlResult                = $this->engine->openDB->query($sql);
-		
-		if (!$sqlResult['result']) {
+		$sqlResult = $this->db->query($sql);
+		if (!$sqlResult->errorCode()) {
 			return webHelper_errorMsg("Error fetching snippet.");
 		}
 		
