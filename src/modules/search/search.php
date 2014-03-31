@@ -5,6 +5,10 @@
  */
 class search {
 
+	/**
+	 * @var dbDriver
+	 */
+	private $db;
 	private $engine         = NULL;
 	private $searchArray    = array();
 	private $searchString   = array();
@@ -32,6 +36,18 @@ class search {
 		if ($debug->needed("search")) {
 			$this->debug = TRUE;
 		}
+
+		$this->set_database();
+	}
+
+	/**
+	 * Set the internal database connection
+	 * @param dbDriver|string $db
+	 */
+	public function set_database($db = 'appDB'){
+		$this->db = $db instanceof dbDriver
+			? $db
+			: db::get($db);
 	}
 
 	/**
@@ -55,7 +71,7 @@ class search {
 		$fieldNames   = array();
 		$from         = array();
 
-
+		// TODO: $this->links not defined anywhere
 		if (is_array($this->links)) {
 			foreach ($this->links as $link) {
 				$from[$link['table1']][$link['table2']][] = $link['table2'].".".$link['field2']."=".$link['table1'].".".$link['field1'];
@@ -95,46 +111,35 @@ class search {
 
 
 		$sql = sprintf("CREATE TEMPORARY TABLE `%s` (%s TEXT, FULLTEXT (%s)) ENGINE=MyISAM",
-			$engine->openDB->escape($tableName),
+			$this->db->escape($tableName),
 			implode(" TEXT, ",$fieldNames),
 			implode(", ",$fieldNames)
 			);
-		$sqlResult = $engine->openDB->query($sql);
+		$sqlResult = $this->db->query($sql);
 
-		if (!$sqlResult['result']) {
+		if (!$sqlResult->errorCode()) {
 			return errorHandle::errorMsg("Failed to create table: $table");
 		}
 
 
 		$sql = sprintf("INSERT INTO `%s` (%s) SELECT DISTINCT %s FROM %s %s",
-			$engine->openDB->escape($tableName),
-			$engine->openDB->escape(implode(", ",$fieldNames)),
+			$this->db->escape($tableName),
+			$this->db->escape(implode(", ",$fieldNames)),
 			$selectClause,
-			$engine->openDB->escape($fromClause),
+			$this->db->escape($fromClause),
 			$this->whereClause
 			);
-		$sqlResult = $engine->openDB->query($sql);
+		$sqlResult = $this->db->query($sql);
 
 		if ($this->debug === TRUE) {
 			print "<pre>";
-			print_r($sqlResult);
+			print_r($sqlResult->fetchAll());
 			print "</pre>";
 		}
 
-		if (!$sqlResult['result']) {
+		if (!$sqlResult->errorCode()) {
 			return errorHandle::errorMsg("Error populating table: $table");
 		}
-
-		// Debug: To view contents of the temp table
-		// $sql = sprintf("SELECT * FROM `%s`",
-		// 	$engine->openDB->escape($tableName)
-		// 	);
-		// $sqlResult = $engine->openDB->query($sql);
-		// while ($row = mysql_fetch_array($sqlResult['result'], MYSQL_ASSOC)) {
-		// 	print "<pre>";
-		// 	print_r($row);
-		// 	print "</pre>";
-		// }
 
 		$thisTable = array();
 		$thisTable['name']   = $this->tempTablePrefix.$table;
@@ -222,7 +227,7 @@ class search {
 
 			$sql = sprintf("SELECT DISTINCT *, %s AS relevance FROM `%s` %s %s HAVING relevance > 0.2",
 				$match,
-				$engine->openDB->escape($table['name']),
+				$this->db->escape($table['name']),
 				$whereStr,
 				$match
 				);
@@ -245,9 +250,9 @@ class search {
 				print "<br />$sql<br /><br />";
 			}
 
-			$sqlResult = $engine->openDB->query($sql);
+			$sqlResult = $this->db->query($sql);
 
-			while ($row = mysql_fetch_array($sqlResult['result'], MYSQL_ASSOC)) {
+			while ($row = $sqlResult->fetch()) {
 				$row[$this->tempTablePrefix.'tableName'] = $table['name'];
 				$results[] = $row;
 			}
