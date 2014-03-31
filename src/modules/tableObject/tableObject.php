@@ -6,6 +6,10 @@
 class tableObject {
 
 	/**
+	 * @var dbDriver
+	 */
+	private $db;
+	/**
 	 * @var EngineAPI
 	 */
 	private $engine         = NULL;
@@ -116,7 +120,8 @@ class tableObject {
 	function __construct($type=NULL) {
 
 		$this->engine = EngineAPI::singleton();
-		
+		$this->set_database();
+
 		if (!isnull($type)) {
 			if ($type != "array" && $type != "mysql") {
 				return(FALSE);
@@ -125,7 +130,17 @@ class tableObject {
 		}
 
 	}
-	
+
+	/**
+	 * Sets internal database connection
+	 * @param dbDriver|string $db
+	 */
+	public function set_database($db=NULL){
+		$this->db = isnull($db)
+			? db::get('appDB')
+			: db::get($db);
+	}
+
 	/**
 	 * Add column header(s)
 	 *
@@ -382,22 +397,13 @@ class tableObject {
 			return FALSE;
 		}
 
-		$this->engine->openDB->sanitize = FALSE;
-		$sqlResult                = $this->engine->openDB->query($data);
-		
-		if (!$sqlResult['result']) {
-			return($sqlResult['error']);
-			return(FALSE);
+		$sqlResult = $this->db->query($data);
+		if(!$sqlResult->errorCode()){
+			errorHandle::newError(__METHOD__."() SQL Error: ".$sqlResult->errorMsg(), errorHandle::DEBUG);
+			return FALSE;
 		}
-		
-		unset($data);
-		$data = array();
-		while ($row = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC)) {
-			$data[] = $row;
-		}
-		
-		return($data);
-		
+
+		return $sqlResult->fetchAll();
 	}
 }
 
