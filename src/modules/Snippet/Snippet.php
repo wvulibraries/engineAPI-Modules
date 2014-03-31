@@ -113,7 +113,7 @@ class Snippet {
 		$sqlResult = $this->db->query($sql);
 		if (!$sqlResult->errorCode()) {
 			errorHandle::newError(__METHOD__."() - ".$sqlResult->errorMsg(), errorHandle::DEBUG);
-			return webHelper_errorMsg("Error fetching snippets.");
+			return errorHandle::errorMsg("Error fetching snippets.");
 		}
 		
 		?>
@@ -234,7 +234,6 @@ class Snippet {
 	 * Display a snippet from the database
 	 *
 	 * @todo optimize SQL
-	 * @todo Remove usage of deprecated webHelper_successMsg()
 	 * @param int $id
 	 * @param string $field
 	 * @return string
@@ -244,7 +243,7 @@ class Snippet {
 		$sql       = sprintf("SHOW INDEXES FROM %s", $this->table);
 		$sqlResult = $this->db->query($sql);
 		if (!$sqlResult->errorCode()) {
-			return webHelper_errorMsg("Error fetching primary key.");
+			return errorHandle::errorMsg("Error fetching primary key.");
 		}
 		
 		$row = $sqlResult->fetch();
@@ -257,7 +256,7 @@ class Snippet {
 			);
 		$sqlResult = $this->db->query($sql);
 		if (!$sqlResult->errorCode()) {
-			return webHelper_errorMsg("Error fetching snippet.");
+			return errorHandle::errorMsg("Error fetching snippet.");
 		}
 		
 		$row = $sqlResult->fetch();
@@ -269,7 +268,6 @@ class Snippet {
 	 * Delete a snippet from the database
 	 *
 	 * @todo optimize SQL
-	 * @todo Remove usage of deprecated webHelper_successMsg()
 	 * @param int $id
 	 * @return string
 	 */
@@ -278,7 +276,7 @@ class Snippet {
 		$sql       = sprintf("SHOW INDEXES FROM %s", $this->table);
 		$sqlResult = $this->db->query($sql);
 		if (!$sqlResult->errorCode()) {
-			return webHelper_errorMsg("Error fetching primary key.");
+			return errorHandle::errorMsg("Error fetching primary key.");
 		}
 		
 		$row = $sqlResult->fetch();
@@ -292,10 +290,10 @@ class Snippet {
 
 		$sqlResult = $this->db->query($sql);
 		if (!$sqlResult->errorCode()) {
-			return webHelper_errorMsg("Error fetching snippet.");
+			return errorHandle::errorMsg("Error fetching snippet.");
 		}
 		
-		return webHelper_successMsg("Successfully Deleted Snippet");
+		return errorHandle::successMsg("Successfully Deleted Snippet");
 		
 	}
 }
