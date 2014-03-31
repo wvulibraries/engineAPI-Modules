@@ -58,8 +58,8 @@ class revisionControlSystem {
 	 *        Field name of the primary key in the production table
 	 * @param $secondaryID
 	 *        Field name of the secondary key in the revision table
-	 * @param engineDB $database
-	 *        engineAPI database object to use instead of $this->openDB
+	 * @param dbDriver $database
+	 *        Database object to use
 	 */
 	function __construct($productionTable,$revisionTable,$primaryID,$secondaryID,$database=NULL) {
 		$this->set_database($database);
@@ -77,7 +77,7 @@ class revisionControlSystem {
 
 	/**
 	 * Sets the internal database connection
-	 * @param string $database
+	 * @param dbDriver|string $database
 	 */
 	public function set_database($database='appDB'){
 		$this->db = $database instanceof dbDriver
