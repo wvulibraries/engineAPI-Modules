@@ -12,6 +12,7 @@
  *  - fieldCSS            [str]      CSS Style to add to the field
  *  - fieldID             [str]      id attribute for the field
  *  - fieldMetadata       [array]    Array of key->value pairs to be added to the field through data-* attributes
+ *  - hash                [str]      The mhash algorithm to use for password fields (default: sha512)
  *  - help                [array]    Array of field help options
  *     - type             [str]      The type of help: modal, newWindow, hover, tooltip (default: tooltip)
  *     - text             [str]      Plaintext to display
@@ -93,6 +94,7 @@ class fieldBuilder{
 		'fieldCSS'        => '',
 		'fieldID'         => '',
 		'fieldMetadata'   => array(),
+		'hash'            => 'sha512',
 		'help'            => array(),
 		'label'           => '',
 		'labelClass'      => '',
@@ -266,6 +268,8 @@ class fieldBuilder{
 			case 'time':
 				$time = new time;
 				return $time->toSeconds($value);
+			case 'password':
+				return mhash($this->hash, $value);
 			default:
 				return $value;
 		}
