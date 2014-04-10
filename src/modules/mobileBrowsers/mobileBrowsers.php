@@ -50,7 +50,7 @@ class mobileBrowsers {
 	}
 
 	/**
-	 * Returns what kind of devide the UserAgent is
+	 * Returns what kind of device the UserAgent is
 	 * If valid UA, returns 'tablet', 'mobile', or 'desktop'
 	 *
 	 * @return mixed
@@ -60,9 +60,9 @@ class mobileBrowsers {
 		if (self::$uaResult === FALSE || isnull(self::$uaResult)) return(self::$uaResult);
 		switch(true){
 			case self::$uaResult->isMobile:
-				return "tablet";
-			case self::$uaResult->isTablet:
 				return "mobile";
+			case self::$uaResult->isTablet:
+				return "tablet";
 			default:
 				return "desktop";
 		}
