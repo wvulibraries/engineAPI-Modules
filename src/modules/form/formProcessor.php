@@ -593,6 +593,14 @@ class formProcessor{
 
 		if(!session::has('POST')){
 			if(sizeof($_POST)){
+				// Save the uploaded files in the session
+				if (sizeof($_FILES)) {
+					foreach ($_FILES as $name => $file) {
+						$_FILES[$name]['data'] = file_get_contents($file['tmp_name']);
+					}
+					session::set('FILES', $_FILES, array('location' => 'flash'));
+				}
+
 				// Save the POST in the session and redirect back to the same URL (this time w/o POST data)
 				session::set('POST', $_POST, array('location' => 'flash'));
 				http::redirect($_SERVER['REQUEST_URI'], 303, TRUE);
@@ -602,6 +610,19 @@ class formProcessor{
 			}
 		}
 
+		// Restore $_FILES array
+		$_FILES = session::get('FILES');
+		session::destroy('FILES');
+		if (sizeof($_FILES)) {
+			foreach ($_FILES as $name => $file) {
+				file_put_contents($file['tmp_name'], $file['data']);
+			}
+		}
+
+		// Restore $_POST array
+		$_POST = session::get('POST');
+		session::destroy('POST');
+
 		/*
 		 * Extract the RAW data from _POST and pass it to process() for processing
 		 *
@@ -609,8 +630,6 @@ class formProcessor{
 		 * This may happen because the developer will use process() to handle his own raw data
 		 * Since the database module uses prepared statements, manually escaping the POST data is not necessary
 		 */
-		$_POST = session::get('POST');
-		session::destroy('POST');
 		$result = $this->process($_POST['RAW']);
 		session::destroy(formBuilder::SESSION_SAVED_FORMS_KEY);
 		return $result;
