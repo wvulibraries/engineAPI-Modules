@@ -398,6 +398,9 @@ class formBuilderTemplate {
 					// If we have browser validation turned off, add the attribute to <form>
 					if(!$this->formBuilder->browserValidation) $attrPairs['novalidate'] = '';
 
+					// If we have browser validation turned off, add the attribute to <form>
+					if($this->formBuilder->formEncoding) $this->formAttributes['enctype'] = $this->formBuilder->formEncoding;
+
 					// Compile form attributes
 					$attrs = array();
 					foreach(array_merge($this->formAttributes, $attrPairs) as $attr => $value){
