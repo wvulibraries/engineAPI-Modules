@@ -73,7 +73,7 @@
  *  - reset       Form reset button
  *  - search      HTML5 search field
  *  - select      <select> field
- *    - options   Array of value->label pairs to be displayed
+ *    - options   String of options or Array of value->label pairs to be displayed
  *  - string      Alias for 'text'
  *  - submit      Sorm submit button
  *  - text        simple <input> field
@@ -925,6 +925,9 @@ class fieldBuilder{
 			errorHandle::newError(__METHOD__.'() No options provided for select field!', errorHandle::DEBUG);
 			return '';
 		}
+
+        // If the options were provided as a string instead of an array, just return the string
+        if (is_string($options)) return $options;
 
 		// Prepend a 'blank option'?
 		if($blankOption = $this->getFieldOption('blankOption')){
