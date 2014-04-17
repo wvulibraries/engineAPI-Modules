@@ -863,7 +863,7 @@ class formBuilder{
 		if($options['expandable']){
 			$editStripFieldCount = 0;
 			foreach($this->fields as $field){
-				if($field->showInEditStrip) $editStripFieldCount++;
+				if($field->showInEditStrip && $field->type != 'hidden') $editStripFieldCount++;
 			}
 			if($editStripFieldCount >= $this->fields->countVisible()) $options['expandable'] = FALSE;
 		}
