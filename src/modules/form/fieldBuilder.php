@@ -653,8 +653,8 @@ class fieldBuilder{
 	private function __render_multiselect(){
 		$this->renderOptions['multiple'] = TRUE;
 		$selectBox = $this->__render_select();
-		$scriptTag = sprintf("<script>$('#%s').multiSelect()</script>",
-			$this->getFieldOption('fieldID')
+		$scriptTag = sprintf("<script>$('select[name^=%s]').multiSelect()</script>",
+			substr($this->getFieldOption('name'), 0, -2)
 		);
 		return $selectBox.$scriptTag;
 	}
