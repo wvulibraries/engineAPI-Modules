@@ -509,7 +509,6 @@ class formBuilder{
 		$assets = array();
 
 		// Global assets
-		$assets[] = 'http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js';
 		$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'formEvents.js';
 
 		// Template assets
