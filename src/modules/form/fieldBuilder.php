@@ -528,8 +528,15 @@ class fieldBuilder{
 	 */
 	public function renderLabel($options = array()){
 		// If this field does not require a label, don't render one!
-		$ignoredTypes = array('hidden','button','submit','reset','plaintext');
+		$ignoredTypes = array('hidden','button','submit','reset');
 		if (in_array($this->field['type'], $ignoredTypes)) return '';
+
+        // Skip plaintext fields that haven't defined a label
+        if ($this->field['type'] == 'plaintext') {
+            if (!isset($options['label']) && $this->field['label'] == $this->field['name']) {
+                return '';
+            }
+        }
 
 		// Continue for a normal field
 		$this->ensureFieldID();
