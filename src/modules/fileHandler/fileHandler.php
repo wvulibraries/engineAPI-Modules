@@ -848,7 +848,7 @@ class fileHandler {
             $file_path = $tmpFilename;
         }
 
-        if(class_exists('finfo')){
+        if(class_exists('finfo',false)){
             if(isPHP('5.3')){
                 // $fInfo = new finfo(FILEINFO_MIME_TYPE);
 
