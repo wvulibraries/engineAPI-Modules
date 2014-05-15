@@ -121,7 +121,7 @@ class formProcessor{
 	 * @param string $msg
 	 * @param string $type
 	 */
-	private function formError($msg, $type){
+	public function formError($msg, $type){
 		switch($type){
 			case errorHandle::ERROR:
 				errorHandle::errorMsg($msg);
