@@ -596,7 +596,9 @@ class formProcessor{
 				// Save the uploaded files in the session
 				if (sizeof($_FILES)) {
 					foreach ($_FILES as $name => $file) {
-						$_FILES[$name]['data'] = file_get_contents($file['tmp_name']);
+						if (isset($file['tmp_name']) && !is_empty($file['tmp_name'])) {
+							$_FILES[$name]['data'] = file_get_contents($file['tmp_name']);
+						}
 					}
 					session::set('FILES', $_FILES, array('location' => 'flash'));
 				}
@@ -615,7 +617,9 @@ class formProcessor{
 		session::destroy('FILES');
 		if (sizeof($_FILES)) {
 			foreach ($_FILES as $name => $file) {
-				file_put_contents($file['tmp_name'], $file['data']);
+				if (isset($file['data']) && !is_empty($file['data'])) {
+					file_put_contents($file['tmp_name'], $file['data']);
+				}
 			}
 		}
 
