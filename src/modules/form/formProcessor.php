@@ -305,6 +305,9 @@ class formProcessor{
 					// Process the link table, no local field to process
 					$deferredLinkedToFields[] = $field;
 				}else{
+					// Don't add this field if it's NULL
+					if (isnull($data[ $field->name ])) continue;
+
 					// Field doesn't use a link field, normalize arrays for single query
 					$fields[ $field->name ] = $field->formatValue($data[ $field->name ]);
 				}
