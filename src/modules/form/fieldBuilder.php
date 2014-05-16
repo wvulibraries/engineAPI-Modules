@@ -40,7 +40,7 @@
  *  - primary             [bool]     Sets the field as a primary field (multiple primary fields are allowed*) (default: false)
  *  - readonly            [bool]     Sets the field to be read-only (default: false)
  *  - required            [bool]     Sets the field as required (default: false)
- *  - showInEditStrip     [bool]     Show/Hide the field in the edit table's editStrip (default: true)
+ *  - showIn              [array]    Show/Hide the field in specified forms (default: array of all types)
  *  - type                [str]      The type of field (see list of field types below)
  *  - validate            [str]      The validate method to check the value against
  *  - value               [str]      The initial value for this field
@@ -108,7 +108,7 @@ class fieldBuilder{
 		'primary'         => FALSE,
 		'readonly'        => FALSE,
 		'required'        => FALSE,
-		'showInEditStrip' => TRUE,
+        'showIn'          => array(formBuilder::TYPE_INSERT, formBuilder::TYPE_UPDATE, formBuilder::TYPE_EDIT),
 		'type'            => 'text',
 		'validate'        => NULL,
 		'value'           => '',

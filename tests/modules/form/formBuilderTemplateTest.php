@@ -282,8 +282,8 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_fieldsLoop_editStrip_null(){
-		$this->assertTrue($this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'showInEditStrip' => TRUE))));
-		$this->assertTrue($this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'showInEditStrip' => FALSE))));
+		$this->assertTrue($this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'showIn' => array(formBuilder::TYPE_EDIT)))));
+		$this->assertTrue($this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'showIn' => array(formBuilder::TYPE_INSERT)))));
 
 		$template = $this->formTemplate->render('{form}{fieldsLoop editStrip="null"}<li>{field}</li>{/fieldsLoop}{/form}');
 
@@ -297,8 +297,8 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_fieldsLoop_editStrip_true(){
-		$this->assertTrue($this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'showInEditStrip' => TRUE))));
-		$this->assertTrue($this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'showInEditStrip' => FALSE))));
+		$this->assertTrue($this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'showIn' => array(formBuilder::TYPE_EDIT)))));
+		$this->assertTrue($this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'showIn' => array(formBuilder::TYPE_INSERT)))));
 
 		$template = $this->formTemplate->render('{form}{fieldsLoop editStrip="true"}<li>{field}</li>{/fieldsLoop}{/form}');
 
@@ -322,8 +322,8 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_fieldsLoop_editStrip_false(){
-		$this->assertTrue($this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'showInEditStrip' => TRUE))));
-		$this->assertTrue($this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'showInEditStrip' => FALSE))));
+		$this->assertTrue($this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'showIn' => array(formBuilder::TYPE_EDIT)))));
+		$this->assertTrue($this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'showIn' => array(formBuilder::TYPE_INSERT)))));
 
 		$template = $this->formTemplate->render('{form}{fieldsLoop editStrip="false"}<li>{field}</li>{/fieldsLoop}{/form}');
 
@@ -347,10 +347,10 @@ class formBuilderTemplateTest extends PHPUnit_Framework_TestCase{
 	}
 
 	function test_fieldsLoop_listedFieldsAndEditStrip(){
-		$this->assertTrue($this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'showInEditStrip' => FALSE))));
-		$this->assertTrue($this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'showInEditStrip' => TRUE))));
-		$this->assertTrue($this->form->addField($dog = fieldBuilder::createField(array('name' => 'dog', 'showInEditStrip' => FALSE))));
-		$this->assertTrue($this->form->addField($cat = fieldBuilder::createField(array('name' => 'cat', 'showInEditStrip' => TRUE))));
+		$this->assertTrue($this->form->addField($foo = fieldBuilder::createField(array('name' => 'foo', 'showIn' => array(formBuilder::TYPE_INSERT)))));
+		$this->assertTrue($this->form->addField($bar = fieldBuilder::createField(array('name' => 'bar', 'showIn' => array(formBuilder::TYPE_EDIT)))));
+		$this->assertTrue($this->form->addField($dog = fieldBuilder::createField(array('name' => 'dog', 'showIn' => array(formBuilder::TYPE_INSERT)))));
+		$this->assertTrue($this->form->addField($cat = fieldBuilder::createField(array('name' => 'cat', 'showIn' => array(formBuilder::TYPE_EDIT)))));
 
 		$template = $this->formTemplate->render('{form}{fieldsLoop editStrip="true" list="foo,bar"}<li>{field}</li>{/fieldsLoop}{/form}');
 

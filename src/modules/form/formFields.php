@@ -322,8 +322,8 @@ class formFields implements Countable, Iterator{
 					$field = $this->getField($fieldName);
 
 					// Skip fields if they don't match $editStrip (null shows all)
-					if (TRUE === $editStrip && !$field->showInEditStrip) continue;
-					if (FALSE === $editStrip && $field->showInEditStrip) continue;
+					if (TRUE === $editStrip && !in_array(formBuilder::TYPE_EDIT, $field->showIn)) continue;
+					if (FALSE === $editStrip && in_array(formBuilder::TYPE_EDIT, $field->showIn)) continue;
 
 					$this->orderedFields[$storageKey][] = $fieldName;
 				}

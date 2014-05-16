@@ -539,10 +539,10 @@ class formBuilder{
 		}
 
 		$submitField = array(
-			'type'            => 'submit',
-			'name'            => 'submit',
-			'value'           => $buttonText,
-			'showInEditStrip' => FALSE,
+			'type'   => 'submit',
+			'name'   => 'submit',
+			'value'  => $buttonText,
+			'showIn' => array(self::TYPE_INSERT, self::TYPE_UPDATE),
 		);
 
 		if($this->addField($submitField)){
@@ -862,7 +862,7 @@ class formBuilder{
 		if($options['expandable']){
 			$editStripFieldCount = 0;
 			foreach($this->fields as $field){
-				if($field->showInEditStrip && $field->type != 'hidden') $editStripFieldCount++;
+				if(in_array(self::TYPE_EDIT, $field->showIn) && $field->type != 'hidden') $editStripFieldCount++;
 			}
 			if($editStripFieldCount >= $this->fields->countVisible()) $options['expandable'] = FALSE;
 		}

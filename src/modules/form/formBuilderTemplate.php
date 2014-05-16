@@ -143,6 +143,9 @@ class formBuilderTemplate {
 				if (!in_array($field->name, $list)) continue;
 				// Skip fields that have already been rendered
 				if (in_array($field->name, $this->fieldsRendered)) continue;
+				// Skip if it's not set to show in this form
+				if (!is_empty($this->formType) && !in_array($this->formType, $field->showIn)) continue;
+
 				// We only care if this is a hidden field
 				if ($field->type == 'hidden') {
 					$output .= $field->render();
@@ -160,6 +163,9 @@ class formBuilderTemplate {
 
 			// Skip the field if it's not in the list
 			if (!in_array($field->name, $list)) continue;
+
+			// Skip if it's not set to show in this form
+			if (!is_empty($this->formType) && !in_array($this->formType, $field->showIn)) continue;
 
 			// Replace any unnamed field with a named version for this field
 			$output .= preg_replace('/{field(?!.*name=".+".*)(.*)}/', '{field $1 name="'.$field->name.'"}', $block);
