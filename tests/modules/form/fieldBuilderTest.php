@@ -34,7 +34,6 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 		$this->assertFalse($field->disabled);
 		$this->assertTrue($field->duplicates);
 		$this->assertFalse($field->readonly);
-		$this->assertFalse($field->dragDrop);
 		$this->assertFalse($field->required);
 		$this->assertFalse($field->disableStyling);
 		$this->assertFalse($field->multiple);
@@ -54,7 +53,6 @@ class fieldBuilderTest extends PHPUnit_Framework_TestCase{
 		$this->assertEmpty($field->labelID);
 		$this->assertEmpty($field->selectValues);
 		$this->assertEquals('text', $field->type);
-		$this->assertEquals(40, $field->size);
 	}
 
 	function testItAcceptsIntegerOrdering(){
