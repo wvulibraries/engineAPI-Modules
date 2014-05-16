@@ -139,27 +139,30 @@ class formBuilderTemplate {
 
 		if ($showHidden || $showHidden === NULL) {
 			foreach ($this->formBuilder->fields->getFields() as $field) {
-				// Skip the field if it's not in the list
-				if (!in_array($field->name, $list)) continue;
+				// Skip all non-hidden fields
+				if ($field->type != 'hidden') continue;
+
 				// Skip fields that have already been rendered
 				if (in_array($field->name, $this->fieldsRendered)) continue;
+
+				// Skip the field if it's not in the list
+				if (!in_array($field->name, $list)) continue;
+
 				// Skip if it's not set to show in this form
 				if (!is_empty($this->formType) && !in_array($this->formType, $field->showIn)) continue;
 
 				// We only care if this is a hidden field
-				if ($field->type == 'hidden') {
-					$output .= $field->render();
-					$this->fieldsRendered[] = $field->name;
-				}
+				$output .= $field->render();
+				$this->fieldsRendered[] = $field->name;
 			}
 		}
 
 		foreach ($this->formBuilder->fields->getSortedFields($editStrip) as $field) {
-			// Skip fields that have already been rendered
-			if (in_array($field->name, $this->fieldsRendered)) continue;
-
 			// Skip any hidden fields, we've already processed them
 			if ($field->type == 'hidden') continue;
+
+			// Skip fields that have already been rendered
+			if (in_array($field->name, $this->fieldsRendered)) continue;
 
 			// Skip the field if it's not in the list
 			if (!in_array($field->name, $list)) continue;
