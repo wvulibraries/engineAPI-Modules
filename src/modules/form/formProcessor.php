@@ -299,7 +299,8 @@ class formProcessor{
 			$fields = array();
 			$deferredLinkedToFields = array();
 			foreach($data as $field => $value){
-				$field =  $this->fields->getField($field);
+				$field = $this->fields->getField($field);
+				if(!($field instanceof fieldBuilder)) continue;
 
 				if($field->usesLinkTable()){
 					// Process the link table, no local field to process
