@@ -239,6 +239,9 @@ class formProcessor{
 			// If no validation set, skip
 			if(isnull($field->validate)) continue;
 
+			// Save the data for easy access
+			$fieldData = $data[ $field->name ];
+
 			// If no value, contineu (at this point we know the field isn't required)
 			if(is_empty($fieldData)) continue;
 
