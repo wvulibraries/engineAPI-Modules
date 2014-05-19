@@ -226,38 +226,16 @@ class formProcessor{
 		$isValid   = TRUE;
 		$validator = validate::getInstance();
 		foreach($this->fields as $field){
+			// Save the data for easy access
+			$fieldData = $data[ $field->name ];
+
 			// If this field is required, make sure it's present
-			if($field->required && (!isset($data[ $field->name ]) || is_empty($data[ $field->name ]))){
-				$isValid = FALSE;
-				$this->formError("Field '$field->label' required!", errorHandle::ERROR);
+			if (!isset($fieldData) || is_empty($fieldData)) {
+				if ($field->required) {
+					$isValid = FALSE;
+					$this->formError("Field '$field->label' required!", errorHandle::ERROR);
+				}
 				continue;
-			}
-
-			// If we're here, and it's not set then it is an optional field
-			if(!isset($data[ $field->name ])) continue;
-
-			// If no validation set, skip
-			if(isnull($field->validate)) continue;
-
-			// Save the data for easy access
-			$fieldData = $data[ $field->name ];
-
-			// If no value, contineu (at this point we know the field isn't required)
-			if(is_empty($fieldData)) continue;
-
-			// Save the data for easy access
-			$fieldData = $data[ $field->name ];
-
-			// Try and validate the data
-			$result = method_exists($validator, $field->validate)
-				? call_user_func(array($validator, $field->validate), $fieldData)
-				: $validator->regexp($field->validate, $fieldData);
-
-			if($result === NULL){
-				errorHandle::newError(__METHOD__."() Error occurred during validation for field '{$field->name}'! (possible regex error: ".preg_last_error().")", errorHandle::DEBUG);
-			}elseif($result === FALSE){
-				$isValid = FALSE;
-				$this->formError($validator->getErrorMessage($field->validate, $fieldData), errorHandle::ERROR);
 			}
 
 			// dupe checking
@@ -270,6 +248,21 @@ class formProcessor{
 					$isValid = FALSE;
 					$this->formError("Duplicate value '".htmlSanitize($fieldData)."' found for field '{$field->label}'!", errorHandle::ERROR);
 				}
+			}
+
+			// If no validation set, skip
+			if(isnull($field->validate)) continue;
+
+			// Try and validate the data
+			$result = method_exists($validator, $field->validate)
+				? call_user_func(array($validator, $field->validate), $fieldData)
+				: $validator->regexp($field->validate, $fieldData);
+
+			if($result === NULL){
+				errorHandle::newError(__METHOD__."() Error occurred during validation for field '{$field->name}'! (possible regex error: ".preg_last_error().")", errorHandle::DEBUG);
+			}elseif($result === FALSE){
+				$isValid = FALSE;
+				$this->formError($validator->getErrorMessage($field->validate, $fieldData), errorHandle::ERROR);
 			}
 
 			// Did an error occur? (like a bad regex pattern)
