@@ -242,6 +242,7 @@ class formProcessor{
 			if (!$field->duplicates && !is_empty($fieldData)) {
 				// Get primary fields
 				if (!isset($primaryFieldsSQL)) {
+					$primaryFieldsSQL = array();
 					foreach ($this->fields->getPrimaryFields() as $f) {
 						if (isset($data[ $f->name ])) {
 							$primaryFieldsSQL["`{$f->name}`!=?"] = $data[ $f->name ];
