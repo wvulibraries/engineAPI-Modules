@@ -226,11 +226,8 @@ class formProcessor{
 		$isValid   = TRUE;
 		$validator = validate::getInstance();
 		foreach($this->fields as $field){
-			// Save the data for easy access
-			$fieldData = $data[ $field->name ];
-
 			// If this field is required, make sure it's present
-			if (!isset($fieldData) || is_empty($fieldData)) {
+			if (!isset($data[ $field->name ]) || is_empty($data[ $field->name ])) {
 				if ($field->required) {
 					$isValid = FALSE;
 					$this->formError("Field '$field->label' required!", errorHandle::ERROR);
@@ -238,12 +235,29 @@ class formProcessor{
 				continue;
 			}
 
+			// Save the data for easy access
+			$fieldData = $data[ $field->name ];
+
 			// dupe checking
-			if(!$field->duplicates && !is_empty($fieldData)){
-				$sql = sprintf('SELECT COUNT(*) AS i FROM `%s` WHERE `%s`=?',
+			if (!$field->duplicates && !is_empty($fieldData)) {
+				// Get primary fields
+				if (!isset($primaryFieldsSQL)) {
+					foreach ($this->fields->getPrimaryFields() as $f) {
+						if (isset($data[ $f->name ])) {
+							$primaryFieldsSQL["`{$f->name}`!=?"] = $data[ $f->name ];
+						}
+					}
+				}
+
+				$where = $primaryFieldsSQL;
+				$where[ $field->toSqlSnippet() ] = $fieldData;
+
+				// loop through primary fields
+				$sql = sprintf('SELECT COUNT(*) AS i FROM `%s` WHERE %s',
 					$this->db->escape($this->dbTable),
-					$this->db->escape($field->name));
-				$stmt = $this->db->query($sql, array($fieldData));
+					implode(' AND ', array_keys($where))
+				);
+				$stmt = $this->db->query($sql, array_values($where));
 				if($stmt->fetchField()){
 					$isValid = FALSE;
 					$this->formError("Duplicate value '".htmlSanitize($fieldData)."' found for field '{$field->label}'!", errorHandle::ERROR);
