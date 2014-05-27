@@ -235,7 +235,7 @@ class formProcessor{
 				continue;
 			}
 
-			// Save the data for easy access
+			// Save the data for easy access (now that we know it exists)
 			$fieldData = $data[ $field->name ];
 
 			// dupe checking
