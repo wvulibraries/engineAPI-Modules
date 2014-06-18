@@ -75,7 +75,7 @@
  *  - select      <select> field
  *    - options   String of options or Array of value->label pairs to be displayed
  *  - string      Alias for 'text'
- *  - submit      Sorm submit button
+ *  - submit      Form submit button
  *  - text        simple <input> field
  *  - textarea    Full <textarea>
  *  - tel         HTML5 tel field
