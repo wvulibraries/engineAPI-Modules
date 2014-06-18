@@ -91,3 +91,9 @@
 	color: #aaa;
 	cursor: text;
 }
+
+.ms-container .ms-selectable li,
+.ms-container .ms-selection li {
+	text-indent: -10px;
+	margin-left: 10px;
+}
