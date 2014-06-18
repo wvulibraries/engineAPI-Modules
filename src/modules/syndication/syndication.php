@@ -40,11 +40,9 @@ class syndication {
 	 *        Template to use (located in EngineAPI syndication template directory)
 	 */
 	function __construct($template=NULL) {
+		$enginevars = enginevars::getInstance();
+		$this->templateDir = $enginevars->get("syndicationTemplateDir");
 
-		$engine = EngineAPI::singleton();
-
-		$this->templateDir = enginevars::get("syndicationTemplateDir");
-		
 		if (!isnull($template) && is_readable($this->templateDir."/".$template)) {
 			$this->template = $this->templateDir."/".$template;
 		}
@@ -68,7 +66,7 @@ class syndication {
 
 			if (is_readable($this->templateDir."/".$template)) {
 				$this->template = $this->templateDir."/".$template;
-				return(TRUE);				
+				return(TRUE);
 			}
 
 		}
@@ -114,12 +112,12 @@ class syndication {
 
 		foreach ($this->itemFields as $I=>$field) {
 			if ($field['optional'] === FALSE && !isset($item[$field['name']])) {
-				errorHandle::newError("Missing Field:".$field['name'],errorHandle::DEBUG);			
+				errorHandle::newError("Missing Field:".$field['name'],errorHandle::DEBUG);
 				return(FALSE);
 			}
 
 			if (!isset($item[$field['name']])) {
-				$item[$field['name']] = "";	
+				$item[$field['name']] = "";
 			}
 
 			$itemTemp[$field['name']] = $item[$field['name']];
@@ -207,11 +205,12 @@ class syndication {
 	 * @return bool|SimpleXMLElement
 	 */
 	public static function get($url,$cache=NULL,$cacheDir=NULL) {
+		$enginevars = enginevars::getInstance();
 
-		$cacheUpdate = (!isnull($cache) && validate::integer($cache))?$cache:enginevars::get("syndicationCache");
+		$cacheUpdate = (!isnull($cache) && validate::integer($cache))?$cache:$enginevars->get("syndicationCache");
 
 		$fileHash    = hash("md5",$url);
-		$filename    = (!isnull($cacheDir) && is_writable($cacheDir))?$cacheDir."/".$fileHash:enginevars::get("syndicationCacheDir")."/".$fileHash;
+		$filename    = (!isnull($cacheDir) && is_writable($cacheDir))?$cacheDir."/".$fileHash:$enginevars->get("syndicationCacheDir")."/".$fileHash;
 
 		$currentTime = time();
 
@@ -261,7 +260,7 @@ class syndication {
 		$baseCount = 0;
 		$repeat    = FALSE;
 		for($I=0;$I<count($rawTemp);$I++) {
-			
+
 			if(preg_match('/{xml repeat="start"}/',$rawTemp[$I])) {
 				$repeat = TRUE;
 				continue;
@@ -271,7 +270,7 @@ class syndication {
 				$baseCount++;
 				continue;
 			}
-			
+
 			if ($repeat == FALSE) {
 				$template[$baseCount++] = $rawTemp[$I];
 			}
@@ -279,12 +278,12 @@ class syndication {
 				if (empty($template[$baseCount])) {
 					$template[$baseCount] = array();
 				}
-				
+
 				$template[$baseCount][$I] = $rawTemp[$I];
 			}
-				
+
 		}
-				
+
 		return($template);
 	}
 }
