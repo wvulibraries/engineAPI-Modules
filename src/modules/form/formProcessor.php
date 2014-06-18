@@ -939,8 +939,6 @@ class formProcessor{
 	/**
 	 * Delete a given record from the database
 	 *
-	 * @TODO Discuss referential integrity checking
-	 *
 	 * @param array $data
 	 * @return int
 	 */
