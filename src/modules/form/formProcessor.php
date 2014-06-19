@@ -767,7 +767,15 @@ class formProcessor{
 		if (TRUE === $deleteRecord) {
 			$doDelete = $this->__processDelete(array($updateData));
 			if (self::ERR_OK !== $doDelete) {
-				return $doDelete;
+				if ($this->triggerPresent('onFailure')) {
+					$onFailure = $this->triggerCallback('onFailure', array($doDelete, $updateData));
+					if (!$onFailure) {
+						return $onFailure;
+					}
+				}
+				else {
+					return $doDelete;
+				}
 			}
 
 			// Trigger onSuccess event
