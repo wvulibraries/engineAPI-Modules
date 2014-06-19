@@ -13,8 +13,9 @@
  *  - template           [str]  The template name to load for this template (default: 'default')
  *  - ajaxHandlerURL     [str]  URL for formBuilder ajax handler (default: the current URL)
  *  - insertFormCallback [str]  Custom JavaScript function name to call to retrieve the updateForm in an expandable editTable (default: none)
- * 	- submitTextInsert   [str]  Button text for submit button on insertForm (default: 'Insert')
+ *	- submitTextInsert   [str]  Button text for submit button on insertForm (default: 'Insert')
  *  - submitTextUpdate   [str]  Button text for submit button on updateForm (default: 'Update')
+ *  - deleteTextUpdate   [str]  Button text for delete button on updateForm (default: 'Delete')
  *  - submitTextEdit     [str]  Button text for submit button on editTable (default: 'Update')
  *  - expandable         [bool] Sets editTable as an 'expandable' editTable with drop-down update form (default: true)
  */
@@ -123,6 +124,11 @@ class formBuilder{
 	 * @var string The text to render into the submit button for updateForm
 	 */
 	public $submitTextUpdate = 'Update';
+
+	/**
+	 * @var string The text to render into the delete button for updateForm
+	 */
+	public $deleteTextUpdate = 'Delete';
 
 	/**
 	 * @var string The text to render into the submit button for editTable
@@ -554,6 +560,32 @@ class formBuilder{
 	}
 
 	/**
+	 * Add a delete field if one doesn't exist already.
+	 *
+	 * @param string $buttonText
+	 * @return bool Returns TRUE if a field was added, FALSE otherwise
+	 */
+	private function addFormDelete($buttonText){
+		foreach ($this->fields as $field) {
+			if ($field->type == 'delete') return FALSE;
+		}
+
+		$deleteField = array(
+			'type'   => 'delete',
+			'name'   => 'delete',
+			'value'  => $buttonText,
+			'showIn' => array(self::TYPE_UPDATE),
+		);
+
+		if($this->addField($deleteField)){
+			return TRUE;
+		}else{
+			errorHandle::newError(__METHOD__."() Failed to add delete field!", errorHandle::DEBUG);
+			return FALSE;
+		}
+	}
+
+	/**
 	 * Make sure there are primary fields set
 	 *
 	 * (This is used on displayUpdateForm and displayEditTable for sanity checking)
@@ -815,6 +847,9 @@ class formBuilder{
 		// Add a submit button if one does not exist
 		$submitAdded = $this->addFormSubmit($this->submitTextUpdate);
 
+		// Add a delete button if one does not exist
+		$deleteAdded = $this->addFormDelete($this->deleteTextUpdate);
+
 		// Set default title if needed
 		if (!isset($options['title'])) $options['title'] = $this->updateTitle;
 
@@ -837,7 +872,10 @@ class formBuilder{
 		$output = $template->render();
 
 		// Remove any submit button which we added (must be before form is saved)
-		if($submitAdded) $this->fields->removeField('submit');
+		// if($submitAdded) $this->fields->removeField('submit');
+
+		// Remove any delete button which we added (must be before form is saved)
+		// if($deleteAdded) $this->fields->removeField('delete');
 
 		// Save the form to the session
 		$this->saveForm($template->formID, $template->formType);

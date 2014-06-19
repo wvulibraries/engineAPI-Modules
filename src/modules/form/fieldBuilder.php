@@ -76,6 +76,7 @@
  *    - options   String of options or Array of value->label pairs to be displayed
  *  - string      Alias for 'text'
  *  - submit      Form submit button
+ *  - delete      Form submit button to delete the record
  *  - text        simple <input> field
  *  - textarea    Full <textarea>
  *  - tel         HTML5 tel field
@@ -187,7 +188,7 @@ class fieldBuilder{
 	 * @return bool
 	 */
 	public function isSpecial(){
-		return in_array($this->type, array('submit','reset','button'));
+		return in_array($this->type, array('submit','delete','reset','button'));
 	}
 
 	/**
@@ -528,7 +529,7 @@ class fieldBuilder{
 	 */
 	public function renderLabel($options = array()){
 		// If this field does not require a label, don't render one!
-		$ignoredTypes = array('hidden','button','submit','reset');
+		$ignoredTypes = array('hidden','button','submit','delete','reset');
 		if (in_array($this->field['type'], $ignoredTypes)) return '';
 
         // Skip plaintext fields that haven't defined a label
@@ -842,6 +843,20 @@ class fieldBuilder{
 				$this->renderOptions['options'][1] = $yes;
 				return $this->__render_select();
 		}
+	}
+
+	/**
+	 * [Render Helper] Render a password field
+	 * @return string
+	 */
+	private function __render_delete(){
+		$type = $this->field['type'];
+
+		$this->field['type'] = 'submit';
+		$output = $this->__render_input();
+		$this->field['type'] = $type;
+
+		return $output;
 	}
 
 	/**

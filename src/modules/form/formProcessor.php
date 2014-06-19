@@ -728,9 +728,16 @@ class formProcessor{
 	 * @return int
 	 */
 	private function __processUpdate($data){
-		$updateData = array();
+		$updateData   = array();
+		$deleteRecord = FALSE;
 
-		foreach($this->fields as $field){
+		foreach($this->fields as $field) {
+			if (FALSE === $deleteRecord) {
+				if (isset($data[$field->name]) && $field->type == 'delete') {
+					$deleteRecord = TRUE;
+				}
+			}
+
 			// Skip system or special fields
 			if($field->isSystem() || $field->isSpecial()) continue;
 
@@ -754,6 +761,19 @@ class formProcessor{
 
 			// Save the field for insertion
 			$updateData[ $field->name ] = $data[ $field->name ];
+		}
+
+		// If the delete button was used to submit this form, delete it and return, don't update
+		if (TRUE === $deleteRecord) {
+			$doDelete = $this->__processDelete(array($updateData));
+			if (self::ERR_OK !== $doDelete) {
+				return $doDelete;
+			}
+
+			// Trigger onSuccess event
+			return $this->triggerPresent('onSuccess')
+				? $this->triggerCallback('onSuccess')
+				: self::ERR_OK;
 		}
 
 		// Trigger beforeUpdate event
@@ -821,25 +841,14 @@ class formProcessor{
 			}
 		}
 
-		// Strip rowID off updatedRows now that deletedRows is build (as it's no longer needed)
-		$updateRowData = array_values($updateRowData);
-
-		// Trigger beforeDelete event
-		if($this->triggerPresent('beforeDelete')) $deletedRows = $this->triggerCallback('beforeDelete', array($deletedRows));
-
-		// Trigger doDelete event
-		$doDelete = $this->triggerCallback('doDelete', array($deletedRows), '__deleteRows');
-		if($doDelete !== self::ERR_OK) {
-			if ($this->triggerPresent('onFailure')) {
-				$onFailure = $this->triggerCallback('onFailure', array($doDelete, $deletedRows));
-				if(!$onFailure) return $onFailure;
-			}else {
-				return $doDelete;
-			}
+		// Trigger delete callbacks for the rows we want to delete
+		$doDelete = $this->__processDelete($deletedRows);
+		if ($doDelete !== self::ERR_OK) {
+			return $doDelete;
 		}
 
-		// Trigger afterDelete event
-		$this->triggerCallback('afterDelete', array($deletedRows));
+		// Strip rowID off updatedRows now that deletedRows is built (as it's no longer needed)
+		$updateRowData = array_values($updateRowData);
 
 		// Trigger beforeEdit event
 		if($this->triggerPresent('beforeEdit')) $updateRowData = $this->triggerCallback('beforeEdit', array($updateRowData));
@@ -862,6 +871,27 @@ class formProcessor{
 		return $this->triggerPresent('onSuccess')
 			? $this->triggerCallback('onSuccess')
 			: self::ERR_OK;
+	}
+
+	private function __processDelete($rows) {
+		// Trigger beforeDelete event
+		if($this->triggerPresent('beforeDelete')) $rows = $this->triggerCallback('beforeDelete', array($rows));
+
+		// Trigger doDelete event
+		$doDelete = $this->triggerCallback('doDelete', array($rows), '__deleteRows');
+		if($doDelete !== self::ERR_OK) {
+			if ($this->triggerPresent('onFailure')) {
+				$onFailure = $this->triggerCallback('onFailure', array($doDelete, $rows));
+				if(!$onFailure) return $onFailure;
+			}else {
+				return $doDelete;
+			}
+		}
+
+		// Trigger afterDelete event
+		$this->triggerCallback('afterDelete', array($rows));
+
+		return self::ERR_OK;
 	}
 
 	/**
