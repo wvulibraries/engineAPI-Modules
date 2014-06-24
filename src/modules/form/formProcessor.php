@@ -717,9 +717,7 @@ class formProcessor{
 		$this->triggerCallback('afterInsert', array($this->insertID, $insertData));
 
 		// Trigger onSuccess event
-		return $this->triggerPresent('onSuccess')
-			? $this->triggerCallback('onSuccess')
-			: self::ERR_OK;
+		return $this->triggerCallback('onSuccess', array($this->insertID, $insertData), '__onSuccess');
 	}
 
 	/**
@@ -802,9 +800,7 @@ class formProcessor{
 		$this->triggerCallback('afterUpdate', array($updateData));
 
 		// Trigger onSuccess event
-		return $this->triggerPresent('onSuccess')
-			? $this->triggerCallback('onSuccess')
-			: self::ERR_OK;
+		return $this->triggerCallback('onSuccess', array($updateData), '__onSuccess');
 	}
 
 	/**
@@ -876,9 +872,7 @@ class formProcessor{
 		$this->triggerCallback('afterEdit', array($updateRowData));
 
 		// Trigger onSuccess event
-		return $this->triggerPresent('onSuccess')
-			? $this->triggerCallback('onSuccess')
-			: self::ERR_OK;
+		return $this->triggerCallback('onSuccess', array($updateRowData), '__onSuccess');
 	}
 
 	/**
@@ -977,6 +971,22 @@ class formProcessor{
 		}
 
 		return $processor->update($data);
+	}
+
+	/**
+	 * [Callback] Default callback for onSuccess
+	 * @param self  $processor
+	 * @param array $data
+	 * @return int
+	 */
+	private function __onSuccess($processor, $data) {
+		foreach($processor->fields as $field) {
+			if (isset($_POST['MYSQL'][$field->name])) unset($_POST['MYSQL'][$field->name]);
+			if (isset($_POST['HTML'][$field->name]))  unset($_POST['HTML'][$field->name]);
+			if (isset($_POST['RAW'][$field->name]))   unset($_POST['RAW'][$field->name]);
+		}
+
+		return self::ERR_OK;
 	}
 
 	/**
