@@ -631,7 +631,7 @@ class fieldBuilder{
 
 		return sprintf('<input type="%s" value="%s" %s%s>',
 			$this->field['type'],
-			$value,
+			str_replace('"', '&quot;', $value),
 			$this->buildFieldAttributes(),
 			(!is_empty($this->getFieldOption('placeholder')) ? ' placeholder="'.$this->getFieldOption('placeholder').'"' : '')
 		);
