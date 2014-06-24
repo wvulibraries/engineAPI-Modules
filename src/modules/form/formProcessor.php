@@ -881,6 +881,11 @@ class formProcessor{
 			: self::ERR_OK;
 	}
 
+	/**
+	 * [Internal helper] Process row deletion
+	 * @param array $rows
+	 * @return int
+	 */
 	private function __processDelete($rows) {
 		// Trigger beforeDelete event
 		if($this->triggerPresent('beforeDelete')) $rows = $this->triggerCallback('beforeDelete', array($rows));
