@@ -210,7 +210,6 @@ class tableObject {
 	/**
 	 * Generates HTML table
 	 *
-	 * @todo Remove usage of deprecated webhelper_errorMsg()
 	 * @param string|array $data
 	 *        if tableType is 'array' $data must be an array or arrays (rows=>columns)
 	 *        if tableType is 'mysql' $data must be a SQL string
@@ -222,29 +221,29 @@ class tableObject {
 		
 		if ($this->tableType == "array") {
 			if (!is_array($data)) {
-				return webhelper_errorMsg("Data must be an array of arrays.");
+				return errorHandle::errorMsg("Data must be an array of arrays.");
 			}
 			$this->data = $data;
 		}
 		else if ($this->tableType == "mysql") {
 			if (!is_string($data)) {
-				return webhelper_errorMsg("Data must be a string (valid MySQL query).");
+				return errorHandle::errorMsg("Data must be a string (valid MySQL query).");
 			}
 			
 			$data = $this->getMySQLdata($data);
 			
 			if ($data === FALSE || is_string($data)) {
 				if (is_string($data)) {
-					return webhelper_errorMsg($data);
+					return errorHandle::errorMsg($data);
 				}
-				return webhelper_errorMsg("Error retrieving dataset.");
+				return errorHandle::errorMsg("Error retrieving dataset.");
 			}
 		}
 		
 		$output = "";
 		
 		if (isnull($this->summary) && $this->summaryErrorMsg === TRUE) {
-			$output .= webhelper_errorMsg("Table Summary not provided");
+			$output .= errorHandle::errorMsg("Table Summary not provided");
 		}
 		
 		if ($this->sortable === TRUE) {
@@ -310,7 +309,7 @@ class tableObject {
 		
 		if ($this->groupBy !== NULL) {
 			if (!is_integer($this->groupBy)) {
-				return webhelpder_errorMsg("groupBy value must be an integer.");
+				return errorHandle::errorMsg("groupBy value must be an integer.");
 			}
 			$data = naturalSort($data,$this->groupBy);
 		}
