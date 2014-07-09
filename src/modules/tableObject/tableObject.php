@@ -247,8 +247,7 @@ class tableObject {
 		}
 		
 		if ($this->sortable === TRUE) {
-			
-			$output .= "<script src=\"".enginevars::get("sortableTables")."\" type=\"text/javascript\"></script>";
+			$output .= "<script src=\"".enginevars::getInstance()->get("sortableTables")."\" type=\"text/javascript\"></script>";
 		}
 		
 		$output .= "<table";
