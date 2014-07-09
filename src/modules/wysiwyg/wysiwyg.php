@@ -9,7 +9,7 @@ class wysiwyg {
 	/**
 	 * @var string Base URL where handleRequest() is 'mounted' at
 	 */
-	public $baseURL='';
+	public $baseURL='/engineIncludes/wysiwyg';
 
 	/**
 	 * @var array Array of valid providers
