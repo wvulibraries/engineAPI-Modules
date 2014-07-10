@@ -174,11 +174,12 @@ class formValidation {
 				}
 
 				$return = FALSE;
+				$validateObj = validate::getInstance();
 				if (preg_match('/^\/(.+?)\/$/',$this->fields[$type][$var]['validate'])) {
-					$return = call_user_func(array('validate','regexp'),$this->fields[$type][$var]['validate'],$value);
+					$return = call_user_func(array($validateObj,'regexp'),$this->fields[$type][$var]['validate'],$value);
 				}
 				else {
-					$return = call_user_func(array('validate', $this->fields[$type][$var]['validate']),$value);
+					$return = call_user_func(array($validateObj, $this->fields[$type][$var]['validate']),$value);
 				}
 
 				if ($return === FALSE) {
