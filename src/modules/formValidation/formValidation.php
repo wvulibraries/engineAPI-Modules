@@ -38,11 +38,11 @@ class formValidation {
 		$this->fields['post'] = array();
 		$this->fields['all']  = array();
 
-		if (lc($type) == "post") {
-			$this->type = lc($type);
+		if (strtolower($type) == "post") {
+			$this->type = strtolower($type);
 		}
-		else if (lc($type) == "get") {
-			$this->type = lc($type);
+		else if (strtolower($type) == "get") {
+			$this->type = strtolower($type);
 		}
 
 	}
@@ -61,7 +61,7 @@ class formValidation {
 	 */
 	public function addField($field) {
 
-		if (!isset($field['type']) || (lc($field['type']) != "post" && lc($field['type']) != "get")) {
+		if (!isset($field['type']) || (strtolower($field['type']) != "post" && strtolower($field['type']) != "get")) {
 			errorHandle::newError(__METHOD__."() - type not set or invalid", errorHandle::DEBUG);
 			return(FALSE);
 		}
@@ -76,11 +76,11 @@ class formValidation {
 			return(FALSE);
 		}
 
-		if (lc($field['type']) == "get") {
+		if (strtolower($field['type']) == "get") {
 			$field['type'] = "get";
 			$this->fields['get'][$field['var']] = $field;
 		}
-		else if (lc($field['type']) == "post") {
+		else if (strtolower($field['type']) == "post") {
 			$field['type'] = "post";
 			$this->fields['post'][$field['var']] = $field;
 		}
