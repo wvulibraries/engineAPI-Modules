@@ -109,7 +109,7 @@ class listManagement {
 	function __construct($table, $database=NULL) {
 		$this->table = $table;
 		$engine      = EngineAPI::singleton();
-		$this->db    = ($database instanceof engineDB) ? $database : $engine->openDB;
+		$this->db    = ($database instanceof dbDriver) ? $database : db::get(EngineAPI::DB_CONNECTION);
 
 		templates::defTempPatterns($this->pattern, $this->function, $this);
 
@@ -667,7 +667,7 @@ class listManagement {
 						$this->db->escape($I['options']['valueTable']));
 
 					$sqlResult = $this->db->query($sql);
-					while ($row = mysql_fetch_array($sqlResult['result'], MYSQL_ASSOC)) {
+					while ($row = $sqlResult->fetch()) {
 
 						$checked = NULL;
 						if ($error === TRUE && isset($_POST['HTML'][$I['field'].'_insert']) && in_array($row[$I['options']['valueDisplayID']],$_POST['HTML'][$I['field'].'_insert'])) {
@@ -882,13 +882,12 @@ class listManagement {
 			print "SQL: ".$sql."<br />";
 		}
 
-		$this->db->sanitize = FALSE;
 		$sqlResult = $this->db->query($sql);
 
-		if (!$sqlResult['result']) {
+		if ($sqlResult->error()) {
 			if ($this->debug === TRUE) {
-				errorHandle::errorMsg($sqlResult['error']."<br />");
-				errorHandle::errorMsg($sqlResult['query']."<br />");
+				errorHandle::errorMsg($sqlResult->errorMsg()."<br />");
+				errorHandle::errorMsg($sqlResult->getSQL()."<br />");
 			}
 			// Should be sending a debug error here
 			errorHandle::errorMsg("SQL Error");
@@ -979,7 +978,7 @@ class listManagement {
 		$output .= "<tbody>".$this->eolChar;
 
 		$numberRowsCount = 1;
-		while ($row = mysql_fetch_array($sqlResult['result'],  MYSQL_BOTH)) {
+		while ($row = $sqlResult->fetch(PDO::FETCH_BOTH)) {
 			$output .= "<tr";
 			if ($this->rowStriping === TRUE) {
 				$output .= (is_odd($numberRowsCount))?" class=\"oddrow\"":" class=\"evenrow\"";
@@ -1037,9 +1036,8 @@ class listManagement {
 					if (!isnull($this->fields[$I]['matchOn'])) {
 						$sql = "SELECT ".$this->db->escape($this->fields[$I]['matchOn']['field'])." FROM ".$this->db->escape($this->fields[$I]['matchOn']['table'])." WHERE ".$this->db->escape($this->fields[$I]['matchOn']['key'])."='".$this->db->escape($row[$this->fields[$I]['field']])."'";
 
-						$this->db->sanitize = FALSE;
-						$matchOnSqlResult               = $this->db->query($sql);
-						$matchOnValueResult             = mysql_fetch_array($matchOnSqlResult['result'], MYSQL_BOTH);
+						$matchOnSqlResult   = $this->db->query($sql);
+						$matchOnValueResult = $matchOnSqlResult->fetch(PDO::FETCH_BOTH);
 
 						if (isset($this->fields[$I]['matchOn']['field'])) {
 							$value = $matchOnValueResult[$this->fields[$I]['matchOn']['field']];
@@ -1197,9 +1195,8 @@ class listManagement {
 					if (!isnull($this->fields[$I]['matchOn'])) {
 						$sql = "SELECT ".$this->db->escape($this->fields[$I]['matchOn']['field'])." FROM ".$this->db->escape($this->fields[$I]['matchOn']['table'])." WHERE ".$this->db->escape($this->fields[$I]['matchOn']['key'])."='".$this->db->escape($row[$this->fields[$I]['field']])."'";
 
-						$this->db->sanitize = FALSE;
-						$matchOnSqlResult               = $this->db->query($sql);
-						$matchOnValueResult             = mysql_fetch_array($matchOnSqlResult['result'], MYSQL_BOTH);
+						$matchOnSqlResult   = $this->db->query($sql);
+						$matchOnValueResult = $matchOnSqlResult->fetch(PDO::FETCH_BOTH);
 
 						if (isset($this->fields[$I]['matchOn']['field'])) {
 							$value = $matchOnValueResult[$this->fields[$I]['matchOn']['field']];
@@ -1274,7 +1271,7 @@ class listManagement {
 		$engine = EngineAPI::singleton();
 		$error = array();
 		$error['string'] = "";
-		$error["error"]  = FALSE;
+		$error['error']  = FALSE;
 
 		$multiSelectFields = array();
 
@@ -1577,14 +1574,14 @@ class listManagement {
 
 		// No callbacks, insert the data ourselves
 
-		$result = $this->db->transBegin($this->db->escape($this->table));
+		$result = $this->db->beginTransaction();
 
 		if ($result !== TRUE) {
 			errorHandle::errorMsg("Transaction could not begin.");
 			$error['error'] = TRUE; // Yeah. i know. this doesn't need set. just staying consistent.
 			if ($this->debug === TRUE) {
-				errorHandle::errorMsg($result['error']."<br />");
-				errorHandle::errorMsg($result['query']."<br />");
+				errorHandle::errorMsg($result->errorMsg()."<br />");
+				errorHandle::errorMsg($result->getSQL()."<br />");
 			}
 			return(!$error['error']);
 		}
@@ -1609,20 +1606,15 @@ class listManagement {
 
 		$sqlResult = $this->db->query($sql);
 
-		// print "<pre>";
-		// var_dump($sqlResult);
-		// print "</pre>";
-
 		$output = "";
 
-		if (!$sqlResult['result']) {
-			$this->db->transRollback();
-			$this->db->transEnd();
+		if ($sqlResult->error()) {
+			$this->db->rollback();
 			$error['error'] = TRUE;
 			errorHandle::errorMsg("Insert Error: ");
 			if ($this->debug === TRUE) {
-				errorHandle::errorMsg($sqlResult['error']."<br />");
-				errorHandle::errorMsg($sqlResult['query']."<br />");
+				errorHandle::errorMsg($sqlResult->errorMsg()."<br />");
+				errorHandle::errorMsg($sqlResult->getSQL()."<br />");
 			}
 			return(FALSE);
 		}
@@ -1637,7 +1629,7 @@ class listManagement {
 
 			if (!isnull($checkboxFields)) {
 				if ($this->updateInsert === FALSE) {
-					$linkObjectID = $sqlResult['id'];
+					$linkObjectID = $sqlResult->insertId();
 				}
 				else {
 					$linkObjectID = $_POST['MYSQL'][$this->updateInsertID."_insert"];
@@ -1652,16 +1644,15 @@ class listManagement {
 							$linkObjectID
 							);
 
-						$sqlResult                      = $this->db->query($sql);
+						$sqlResult = $this->db->query($sql);
 
-						if (!$sqlResult['result']) {
-							$this->db->transRollback();
-							$this->db->transEnd();
+						if ($sqlResult->error()) {
+							$this->db->rollback();
 							$error['error'] = TRUE;
 							errorHandle::errorMsg("Checkbox Delete Error: <br />");
 							if ($this->debug === TRUE) {
-								errorHandle::errorMsg($sqlResult['error']."<br />");
-								errorHandle::errorMsg($sqlResult['query']."<br />");
+								errorHandle::errorMsg($sqlResult->errorMsg()."<br />");
+								errorHandle::errorMsg($sqlResult->getSQL()."<br />");
 							} // if debug
 							return(!$error['error']);
 						} // if sql error
@@ -1675,18 +1666,15 @@ class listManagement {
 									$value,
 									$linkObjectID
 									);
+								$sqlResult = $this->db->query($sql);
 
-								$this->db->sanitize = FALSE;
-								$sqlResult                = $this->db->query($sql);
-
-								if (!$sqlResult['result']) {
-									$this->db->transRollback();
-									$this->db->transEnd();
+								if ($sqlResult->error()) {
+									$this->db->rollback();
 									$error['error'] = TRUE;
 									errorHandle::errorMsg("Checkbox Insert Error: <br />");
 									if ($this->debug === TRUE) {
-										errorHandle::errorMsg($sqlResult['error']."<br />");
-										errorHandle::errorMsg($sqlResult['query']."<br />");
+										errorHandle::errorMsg($sqlResult->errorMsg()."<br />");
+										errorHandle::errorMsg($sqlResult->getSQL()."<br />");
 									} // if debug
 									return(!$error['error']);
 								} // if sql error
@@ -1714,7 +1702,7 @@ class listManagement {
 			// If we have any multiselect types, deal with them here
 			if (!isnull($multiSelectFields)) {
 				if ($this->updateInsert === FALSE) {
-					$linkObjectID = $sqlResult['id'];
+					$linkObjectID = $sqlResult->insertId();
 				}
 				else {
 					$linkObjectID = $_POST['MYSQL'][$this->updateInsertID."_insert"];
@@ -1727,18 +1715,15 @@ class listManagement {
 						$this->db->escape($I['options']['linkObjectField']),
 						$linkObjectID
 						);
+					$sqlResult = $this->db->query($sql);
 
-					$this->db->sanitize = FALSE;
-					$sqlResult                      = $this->db->query($sql);
-
-					if (!$sqlResult['result']) {
-						$this->db->transRollback();
-						$this->db->transEnd();
+					if ($sqlResult->error()) {
+						$this->db->rollback();
 						$error['error'] = TRUE;
 						errorHandle::errorMsg("Multiselect Delete Error: <br />");
 						if ($this->debug === TRUE) {
-							errorHandle::errorMsg($sqlResult['error']."<br />");
-							errorHandle::errorMsg($sqlResult['query']."<br />");
+							errorHandle::errorMsg($sqlResult->errorMsg()."<br />");
+							errorHandle::errorMsg($sqlResult->getSQL()."<br />");
 						} // if debug
 						return(!$error['error']);
 					} // if sql error
@@ -1752,18 +1737,15 @@ class listManagement {
 								$value,
 								$linkObjectID
 								);
+							$sqlResult = $this->db->query($sql);
 
-							$this->db->sanitize = FALSE;
-							$sqlResult                = $this->db->query($sql);
-
-							if (!$sqlResult['result']) {
-								$this->db->transRollback();
-								$this->db->transEnd();
+							if ($sqlResult->error()) {
+								$this->db->rollback();
 								$error['error'] = TRUE;
 								errorHandle::errorMsg("Multiselect Insert Error: <br />");
 								if ($this->debug === TRUE) {
-									errorHandle::errorMsg($sqlResult['error']."<br />");
-									errorHandle::errorMsg($sqlResult['query']."<br />");
+									errorHandle::errorMsg($sqlResult->errorMsg()."<br />");
+									errorHandle::errorMsg($sqlResult->getSQL()."<br />");
 								} // if debug
 								return(!$error['error']);
 							} // if sql error
@@ -1776,14 +1758,13 @@ class listManagement {
 
 		if ($error['error'] === FALSE) {
 
-			$this->db->transCommit();
-			$this->db->transEnd();
+			$this->db->commit();
 
 			errorHandle::successMsg($this->insertSuccessMsg);
 
 			// Drop the Insert ID into a local variable suitable for framing
 			if ($this->updateInsert === FALSE) {
-				localvars::add("listObjInsertID",$sqlResult['id']);
+				localvars::add("listObjInsertID",$sqlResult->insertId());
 			}
 			else {
 				localvars::add("listObjInsertID",$_POST['MYSQL'][$this->updateInsertID."_insert"]);
@@ -1793,11 +1774,10 @@ class listManagement {
 		if ($this->dragOrdering === TRUE) {
 			$sql = sprintf("UPDATE %s SET position=%s WHERE %s=%s",
 				$this->db->escape($this->table),
-				((int)$sqlResult['id'] - 1),
+				((int)$sqlResult->insertId() - 1),
 				$this->primaryKey,
-				$sqlResult['id']
+				$sqlResult->insertId()
 			);
-			$this->db->sanitize = FALSE;
 			$sqlResult = $this->db->query($sql);
 		}
 
@@ -1824,9 +1804,9 @@ class listManagement {
 	// NOTE: will return false if just 1 record fails
 	public function update($returnBool=FALSE) {
 
-		$engine          = EngineAPI::singleton();
-		$error           = array();
-		$error["error"]  = FALSE;
+		$engine         = EngineAPI::singleton();
+		$error          = array();
+		$error['error'] = FALSE;
 
 		if (isset($_POST['MYSQL']['delete'])) {
 
@@ -1862,18 +1842,15 @@ class listManagement {
 						$this->primaryKey,
 						$this->db->escape($value)
 						);
-
-					$this->db->sanitize = FALSE;
 					$sqlResult = $this->db->query($sql);
 
-					if (!$sqlResult['result']) {
-
+					if ($sqlResult->error()) {
 						errorHandle::errorMsg($this->deleteErrorMsg);
 						if ($this->debug === TRUE) {
-							errorHandle::errorMsg($sqlResult['error']."<br />");
-							errorHandle::errorMsg($sqlResult['query']."<br />");
+							errorHandle::errorMsg($sqlResult->errorMsg()."<br />");
+							errorHandle::errorMsg($sqlResult->getSQL()."<br />");
 						}
-						$error["error"]   = TRUE;
+						$error['error'] = TRUE;
 					} // error check
 				} // no callback else
 			} // foreach
@@ -1882,20 +1859,18 @@ class listManagement {
 		$sql = sprintf("SELECT * FROM %s",
 			$this->db->escape($this->table)
 			);
-
-		$this->db->sanitize = FALSE;
 		$sqlResult = $this->db->query($sql);
 
-		if (!$sqlResult['result']) {
+		if ($sqlResult->error()) {
 			errorHandle::errorMsg("Error fetching table entries. <br />");
 			if ($this->debug === TRUE) {
-				errorHandle::errorMsg($sqlResult['error']."<br />");
-				errorHandle::errorMsg($sqlResult['query']."<br />");
+				errorHandle::errorMsg($sqlResult->errorMsg()."<br />");
+				errorHandle::errorMsg($sqlResult->getSQL()."<br />");
 			}
-			$error["error"]   = TRUE;
+			$error['error'] = TRUE;
 		}
 
-		while ($row = mysql_fetch_array($sqlResult['result'], MYSQL_BOTH)) {
+		while ($row = $sqlResult->fetch(PDO::FETCH_BOTH)) {
 
 			//grab the first column in the current row, if it is set, throw it in $temp
 			if (!isset($_POST['MYSQL']["check_".$row[0]])) {
@@ -1933,7 +1908,7 @@ class listManagement {
 					// perform a blank check. Continue to the next row in the database if there is a blank.
 					if (is_empty($_POST['MYSQL'][$I['field'].'_'.$row[0]],FALSE)) {
 						errorHandle::errorMsg("Blank entries not allowed in ".htmlentities($I['label']).". Other records may be updated still.");
-						$error["error"]   = TRUE;
+						$error['error'] = TRUE;
 						continue 2;
 					}
 				}
@@ -1955,7 +1930,7 @@ class listManagement {
 					// If its not empty, and it does not have a valid email address, continue next database row
 					if(!empty($_POST['MYSQL'][$I["field"].'_'.$row[0]]) && !validateEmailAddr($_POST['MYSQL'][$I["field"].'_'.$row[0]])) {
 						errorHandle::errorMsg("Invalid E-Mail Address: ". htmlentities($_POST['MYSQL'][$I["field"].'_'.$row[0]]).". Other records may be updated still.");
-						$error["error"]   = TRUE;
+						$error['error'] = TRUE;
 						continue 2;
 					}
 				}
@@ -1991,7 +1966,7 @@ class listManagement {
 						// $row[$I["field"]] != $_POST['MYSQL'][$I['field'].'_'.$row[0]] &&
 						if ($this->duplicateCheck($_POST['MYSQL'][$I['field'].'_'.$row[0]],$I["field"],$row[0])) {
 							errorHandle::errorMsg("Entry, ".htmlentities($_POST['MYSQL'][$I['field'].'_'.$row[0]]).", already in database. Other records may be updated still.");
-							$error["error"]   = TRUE;
+							$error['error'] = TRUE;
 
 							// Set updateInsert back to original Values
 							$this->updateInsert   = $tempUI;
@@ -2016,7 +1991,7 @@ class listManagement {
 					else {
 						$validateResult = $this->validateData($I['validate'],$_POST['MYSQL'][$I['field'].'_'.$row[0]]);
 						if ($validateResult !== FALSE) {
-							$error["error"]   = TRUE;
+							$error['error'] = TRUE;
 							continue 2;
 						}
 					}
@@ -2041,7 +2016,7 @@ class listManagement {
 
 			$sqlResultUpdates = $this->db->query($sql);
 
-			$rowUpdate = mysql_fetch_array($sqlResultUpdates['result'],  MYSQL_ASSOC);
+			$rowUpdate = $sqlResultUpdates->fetch();
 
 			if ($rowUpdate["COUNT(*)"] == 0) {
 				$this->modifiedIDs[] = $row[0];
@@ -2053,28 +2028,26 @@ class listManagement {
 				$this->primaryKey,
 				$row[0]
 				);
-
-			$this->db->sanitize = FALSE;
 			$sqlResult2 = $this->db->query($sql);
 
-			if (!$sqlResult2['result']) {
+			if ($sqlResult2->error()) {
 				errorHandle::errorMsg("Update Error.<br />");
 				if ($this->debug === TRUE) {
-					errorHandle::errorMsg($sqlResult2['error']."<br />");
-					errorHandle::errorMsg($sqlResult2['query']."<br />");
+					errorHandle::errorMsg($sqlResult2->errorMsg()."<br />");
+					errorHandle::errorMsg($sqlResult2->getSQL()."<br />");
 				}
-				$error["error"]   = TRUE;
+				$error['error'] = TRUE;
 
 			}
 
 		}
 
-		if($error["error"] === FALSE) {
+		if($error['error'] === FALSE) {
 			errorHandle::successMsg("Database successfully updated.");
-			return(!$error["error"]);
+			return(!$error['error']);
 		}
 
-		return(!$error["error"]);
+		return(!$error['error']);
 	}
 
 	public function haveDeletes() {
@@ -2101,11 +2074,10 @@ class listManagement {
 			$this->primaryKey,
 			$_POST['MYSQL'][$this->updateInsertID."_insert"]
 			);
+		$sqlResult = $this->db->query($sql);
 
-		$sqlResult                = $this->db->query($sql);
-
-		if ($sqlResult['result']) {
-			$row = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
+		if (!$sqlResult->error()) {
+			$row = $sqlResult->fetch();
 
 			// If count is 0, it didn't find a match, so something changed
 			if ($row["COUNT(*)"] == 0) {
@@ -2129,21 +2101,19 @@ class listManagement {
 		$sql = sprintf("SELECT * FROM %s",
 			$this->db->escape($this->table)
 			);
-
-		$this->db->sanitize = FALSE;
 		$sqlResult = $this->db->query($sql);
 
-		if (!$sqlResult['result']) {
+		if ($sqlResult->error()) {
 			errorHandle::errorMsg("Error fetching table entries. <br />");
 			if ($this->debug === TRUE) {
-				errorHandle::errorMsg($sqlResult['error']."<br />");
-				errorHandle::errorMsg($sqlResult['query']."<br />");
+				errorHandle::errorMsg($sqlResult->errorMsg()."<br />");
+				errorHandle::errorMsg($sqlResult->getSQL()."<br />");
 			}
-			$error["error"]   = TRUE;
+			$error['error'] = TRUE;
 			return(FALSE);
 		}
 
-		while ($row = mysql_fetch_array($sqlResult['result'], MYSQL_BOTH)) {
+		while ($row = $sqlResult->fetch(PDO::FETCH_BOTH)) {
 
 			foreach ($this->fields as $I) {
 				// Check boxes don't return if they aren't checked. Deal with that
@@ -2162,11 +2132,10 @@ class listManagement {
 				$this->primaryKey,
 				$row[0]
 				);
-
 			$sqlResultUpdates = $this->db->query($sql);
 
-			if ($sqlResultUpdates['result']) {
-				$rowUpdate = mysql_fetch_array($sqlResultUpdates['result'],  MYSQL_ASSOC);
+			if (!$sqlResultUpdates->error()) {
+				$rowUpdate = $sqlResultUpdates->fetch();
 
 				// If count is 0, it didn't find a match, so something changed
 				if ($rowUpdate["COUNT(*)"] == 0) {
@@ -2236,25 +2205,22 @@ class listManagement {
 			$multiKey,
 			$idMatch
 			);
-
-
-		$this->db->sanitize = FALSE;
 		$sqlResult = $this->db->query($sql);
 
 		//We should probably do a SQL check here
-		if (!$sqlResult['result']) {
+		if ($sqlResult->error()) {
 			if ($this->debug === TRUE) {
-				errorHandle::errorMsg($sqlResult['error']."<br />");
-				errorHandle::errorMsg($sqlResult['query']."<br />");
+				errorHandle::errorMsg($sqlResult->errorMsg()."<br />");
+				errorHandle::errorMsg($sqlResult->getSQL()."<br />");
 			}
-			return(TRUE);
+			return TRUE;
 		}
 
-		if (mysql_num_rows($sqlResult['result']) == 0) {
-			return(FALSE);
+		if ($sqlResult->rowCount() == 0) {
+			return FALSE;
 		}
 
-		return(TRUE);
+		return TRUE;
 	}
 
 	private function buildUpdateString($row,$and=FALSE) {
