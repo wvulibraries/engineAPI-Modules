@@ -15,10 +15,10 @@ class listManagement {
 	private $wysiwygInputs = FALSE;
 	private $checkboxInput = FALSE;
 	private $multiSelect   = FALSE;
-	private $database      = NULL;  // database object. defaults to $engine->openDB;
+	private $db            = NULL;
 	private $error         = NULL;
 	private $multiKey      = array();
-    public $postTarget    = NULL;
+	public $postTarget    = NULL;
 
 	private $dndInputs     = FALSE;
 	private $dndPathJS     = "/fineuploader/jquery.fineuploader-3.0.min.js";
@@ -106,19 +106,15 @@ class listManagement {
 
 	public $eolChar  = "\n";
 
-	function __construct($table,$database=NULL) {
+	function __construct($table, $database=NULL) {
+		$this->table = $table;
+		$engine      = EngineAPI::singleton();
+		$this->db    = ($database instanceof engineDB) ? $database : $engine->openDB;
 
-		$this->table    = $table;
-		$engine         = EngineAPI::singleton();
-		$this->database = ($database instanceof engineDB) ? $database : $engine->openDB;
-
-		templates::defTempPatterns($this->pattern,$this->function,$this);
+		templates::defTempPatterns($this->pattern, $this->function, $this);
 
 		// Object may already have been declared once and destroyed.
-		templates::reDefTempPatternObject($this->pattern,$this->function,$this);
-	}
-
-	function __destruct() {
+		templates::reDefTempPatternObject($this->pattern, $this->function, $this);
 	}
 
 	/*
@@ -452,7 +448,7 @@ class listManagement {
 		}
 
 		$output .= sprintf('<form action="%s%s" method="post" class="listObj insertForm" %s %s>',
-            (isset($this->postTarget) ? $this->postTarget : $_SERVER['PHP_SELF']),
+			(isset($this->postTarget) ? $this->postTarget : $_SERVER['PHP_SELF']),
 			$queryString,
 			(is_null($this->rel))?"":'rel="'.$this->rel.'"',
 			(is_null($this->rev))?"":'rev="'.$this->rev.'"'
@@ -668,9 +664,9 @@ class listManagement {
 				if ($checkboxError === FALSE) {
 
 					$sql = sprintf("SELECT * FROM `%s`",
-						$this->database->escape($I['options']['valueTable']));
+						$this->db->escape($I['options']['valueTable']));
 
-					$sqlResult = $this->database->query($sql);
+					$sqlResult = $this->db->query($sql);
 					while ($row = mysql_fetch_array($sqlResult['result'], MYSQL_ASSOC)) {
 
 						$checked = NULL;
@@ -862,10 +858,10 @@ class listManagement {
 
 		//Build "ORDER BY"
 		if (isnull($this->orderBy) && isset($this->fields[0]['type']) && $this->fields[0]['type'] != "plainText" ) {
-			$this->orderBy = "ORDER BY ".$this->database->escape($this->fields[0]['field']);
+			$this->orderBy = "ORDER BY ".$this->db->escape($this->fields[0]['field']);
 		}
 		else if (!isnull($this->orderBy)) {
-			$this->orderBy = $this->database->escape($this->orderBy);
+			$this->orderBy = $this->db->escape($this->orderBy);
 		}
 		else {
 			$this->orderBy = "";
@@ -876,7 +872,7 @@ class listManagement {
 		}
 		else {
 			$sql = sprintf("SELECT * FROM %s %s %s",
-				$this->database->escape($this->table),
+				$this->db->escape($this->table),
 				$this->whereClause,
 				$this->orderBy
 				);
@@ -886,8 +882,8 @@ class listManagement {
 			print "SQL: ".$sql."<br />";
 		}
 
-		$this->database->sanitize = FALSE;
-		$sqlResult = $this->database->query($sql);
+		$this->db->sanitize = FALSE;
+		$sqlResult = $this->db->query($sql);
 
 		if (!$sqlResult['result']) {
 			if ($this->debug === TRUE) {
@@ -909,13 +905,13 @@ class listManagement {
 		$output = "";
 
 		if ($this->sortable === TRUE) {
-			
+
 
 			$output .= "<script src=\"".enginevars::get("sortableTables")."\" type=\"text/javascript\"></script>";
 			$output .= '<script type="text/javascript">';
 			$output .= '$(document).ready(function()
 				{
-					$("#'.$this->database->escape($this->table).'_table").tablesorter({textExtraction: function(node) {
+					$("#'.$this->db->escape($this->table).'_table").tablesorter({textExtraction: function(node) {
 								return  node.firstChild.nextSibling.value;
 							}});
 				}
@@ -923,13 +919,13 @@ class listManagement {
 			$output .= "</script>";
 		}
 		if ($this->dragOrdering === TRUE) {
-			
+
 			$output .= "<script src=\"".enginevars::get("tablesDragnDrop")."\" type=\"text/javascript\"></script>";
 		}
 
 		$output .= "\n<!-- engine Instruction break -->".'<!-- engine Instruction displayTemplateOff -->'."\n<!-- engine Instruction break -->";
 		$output .= sprintf('<form action="%s%s" method="post" class="listObj insertForm" %s %s %s>%s',
-            (isset($this->postTarget) ? $this->postTarget : $_SERVER['PHP_SELF']),
+			(isset($this->postTarget) ? $this->postTarget : $_SERVER['PHP_SELF']),
 			$queryString,
 			($this->confirmUpdateDelete === TRUE)?'onsubmit="return listObjDeleteConfirm(this);"':"",
 			(is_null($this->rel))?"":'rel="'.$this->rel.'"',
@@ -939,7 +935,7 @@ class listManagement {
 		// $output .= "<form action=\"".$_SERVER['PHP_SELF']."".$queryString."\" method=\"post\" onsubmit=\"return listObjDeleteConfirm(this);\">".$this->eolChar;
 		$output .= sessionInsertCSRF();
 		$output .= "\n";
-		$output .= "<table border=\"0\" cellpadding=\"1\" cellspacing=\"0\" id=\"".$this->database->escape($this->table)."_table\"";
+		$output .= "<table border=\"0\" cellpadding=\"1\" cellspacing=\"0\" id=\"".$this->db->escape($this->table)."_table\"";
 
 		$output .= " class=\"engineListDisplayTable";
 		if ($this->sortable === TRUE) {
@@ -1039,10 +1035,10 @@ class listManagement {
 
 					$value = $row[$this->fields[$I]['field']];
 					if (!isnull($this->fields[$I]['matchOn'])) {
-						$sql = "SELECT ".$this->database->escape($this->fields[$I]['matchOn']['field'])." FROM ".$this->database->escape($this->fields[$I]['matchOn']['table'])." WHERE ".$this->database->escape($this->fields[$I]['matchOn']['key'])."='".$this->database->escape($row[$this->fields[$I]['field']])."'";
+						$sql = "SELECT ".$this->db->escape($this->fields[$I]['matchOn']['field'])." FROM ".$this->db->escape($this->fields[$I]['matchOn']['table'])." WHERE ".$this->db->escape($this->fields[$I]['matchOn']['key'])."='".$this->db->escape($row[$this->fields[$I]['field']])."'";
 
-						$this->database->sanitize = FALSE;
-						$matchOnSqlResult               = $this->database->query($sql);
+						$this->db->sanitize = FALSE;
+						$matchOnSqlResult               = $this->db->query($sql);
 						$matchOnValueResult             = mysql_fetch_array($matchOnSqlResult['result'], MYSQL_BOTH);
 
 						if (isset($this->fields[$I]['matchOn']['field'])) {
@@ -1199,10 +1195,10 @@ class listManagement {
 					}
 
 					if (!isnull($this->fields[$I]['matchOn'])) {
-						$sql = "SELECT ".$this->database->escape($this->fields[$I]['matchOn']['field'])." FROM ".$this->database->escape($this->fields[$I]['matchOn']['table'])." WHERE ".$this->database->escape($this->fields[$I]['matchOn']['key'])."='".$this->database->escape($row[$this->fields[$I]['field']])."'";
+						$sql = "SELECT ".$this->db->escape($this->fields[$I]['matchOn']['field'])." FROM ".$this->db->escape($this->fields[$I]['matchOn']['table'])." WHERE ".$this->db->escape($this->fields[$I]['matchOn']['key'])."='".$this->db->escape($row[$this->fields[$I]['field']])."'";
 
-						$this->database->sanitize = FALSE;
-						$matchOnSqlResult               = $this->database->query($sql);
+						$this->db->sanitize = FALSE;
+						$matchOnSqlResult               = $this->db->query($sql);
 						$matchOnValueResult             = mysql_fetch_array($matchOnSqlResult['result'], MYSQL_BOTH);
 
 						if (isset($this->fields[$I]['matchOn']['field'])) {
@@ -1262,7 +1258,7 @@ class listManagement {
 
 		if ($this->dragOrdering === TRUE) {
 			$output .= '<script type="text/javascript">';
-			$output .= "var table = document.getElementById('".$this->database->escape($this->table)."_table');";
+			$output .= "var table = document.getElementById('".$this->db->escape($this->table)."_table');";
 			$output .= 'var tableDnD = new TableDnD();';
 			$output .= 'tableDnD.init(table);';
 			$output .= '</script>';
@@ -1581,7 +1577,7 @@ class listManagement {
 
 		// No callbacks, insert the data ourselves
 
-		$result = $this->database->transBegin($this->database->escape($this->table));
+		$result = $this->db->transBegin($this->db->escape($this->table));
 
 		if ($result !== TRUE) {
 			errorHandle::errorMsg("Transaction could not begin.");
@@ -1595,7 +1591,7 @@ class listManagement {
 
 		if ($this->updateInsert === FALSE) {
 			$sql = sprintf("INSERT INTO %s (%s) VALUES(%s)",
-				$this->database->escape($this->table),
+				$this->db->escape($this->table),
 				$this->buildFieldListInsert(),
 				$this->buildFieldValueInsert()
 				);
@@ -1603,15 +1599,15 @@ class listManagement {
 		else {
 
 			$sql = sprintf("UPDATE %s SET %s WHERE %s='%s'",
-				$this->database->escape($this->table),
+				$this->db->escape($this->table),
 				$this->buildInsertUpdateString(),
-				$this->database->escape($this->updateInsertID),
+				$this->db->escape($this->updateInsertID),
 				$_POST['MYSQL'][$this->updateInsertID."_insert"]
 				);
 
 		}
 
-		$sqlResult = $this->database->query($sql);
+		$sqlResult = $this->db->query($sql);
 
 		// print "<pre>";
 		// var_dump($sqlResult);
@@ -1620,8 +1616,8 @@ class listManagement {
 		$output = "";
 
 		if (!$sqlResult['result']) {
-			$this->database->transRollback();
-			$this->database->transEnd();
+			$this->db->transRollback();
+			$this->db->transEnd();
 			$error['error'] = TRUE;
 			errorHandle::errorMsg("Insert Error: ");
 			if ($this->debug === TRUE) {
@@ -1651,16 +1647,16 @@ class listManagement {
 
 					if (isset($I['options']['linkTable']) && isset($I['options']['linkObjectField']) && isset($I['options']['linkValueField'])) {
 						$sql = sprintf("DELETE FROM %s WHERE %s='%s'",
-							$this->database->escape($I['options']['linkTable']),
-							$this->database->escape($I['options']['linkObjectField']),
+							$this->db->escape($I['options']['linkTable']),
+							$this->db->escape($I['options']['linkObjectField']),
 							$linkObjectID
 							);
 
-						$sqlResult                      = $this->database->query($sql);
+						$sqlResult                      = $this->db->query($sql);
 
 						if (!$sqlResult['result']) {
-							$this->database->transRollback();
-							$this->database->transEnd();
+							$this->db->transRollback();
+							$this->db->transEnd();
 							$error['error'] = TRUE;
 							errorHandle::errorMsg("Checkbox Delete Error: <br />");
 							if ($this->debug === TRUE) {
@@ -1673,19 +1669,19 @@ class listManagement {
 						//if (isset($_POST['MYSQL'][$I['field']."_insert"])) {
 							foreach ($_POST['MYSQL'][$I['field']."_insert"] as $K=>$value) {
 								$sql = sprintf("INSERT INTO %s(%s, %s) VALUES('%s','%s')",
-									$this->database->escape($I['options']['linkTable']),
-									$this->database->escape($I['options']['linkValueField']),
-									$this->database->escape($I['options']['linkObjectField']),
+									$this->db->escape($I['options']['linkTable']),
+									$this->db->escape($I['options']['linkValueField']),
+									$this->db->escape($I['options']['linkObjectField']),
 									$value,
 									$linkObjectID
 									);
 
-								$this->database->sanitize = FALSE;
-								$sqlResult                = $this->database->query($sql);
+								$this->db->sanitize = FALSE;
+								$sqlResult                = $this->db->query($sql);
 
 								if (!$sqlResult['result']) {
-									$this->database->transRollback();
-									$this->database->transEnd();
+									$this->db->transRollback();
+									$this->db->transEnd();
 									$error['error'] = TRUE;
 									errorHandle::errorMsg("Checkbox Insert Error: <br />");
 									if ($this->debug === TRUE) {
@@ -1727,17 +1723,17 @@ class listManagement {
 				foreach ($multiSelectFields as $I) {
 
 					$sql = sprintf("DELETE FROM %s WHERE %s='%s'",
-						$this->database->escape($I['options']['linkTable']),
-						$this->database->escape($I['options']['linkObjectField']),
+						$this->db->escape($I['options']['linkTable']),
+						$this->db->escape($I['options']['linkObjectField']),
 						$linkObjectID
 						);
 
-					$this->database->sanitize = FALSE;
-					$sqlResult                      = $this->database->query($sql);
+					$this->db->sanitize = FALSE;
+					$sqlResult                      = $this->db->query($sql);
 
 					if (!$sqlResult['result']) {
-						$this->database->transRollback();
-						$this->database->transEnd();
+						$this->db->transRollback();
+						$this->db->transEnd();
 						$error['error'] = TRUE;
 						errorHandle::errorMsg("Multiselect Delete Error: <br />");
 						if ($this->debug === TRUE) {
@@ -1750,19 +1746,19 @@ class listManagement {
 					if (isset($_POST['MYSQL'][$I['field']])) {
 						foreach ($_POST['MYSQL'][$I['field']] as $K=>$value) {
 							$sql = sprintf("INSERT INTO %s(%s, %s) VALUES('%s','%s')",
-								$this->database->escape($I['options']['linkTable']),
-								$this->database->escape($I['options']['linkValueField']),
-								$this->database->escape($I['options']['linkObjectField']),
+								$this->db->escape($I['options']['linkTable']),
+								$this->db->escape($I['options']['linkValueField']),
+								$this->db->escape($I['options']['linkObjectField']),
 								$value,
 								$linkObjectID
 								);
 
-							$this->database->sanitize = FALSE;
-							$sqlResult                = $this->database->query($sql);
+							$this->db->sanitize = FALSE;
+							$sqlResult                = $this->db->query($sql);
 
 							if (!$sqlResult['result']) {
-								$this->database->transRollback();
-								$this->database->transEnd();
+								$this->db->transRollback();
+								$this->db->transEnd();
 								$error['error'] = TRUE;
 								errorHandle::errorMsg("Multiselect Insert Error: <br />");
 								if ($this->debug === TRUE) {
@@ -1780,8 +1776,8 @@ class listManagement {
 
 		if ($error['error'] === FALSE) {
 
-			$this->database->transCommit();
-			$this->database->transEnd();
+			$this->db->transCommit();
+			$this->db->transEnd();
 
 			errorHandle::successMsg($this->insertSuccessMsg);
 
@@ -1796,13 +1792,13 @@ class listManagement {
 
 		if ($this->dragOrdering === TRUE) {
 			$sql = sprintf("UPDATE %s SET position=%s WHERE %s=%s",
-				$this->database->escape($this->table),
+				$this->db->escape($this->table),
 				((int)$sqlResult['id'] - 1),
 				$this->primaryKey,
 				$sqlResult['id']
 			);
-			$this->database->sanitize = FALSE;
-			$sqlResult = $this->database->query($sql);
+			$this->db->sanitize = FALSE;
+			$sqlResult = $this->db->query($sql);
 		}
 
 		if (!isnull($this->redirectURL)) {
@@ -1862,13 +1858,13 @@ class listManagement {
 				// handle the deletes internally
 				else {
 					$sql = sprintf("DELETE FROM %s WHERE %s=%s",
-						$this->database->escape($this->table),
+						$this->db->escape($this->table),
 						$this->primaryKey,
-						$this->database->escape($value)
+						$this->db->escape($value)
 						);
 
-					$this->database->sanitize = FALSE;
-					$sqlResult = $this->database->query($sql);
+					$this->db->sanitize = FALSE;
+					$sqlResult = $this->db->query($sql);
 
 					if (!$sqlResult['result']) {
 
@@ -1884,11 +1880,11 @@ class listManagement {
 		}
 
 		$sql = sprintf("SELECT * FROM %s",
-			$this->database->escape($this->table)
+			$this->db->escape($this->table)
 			);
 
-		$this->database->sanitize = FALSE;
-		$sqlResult = $this->database->query($sql);
+		$this->db->sanitize = FALSE;
+		$sqlResult = $this->db->query($sql);
 
 		if (!$sqlResult['result']) {
 			errorHandle::errorMsg("Error fetching table entries. <br />");
@@ -2037,13 +2033,13 @@ class listManagement {
 			}
 
 			$sql = sprintf("SELECT COUNT(*) FROM %s WHERE %s AND %s='%s'",
-				$this->database->escape($this->table),
+				$this->db->escape($this->table),
 				$this->buildUpdateString($row[0],TRUE),
 				$this->primaryKey,
 				$row[0]
 				);
 
-			$sqlResultUpdates = $this->database->query($sql);
+			$sqlResultUpdates = $this->db->query($sql);
 
 			$rowUpdate = mysql_fetch_array($sqlResultUpdates['result'],  MYSQL_ASSOC);
 
@@ -2052,14 +2048,14 @@ class listManagement {
 			}
 
 			$sql = sprintf("UPDATE %s SET %s WHERE %s='%s'",
-				$this->database->escape($this->table),
+				$this->db->escape($this->table),
 				$this->buildUpdateString($row[0]),
 				$this->primaryKey,
 				$row[0]
 				);
 
-			$this->database->sanitize = FALSE;
-			$sqlResult2 = $this->database->query($sql);
+			$this->db->sanitize = FALSE;
+			$sqlResult2 = $this->db->query($sql);
 
 			if (!$sqlResult2['result']) {
 				errorHandle::errorMsg("Update Error.<br />");
@@ -2100,13 +2096,13 @@ class listManagement {
 		$engine = EngineAPI::singleton();
 
 		$sql = sprintf("SELECT COUNT(*) FROM %s WHERE %s",
-			$this->database->escape($this->table),
+			$this->db->escape($this->table),
 			$this->buildInsertUpdateString(TRUE),
 			$this->primaryKey,
 			$_POST['MYSQL'][$this->updateInsertID."_insert"]
 			);
 
-		$sqlResult                = $this->database->query($sql);
+		$sqlResult                = $this->db->query($sql);
 
 		if ($sqlResult['result']) {
 			$row = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
@@ -2131,11 +2127,11 @@ class listManagement {
 		$updateIDs = array();
 
 		$sql = sprintf("SELECT * FROM %s",
-			$this->database->escape($this->table)
+			$this->db->escape($this->table)
 			);
 
-		$this->database->sanitize = FALSE;
-		$sqlResult = $this->database->query($sql);
+		$this->db->sanitize = FALSE;
+		$sqlResult = $this->db->query($sql);
 
 		if (!$sqlResult['result']) {
 			errorHandle::errorMsg("Error fetching table entries. <br />");
@@ -2161,13 +2157,13 @@ class listManagement {
 			}
 
 			$sql = sprintf("SELECT COUNT(*) FROM %s WHERE %s AND %s='%s'",
-				$this->database->escape($this->table),
+				$this->db->escape($this->table),
 				$this->buildUpdateString($row[0],TRUE),
 				$this->primaryKey,
 				$row[0]
 				);
 
-			$sqlResultUpdates = $this->database->query($sql);
+			$sqlResultUpdates = $this->db->query($sql);
 
 			if ($sqlResultUpdates['result']) {
 				$rowUpdate = mysql_fetch_array($sqlResultUpdates['result'],  MYSQL_ASSOC);
@@ -2210,8 +2206,8 @@ class listManagement {
 		$multiKey = "";
 		if ($this->updateInsert === TRUE || !isnull($row)) {
 			$idMatch = sprintf(" AND %s!='%s'",
-				$this->database->escape($this->updateInsertID),
-				(isset($_POST['MYSQL'][$this->updateInsertID."_insert"]))?$this->database->escape($_POST['MYSQL'][$this->updateInsertID."_insert"]):$row
+				$this->db->escape($this->updateInsertID),
+				(isset($_POST['MYSQL'][$this->updateInsertID."_insert"]))?$this->db->escape($_POST['MYSQL'][$this->updateInsertID."_insert"]):$row
 
 			);
 		}
@@ -2234,16 +2230,16 @@ class listManagement {
 		}
 
 		$sql = sprintf("SELECT * FROM %s WHERE %s='%s'%s%s",
-			$this->database->escape($this->table),
-			$this->database->escape($col),
-			$this->database->escape($new),
+			$this->db->escape($this->table),
+			$this->db->escape($col),
+			$this->db->escape($new),
 			$multiKey,
 			$idMatch
 			);
 
 
-		$this->database->sanitize = FALSE;
-		$sqlResult = $this->database->query($sql);
+		$this->db->sanitize = FALSE;
+		$sqlResult = $this->db->query($sql);
 
 		//We should probably do a SQL check here
 		if (!$sqlResult['result']) {
@@ -2284,13 +2280,13 @@ class listManagement {
 				}
 			}
 
-			$temp[] = $this->database->escape($I["field"])."='".$_POST['MYSQL'][$I["field"]."_".$row]."'";
+			$temp[] = $this->db->escape($I["field"])."='".$_POST['MYSQL'][$I["field"]."_".$row]."'";
 		}
 		foreach ($this->hiddenFields as $I) {
 			if($I['disabled'] === TRUE) {
 				continue;
 			}
-			$temp[] = $this->database->escape($I["field"])."='".$_POST['MYSQL'][$I["field"]."_".$row]."'";
+			$temp[] = $this->db->escape($I["field"])."='".$_POST['MYSQL'][$I["field"]."_".$row]."'";
 		}
 		$output = implode($sep,$temp);
 
@@ -2320,14 +2316,14 @@ class listManagement {
 			}
 
 			$temp[] = sprintf("%s='%s'",
-				$this->database->escape($I["field"]),
+				$this->db->escape($I["field"]),
 				($I['type'] == "password")?hash($this->passwordHash,$_POST['MYSQL'][$I["field"]."_insert"]):$_POST['MYSQL'][$I["field"]."_insert"]);
 		}
 		foreach ($this->hiddenFields as $I) {
 			if($I['disabled'] === TRUE) {
 				continue;
 			}
-			$temp[] = $this->database->escape($I["field"])."='".$_POST['MYSQL'][$I["field"]."_insert"]."'";
+			$temp[] = $this->db->escape($I["field"])."='".$_POST['MYSQL'][$I["field"]."_insert"]."'";
 		}
 		$output = implode($sep,$temp);
 		return($output);
