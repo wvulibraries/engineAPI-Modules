@@ -423,7 +423,9 @@ class listManagement {
 	}
 
 	public function displayInsertForm($addGet=TRUE) {
-		$engine = EngineAPI::singleton();
+		$engine     = EngineAPI::singleton();
+		$engineVars = enginevars::getInstance();
+
 		$queryString = "";
 		if ($addGet === TRUE && isset($_SERVER['QUERY_STRING']) && !is_empty($_SERVER['QUERY_STRING'])) {
 			$queryString = "?".$_SERVER['QUERY_STRING'];
@@ -438,11 +440,11 @@ class listManagement {
 
 		if ($this->dndInputs === TRUE) {
 			$output .= sprintf('<script type="text/javascript" src="%s%s"></script>',
-				EngineAPI::$engineVars["engineInc"],
+				$engineVars->get('engineInc'),
 				$this->dndPathJS
 				);
 			$output .= sprintf('<link rel="stylesheet" href="%s%s">',
-				EngineAPI::$engineVars["engineInc"],
+				$engineVars->get('engineInc'),
 				$this->dndPathCSS
 				);
 		}
@@ -722,8 +724,8 @@ class listManagement {
 				$output .= "</textarea>";
 
 				if ($I['type'] == "wysiwyg") {
-					$output .= '<script type="text/javascript">window.CKEDITOR_BASEPATH="'.enginevars::get("engineInc").'/CKEditor/"</script>';
-					$output .= '<script type="text/javascript" src="'.enginevars::get("engineInc").'/CKEditor/ckeditor.js"></script>';
+					$output .= '<script type="text/javascript">window.CKEDITOR_BASEPATH="'.$engineVars->get("engineInc").'/CKEditor/"</script>';
+					$output .= '<script type="text/javascript" src="'.$engineVars->get("engineInc").'/CKEditor/ckeditor.js"></script>';
 					$output .= '<script type="text/javascript">';
 					$output .= 'if (CKEDITOR.instances["'.$I['field'].'_insert"]) { CKEDITOR.remove(CKEDITOR.instances["'.$I['field'].'_insert"]); }';
 					$output .= 'CKEDITOR.replace("'.$I['field'].'_insert");';
@@ -851,6 +853,8 @@ class listManagement {
 	}
 
 	public function displayEditTable($addGet=TRUE,$debug=FALSE) {
+		$engineVars = enginevars::getInstance();
+
 		$queryString = "";
 		if ($addGet === TRUE && isset($_SERVER['QUERY_STRING']) && !is_empty($_SERVER['QUERY_STRING'])) {
 			$queryString = "?".$_SERVER['QUERY_STRING'];
@@ -906,7 +910,7 @@ class listManagement {
 		if ($this->sortable === TRUE) {
 
 
-			$output .= "<script src=\"".enginevars::get("sortableTables")."\" type=\"text/javascript\"></script>";
+			$output .= "<script src=\"".$engineVars->get("sortableTables")."\" type=\"text/javascript\"></script>";
 			$output .= '<script type="text/javascript">';
 			$output .= '$(document).ready(function()
 				{
@@ -919,7 +923,7 @@ class listManagement {
 		}
 		if ($this->dragOrdering === TRUE) {
 
-			$output .= "<script src=\"".enginevars::get("tablesDragnDrop")."\" type=\"text/javascript\"></script>";
+			$output .= "<script src=\"".$engineVars->get("tablesDragnDrop")."\" type=\"text/javascript\"></script>";
 		}
 
 		$output .= "\n<!-- engine Instruction break -->".'<!-- engine Instruction displayTemplateOff -->'."\n<!-- engine Instruction break -->";
