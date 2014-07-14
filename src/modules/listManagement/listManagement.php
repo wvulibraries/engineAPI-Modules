@@ -1267,11 +1267,12 @@ class listManagement {
 	// returns TRUE if insert is completely successful
 	// otherwise FALSE
 	public function insert() {
-
-		$engine = EngineAPI::singleton();
-		$error = array();
-		$error['string'] = "";
-		$error['error']  = FALSE;
+		$engine    = EngineAPI::singleton();
+		$localVars = localvars::getInstance();
+		$error     = array(
+			'string'  => '',
+			'error'   => FALSE,
+		);
 
 		$multiSelectFields = array();
 
@@ -1764,10 +1765,10 @@ class listManagement {
 
 			// Drop the Insert ID into a local variable suitable for framing
 			if ($this->updateInsert === FALSE) {
-				localvars::add("listObjInsertID",$sqlResult->insertId());
+				$localVars->set("listObjInsertID", $sqlResult->insertId());
 			}
 			else {
-				localvars::add("listObjInsertID",$_POST['MYSQL'][$this->updateInsertID."_insert"]);
+				$localVars->set("listObjInsertID", $_POST['MYSQL'][$this->updateInsertID."_insert"]);
 			}
 		}
 
@@ -1783,7 +1784,7 @@ class listManagement {
 
 		if (!isnull($this->redirectURL)) {
 			$errorStack        = urlencode(serialize($engine->errorStack));
-			$this->redirectURL = preg_replace('/\{insertID\}/',localvars::get("listObjInsertID"),$this->redirectURL);
+			$this->redirectURL = preg_replace('/\{insertID\}/', $localVars->get("listObjInsertID"),$this->redirectURL);
 			$this->redirectURL = preg_replace('/\{errorStack\}/',$errorStack,$this->redirectURL);
 			$this->redirectURL = stripNewLines($this->redirectURL);
 			header("Location: ".$this->redirectURL);
