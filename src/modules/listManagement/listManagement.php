@@ -453,7 +453,7 @@ class listManagement {
 			(is_null($this->rel))?"":'rel="'.$this->rel.'"',
 			(is_null($this->rev))?"":'rev="'.$this->rev.'"'
 			);
-		$output .= sessionInsertCSRF();
+		$output .= session::templateHandler_csrf();
 		foreach ($this->hiddenFields as $I) {
 			$output .= '<input type="hidden" name="'.$I['field'].'_insert" value="'.htmlentities($I['value']).'" />';
 		}
@@ -932,7 +932,7 @@ class listManagement {
 			$this->eolChar
 			);
 		// $output .= "<form action=\"".$_SERVER['PHP_SELF']."".$queryString."\" method=\"post\" onsubmit=\"return listObjDeleteConfirm(this);\">".$this->eolChar;
-		$output .= sessionInsertCSRF();
+		$output .= session::templateHandler_csrf();
 		$output .= "\n";
 		$output .= "<table border=\"0\" cellpadding=\"1\" cellspacing=\"0\" id=\"".$this->db->escape($this->table)."_table\"";
 
