@@ -2347,43 +2347,29 @@ class listManagement {
 	}
 
 	private function validateData($validate,$data) {
+		$validate = validate::getInstance();
+		$error    = '';
 
-		$error = "";
-
-		if ($validate == "url") {
-			if (!validate::url($data)) {
-				$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid URL.");
-			}
+		if ($validate == 'url' && !$validate->url($data)) {
+			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid URL.");
 		}
-		else if ($validate == "optionalURL") {
-			if (!validate::optionalURL($data)) {
-				$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid URL.");
-			}
+		else if ($validate == 'optionalURL' && !$validate->optionalURL($data)) {
+			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid URL.");
 		}
-		else if ($validate == "email") {
-			if (!validate::emailAddr($data)) {
-				$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid Email Address.");
-			}
+		else if ($validate == 'email' && !$validate->emailAddr($data)) {
+			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid Email Address.");
 		}
-		else if ($validate == "internalEmail") {
-			if (!validate::emailAddr($data,TRUE)) {
-				$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid Email Address.");
-			}
+		else if ($validate == 'internalEmail' && !$validate->emailAddr($data,TRUE)) {
+			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid Email Address.");
 		}
-		else if ($validate == "phone") {
-			if (!validate::phoneNumber($data)) {
-				$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid Phone.");
-			}
+		else if ($validate == 'phone' && !$validate->phoneNumber($data)) {
+			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid Phone.");
 		}
-		else if ($validate == "ipaddr") {
-			if (!validate::ipAddr($data)) {
-				$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid IP Address.");
-			}
+		else if ($validate == 'ipaddr' && !$validate->ipAddr($data)) {
+			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid IP Address.");
 		}
-		else if ($validate == "ipaddrRange") {
-			if (!validate::ipAddrRange($data)) {
-				$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid IP Address Range.");
-			}
+		else if ($validate == 'ipaddrRange' && !$validate->ipAddrRange($data)) {
+			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid IP Address Range.");
 		}
 		else {
 
@@ -2391,48 +2377,45 @@ class listManagement {
 			$return = FALSE;
 			switch($validate) {
 				case "integer":
-					$return = validate::integer($data);
+					$return = $validate->integer($data);
 					break;
 
 				case "integerSpaces":
-					$return = validate::integerSpaces($data);
+					$return = $validate->integerSpaces($data);
 					break;
 
 				case "alphaNumeric":
-					$return = validate::alphaNumeric($data);
+					$return = $validate->alphaNumeric($data);
 					break;
 
 				case "alphaNumericNoSpaces":
-					$return = validate::alphaNumericNoSpaces($data);
+					$return = $validate->alphaNumericNoSpaces($data);
 					break;
 
 				case "alpha":
-					$return = validate::alpha($data);
+					$return = $validate->alpha($data);
 					break;
 
 				case "alphaNoSpaces":
-					$return = validate::alphaNoSpaces($data);
+					$return = $validate->alphaNoSpaces($data);
 					break;
 
 				case "noSpaces":
-					$return = validate::noSpaces($data);
+					$return = $validate->noSpaces($data);
 					break;
 
 				case "noSpecialChars":
-					$return = validate::noSpecialChars($data);
+					$return = $validate->noSpecialChars($data);
 					break;
 
 				case "date":
-					$return = validate::date($data);
+					$return = $validate->date($data);
 					break;
 
 				default:
-					$return = validate::regexp($regexp,$data);
+					$return = $validate->regexp($regexp,$data);
 					break;
 			}
-
-
-			// $return = @preg_match($regexp,$data);
 
 			// if the regular expression fails, returns false. If there is no match, returns "0" otherwise "1"
 			if ($return === NULL) {
@@ -2446,10 +2429,10 @@ class listManagement {
 		}
 
 		if (is_empty($error)) {
-			return(FALSE);
+			return FALSE;
 		}
 
-		return($error);
+		return $error;
 	}
 
 	private function insertOnly($type) {
