@@ -2351,28 +2351,28 @@ class listManagement {
 	}
 
 	private function validateData($validate,$data) {
-		$validate = validate::getInstance();
+		$validater = validate::getInstance();
 		$error    = '';
 
-		if ($validate == 'url' && !$validate->url($data)) {
+		if ($validate == 'url' && !$validater->url($data)) {
 			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid URL.");
 		}
-		else if ($validate == 'optionalURL' && !$validate->optionalURL($data)) {
+		else if ($validate == 'optionalURL' && !$validater->optionalURL($data)) {
 			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid URL.");
 		}
-		else if ($validate == 'email' && !$validate->emailAddr($data)) {
+		else if ($validate == 'email' && !$validater->emailAddr($data)) {
 			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid Email Address.");
 		}
-		else if ($validate == 'internalEmail' && !$validate->emailAddr($data,TRUE)) {
+		else if ($validate == 'internalEmail' && !$validater->emailAddr($data,TRUE)) {
 			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid Email Address.");
 		}
-		else if ($validate == 'phone' && !$validate->phoneNumber($data)) {
+		else if ($validate == 'phone' && !$validater->phoneNumber($data)) {
 			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid Phone.");
 		}
-		else if ($validate == 'ipaddr' && !$validate->ipAddr($data)) {
+		else if ($validate == 'ipaddr' && !$validater->ipAddr($data)) {
 			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid IP Address.");
 		}
-		else if ($validate == 'ipaddrRange' && !$validate->ipAddrRange($data)) {
+		else if ($validate == 'ipaddrRange' && !$validater->ipAddrRange($data)) {
 			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid IP Address Range.");
 		}
 		else {
@@ -2381,43 +2381,43 @@ class listManagement {
 			$return = FALSE;
 			switch($validate) {
 				case "integer":
-					$return = $validate->integer($data);
+					$return = $validater->integer($data);
 					break;
 
 				case "integerSpaces":
-					$return = $validate->integerSpaces($data);
+					$return = $validater->integerSpaces($data);
 					break;
 
 				case "alphaNumeric":
-					$return = $validate->alphaNumeric($data);
+					$return = $validater->alphaNumeric($data);
 					break;
 
 				case "alphaNumericNoSpaces":
-					$return = $validate->alphaNumericNoSpaces($data);
+					$return = $validater->alphaNumericNoSpaces($data);
 					break;
 
 				case "alpha":
-					$return = $validate->alpha($data);
+					$return = $validater->alpha($data);
 					break;
 
 				case "alphaNoSpaces":
-					$return = $validate->alphaNoSpaces($data);
+					$return = $validater->alphaNoSpaces($data);
 					break;
 
 				case "noSpaces":
-					$return = $validate->noSpaces($data);
+					$return = $validater->noSpaces($data);
 					break;
 
 				case "noSpecialChars":
-					$return = $validate->noSpecialChars($data);
+					$return = $validater->noSpecialChars($data);
 					break;
 
 				case "date":
-					$return = $validate->date($data);
+					$return = $validater->date($data);
 					break;
 
 				default:
-					$return = $validate->regexp($regexp,$data);
+					$return = $validater->regexp($regexp,$data);
 					break;
 			}
 
