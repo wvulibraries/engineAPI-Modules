@@ -111,7 +111,7 @@ class Snippet {
 	public function insertSnippetList($class="we_snippetList",$type="ul",$collapse=FALSE,$showURL=FALSE) {
 		$sql       = sprintf("SELECT * FROM %s ORDER BY snippetName", $this->table);
 		$sqlResult = $this->db->query($sql);
-		if (!$sqlResult->errorCode()) {
+		if ($sqlResult->error()) {
 			errorHandle::newError(__METHOD__."() - ".$sqlResult->errorMsg(), errorHandle::DEBUG);
 			return errorHandle::errorMsg("Error fetching snippets.");
 		}
@@ -119,7 +119,7 @@ class Snippet {
 		?>
 		<script type="text/javascript">
 			function snippetAlert(id) {
-				var txt = '<?= $engineVars["WEBROOT"].$this->snippetURL ?>'+id+'\n{snippet id='+id+'}';
+				var txt = '<?php enginevars::getInstance()->get("WEBROOT").$this->snippetURL ?>'+id+'\n{snippet id='+id+'}';
 				alert(txt);
 			}
 		</script>
@@ -132,7 +132,7 @@ class Snippet {
 				$output .= "<".$type." class=\"".$class."\">";
 			}
 			else {
-				$output .= "<span onclick=\"toggleMenu('".$class."');\" class=\"toggleLink\"><img src=\"".enginevars::get("imgListRetractedIcon")."\" id=\"".$class."_img\" width=\"8px\" height=\"8px\" /> Snippet List</span>";
+				$output .= "<span onclick=\"toggleMenu('".$class."');\" class=\"toggleLink\"><img src=\"".enginevars::getInstance()->get("imgListRetractedIcon")."\" id=\"".$class."_img\" width=\"8px\" height=\"8px\" /> Snippet List</span>";
 				$output .= "<".$type." id=\"".$class."\" class=\"".$class."\">";
 			}
 		}
@@ -147,16 +147,16 @@ class Snippet {
 			if ($type == "ul" || $type == "ol" || $type == "li") {
 				$output .= "<li>";
 			}
-			$output .= "<span class=\"deleteSpan\"><a href=\"".$this->resultURL."&amp;deleteID=".$row['ID']."\" onclick=\"return engineDeleteConfirm('".htmlsanitize($row['snippetName'])."');\"><img src=\"".enginevars::get("imgDeleteIcon")."\" alt=\"delete\"  style=\"cursor: not-allowed;\"/></a></span>";
+			$output .= "<span class=\"deleteSpan\"><a href=\"".$this->resultURL."&amp;deleteID=".$row['ID']."\" onclick=\"return engineDeleteConfirm('".htmlsanitize($row['snippetName'])."');\"><img src=\"".enginevars::getInstance()->get("imgDeleteIcon")."\" alt=\"delete\"  style=\"cursor: not-allowed;\"/></a></span>";
 			$output .= "&nbsp;";
 			if ($showURL === TRUE && $collapse === TRUE) {
-				$output .= "<span onclick=\"toggleSnippetInfo('".$row['ID']."_snippet');\" class=\"toggleLink\"><img style=\"cursor: help;\" src=\"".enginevars::get("imgListRetractedIcon")."\" id=\"".$row['ID']."_snippet_img\" /> </span>";
+				$output .= "<span onclick=\"toggleSnippetInfo('".$row['ID']."_snippet');\" class=\"toggleLink\"><img style=\"cursor: help;\" src=\"".enginevars::getInstance()->get("imgListRetractedIcon")."\" id=\"".$row['ID']."_snippet_img\" /> </span>";
 			}
 			$output .= "<a href=\"".$this->resultURL."&amp;snippetID=".htmlsanitize($row['ID'])."\">".htmlsanitize($row['snippetName'])."</a>";
 			if ($showURL === TRUE && $collapse === TRUE) {
 				$output .= "<".$type." id=\"".$row['ID']."_snippet\" style=\"display:none\">";
-				$output .= "<li>Auth Required: <a href=\"".enginevars::get("WEBROOT").$this->snippetURL.$row['ID']."\">".enginevars::get("WEBROOT").$this->snippetURL.$row['ID']."</a></li>";
-				$output .= "<li>Public: <a href=\"".enginevars::get("WEBROOT").$this->snippetPublicURL.$row['ID']."\">".enginevars::get("WEBROOT").$this->snippetPublicURL.$row['ID']."</a></li>";
+				$output .= "<li>Auth Required: <a href=\"".enginevars::getInstance()->get("WEBROOT").$this->snippetURL.$row['ID']."\">".enginevars::getInstance()->get("WEBROOT").$this->snippetURL.$row['ID']."</a></li>";
+				$output .= "<li>Public: <a href=\"".enginevars::getInstance()->get("WEBROOT").$this->snippetPublicURL.$row['ID']."\">".enginevars::getInstance()->get("WEBROOT").$this->snippetPublicURL.$row['ID']."</a></li>";
 				$output .= "<li>{snippet field=\"".$this->field."\" id=\"".$row['ID']."\"}</li>";
 				$output .= "</".$type.">";
 			}
@@ -185,12 +185,12 @@ class Snippet {
 					if (visible[ID] == \"true\") {
 						temp.style.display = \"block\";
 						var img = document.getElementById(ID+\"_img\");
-						img.src=\"".enginevars::get("imgListExpandedIcon")."\";
+						img.src=\"".enginevars::getInstance()->get("imgListExpandedIcon")."\";
 					}
 					else {
 						temp.style.display = \"none\";
 						var img = document.getElementById(ID+\"_img\");
-						img.src=\"".enginevars::get("imgListRetractedIcon")."\";
+						img.src=\"".enginevars::getInstance()->get("imgListRetractedIcon")."\";
 					}
 				}
 			</script>";
@@ -214,14 +214,14 @@ class Snippet {
 				snippetInfoArray[ID][id] = \"true\";
 				$.cookie(id, \"true\");
 				var img = document.getElementById(id+\"_img\");
-				img.src=\"".enginevars::get("imgListExpandedIcon")."\";
+				img.src=\"".enginevars::getInstance()->get("imgListExpandedIcon")."\";
 			}
 			else { 
 				$('#'+id+'').hide('slow');
 				snippetInfoArray[ID][id] = \"false\";
 				$.cookie(id, \"false\");
 				var img = document.getElementById(id+\"_img\");
-				img.src=\"".enginevars::get("imgListRetractedIcon")."\";
+				img.src=\"".enginevars::getInstance()->get("imgListRetractedIcon")."\";
 			}
 		}
 		</script>
@@ -242,7 +242,7 @@ class Snippet {
 
 		$sql       = sprintf("SHOW INDEXES FROM %s", $this->table);
 		$sqlResult = $this->db->query($sql);
-		if (!$sqlResult->errorCode()) {
+		if ($sqlResult->error()) {
 			return errorHandle::errorMsg("Error fetching primary key.");
 		}
 		
@@ -255,7 +255,7 @@ class Snippet {
 			$this->db->escape($id)
 			);
 		$sqlResult = $this->db->query($sql);
-		if (!$sqlResult->errorCode()) {
+		if ($sqlResult->error()) {
 			return errorHandle::errorMsg("Error fetching snippet.");
 		}
 		
@@ -275,7 +275,7 @@ class Snippet {
 
 		$sql       = sprintf("SHOW INDEXES FROM %s", $this->table);
 		$sqlResult = $this->db->query($sql);
-		if (!$sqlResult->errorCode()) {
+		if ($sqlResult->error()) {
 			return errorHandle::errorMsg("Error fetching primary key.");
 		}
 		
@@ -289,7 +289,7 @@ class Snippet {
 			);
 
 		$sqlResult = $this->db->query($sql);
-		if (!$sqlResult->errorCode()) {
+		if ($sqlResult->error()) {
 			return errorHandle::errorMsg("Error fetching snippet.");
 		}
 		
