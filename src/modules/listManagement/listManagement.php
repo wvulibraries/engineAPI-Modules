@@ -2354,26 +2354,40 @@ class listManagement {
 		$validater = validate::getInstance();
 		$error    = '';
 
-		if ($validate == 'url' && !$validater->url($data)) {
-			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid URL.");
+		if ($validate == 'url') {
+			if (!$validater->url($data)) {
+				$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid URL.");
+			}
 		}
-		else if ($validate == 'optionalURL' && !$validater->optionalURL($data)) {
-			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid URL.");
+		else if ($validate == 'optionalURL') {
+			if (!$validater->optionalURL($data)) {
+				$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid URL.");
+			}
 		}
-		else if ($validate == 'email' && !$validater->emailAddr($data)) {
-			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid Email Address.");
+		else if ($validate == 'email') {
+			if (!$validater->emailAddr($data)) {
+				$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid Email Address.1");
+			}
 		}
-		else if ($validate == 'internalEmail' && !$validater->emailAddr($data,TRUE)) {
-			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid Email Address.");
+		else if ($validate == 'internalEmail') { 
+			if (!$validater->emailAddr($data,TRUE)) {
+				$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid Email Address.2");
+			}
 		}
-		else if ($validate == 'phone' && !$validater->phoneNumber($data)) {
-			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid Phone.");
+		else if ($validate == 'phone') {
+			if (!$validater->phoneNumber($data)) {
+				$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid Phone.");
+			}
 		}
-		else if ($validate == 'ipaddr' && !$validater->ipAddr($data)) {
-			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid IP Address.");
+		else if ($validate == 'ipaddr') {
+			if (!$validater->ipAddr($data)) {
+				$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid IP Address.");
+			}
 		}
-		else if ($validate == 'ipaddrRange' && !$validater->ipAddrRange($data)) {
-			$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid IP Address Range.");
+		else if ($validate == 'ipaddrRange') {
+			if (!$validater->ipAddrRange($data)) {
+				$error .= errorHandle::errorMsg("Entry, ".htmlentities($data).", not a valid IP Address Range.");
+			}
 		}
 		else {
 
