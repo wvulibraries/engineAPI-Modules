@@ -882,7 +882,9 @@ class fieldBuilder{
 	 */
 	private function buildFieldAttributes(){
 		$attributes         = (array)$this->getFieldOption('fieldMetadata');
-		$attributes['name'] = $this->getFieldOption('name');
+		if($this->getFieldOption('type') != 'submit'){
+			$attributes['name'] = $this->getFieldOption('name');
+		}
 
 		if (str2bool($this->getFieldOption('disabled'))) $attributes['bool'][] = 'disabled';
 		if (str2bool($this->getFieldOption('readonly'))) $attributes['bool'][] = 'readonly';
@@ -917,16 +919,26 @@ class fieldBuilder{
 			if ($key == 'data') {
 				foreach ($val as $data_name => $data_val) {
 					if (is_bool($data_val)) $data_name = bool2str($data_val, TRUE);
-					$attrPairs[] = sprintf('data-%s="%s"', $data_name, $data_val);
+					$data_name = "data-$data_name";
+					$attrPairs[$data_name] = sprintf('%s="%s"', $data_name, $data_val);
 				}
 			} elseif ($key == 'bool') {
 				foreach ($val as $flag) {
-					$attrPairs[] = $flag;
+					$attrPairs[$flag] = $flag;
 				}
 			} else {
 				if (is_bool($val)) $val = bool2str($val, TRUE);
-				$attrPairs[] = sprintf('%s="%s"', $key, $val);
+				$attrPairs[$key] = sprintf('%s="%s"', $key, $val);
 			}
+		}
+
+		/*
+		 * Patch: Don't include name attr on submit fields
+		 * This is needed so the submit button doesn't show up in POST data and thus overwrite
+		 * the value of any generated submit buttons on the next page load.
+		 */
+		if($this->getFieldOption('type') == 'submit' && in_array('name', array_keys($attrPairs))){
+			unset($attrPairs['name']);
 		}
 
 		return implode(' ', $attrPairs);
