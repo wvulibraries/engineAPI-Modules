@@ -918,7 +918,7 @@ class fieldBuilder{
 		foreach ($attributes as $key => $val) {
 			if ($key == 'data') {
 				foreach ($val as $data_name => $data_val) {
-					if (is_bool($data_val)) $data_name = bool2str($data_val, TRUE);
+					if (is_bool($data_val)) $data_val = bool2str($data_val, TRUE);
 					$data_name = "data-$data_name";
 					$attrPairs[$data_name] = sprintf('%s="%s"', $data_name, $data_val);
 				}
