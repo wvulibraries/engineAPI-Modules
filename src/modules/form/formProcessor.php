@@ -228,7 +228,8 @@ class formProcessor{
 		foreach($this->fields as $field){
 			// If this field is required, make sure it's present
 			if (!isset($data[ $field->name ]) || is_empty($data[ $field->name ])) {
-				if ($field->required) {
+				if ($field->required && $this->processorType != formBuilder::TYPE_EDIT) {
+					// ERROR: No value provided!
 					$isValid = FALSE;
 					$this->formError("Field '$field->label' required!", errorHandle::ERROR);
 				}
