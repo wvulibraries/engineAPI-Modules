@@ -29,6 +29,11 @@ class formBuilder{
 	const TYPE_EDIT    = 3;
 
 	/**
+	 * @var bool Internal 'AJAX Mode' flag
+	 */
+	private static $ajaxMode = FALSE;
+
+	/**
 	 * @var formFields
 	 */
 	public $fields;
@@ -253,8 +258,10 @@ class formBuilder{
 	 */
 	public static function ajaxHandler(){
 		try {
-			// If this isn't an AJAX request, we don't care
-			if (!isAJAX()) return NULL;
+			// Set ajaxMode, and if this isn't an AJAX request, we don't care anymore
+			self::$ajaxMode = isAJAX();
+			if (!self::$ajaxMode) return NULL;
+
 			if (isset($_POST['MYSQL']) && sizeof($_POST['MYSQL'])) {
 				// If there's no formID, we don't care
 				if (!isset($_POST['MYSQL']['__formID'])) return NULL;
@@ -344,6 +351,9 @@ class formBuilder{
 	 * @return int Result code from formProcessor object
 	 */
 	public static function process($formID = NULL){
+		// If this is an ajax request and we're not in ajaxHandler let ajax handle the request
+		if(isAJAX() && !self::$ajaxMode) return self::ajaxHandler();
+
 		// If there's no POST, return
 		if(!sizeof($_POST) && !session::has('POST') && !is_array($formID)) return NULL;
 
