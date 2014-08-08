@@ -6,6 +6,7 @@ class revisionControl {
 	 * @var bool
 	 */
 	public $displayRevert = TRUE;
+
 	/**
 	 * Display controls to compare 2 revisions
 	 * @var bool
@@ -20,7 +21,7 @@ class revisionControl {
 
 	/**
 	 * Revision table name
-	 * @var
+	 * @var string
 	 */
 	private $revisionTable;
 
@@ -38,14 +39,9 @@ class revisionControl {
 	private $secondID;
 
 	/**
-	 * @var EngineAPI
+	 * @var dbDriver
 	 */
-
-	private $engine;
-	/**
-	 * @var engineDB
-	 */
-	private $openDB;
+	private $db;
 
 	/**
 	 * Class constructor
@@ -54,22 +50,27 @@ class revisionControl {
 	 * @param string $revisionTable
 	 * @param string $primaryID
 	 * @param string $secondID
-	 * @param engineDB $database
+	 * @param dbDriver $database
 	 */
-	function __construct($productionTable,$revisionTable,$primaryID,$secondID,$database=NULL) {
-		$this->engine = EngineAPI::singleton();
-
-		$this->openDB = $database instanceof engineDB
-			? $database
-			: $this->engine->openDB;
+	function __construct($productionTable, $revisionTable, $primaryID, $secondID, $database=NULL) {
+		$this->set_database($database);
 
 		$this->productionTable = $productionTable;
 		$this->revisionTable   = $revisionTable;
-		$this->primaryID 	   = $primaryID;
-		$this->secondID 	   = $secondID;
-		
+		$this->primaryID       = $primaryID;
+		$this->secondID        = $secondID;
 	}
-	
+
+	/**
+	 * Sets the internal database connection
+	 * @param dbDriver|string $database
+	 */
+	public function set_database($database='appDB'){
+		$this->db = $database instanceof dbDriver
+			? $database
+			: db::get($database);
+	}
+
 	/**
 	 * Add new revision
 	 *
@@ -81,64 +82,59 @@ class revisionControl {
 	 * @param $ID2
 	 * @return bool
 	 */
-	public function insertRevision($ID,$ID2 = NULL) {
+	public function insertRevision($ID, $ID2=NULL) {
 		// check to see if this revision is already in the table.
-		// if so, don't try to insert again	
+		// if so, don't try to insert again
 		if (isnull($ID2)) {
-			$sql = sprintf("SELECT %s FROM %s WHERE %s='%s'",
-				$this->openDB->escape($this->secondID),
-				$this->openDB->escape($this->productionTable),
-				$this->openDB->escape($this->primaryID),
-				$this->openDB->escape($ID));
-			$sqlResult = $this->openDB->query($sql);
+			$sql = sprintf("SELECT `%s` FROM `%s` WHERE `%s`=?",
+				$this->db->escape($this->secondID),
+				$this->db->escape($this->productionTable),
+				$this->db->escape($this->primaryID)
+			);
+			$sqlResult = $this->db->query($sql, array($ID));
 
-			if (!$sqlResult['result']) {
+			if ($sqlResult->error()) {
 				errorHandle::newError(__METHOD__."() - Error determing original secondary key", errorHandle::DEBUG);
-				return(FALSE);
+				return FALSE;
 			}
 
-			$row = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
-			$ID2 = $row[$this->secondID];
-
+			$ID2 = $sqlResult->fetchField();
 		}
 
-		$sql = sprintf("SELECT COUNT(*) FROM %s WHERE %s='%s' AND %s='%s'",
-			$this->openDB->escape($this->revisionTable),
-			$this->openDB->escape($this->primaryID),
-			$this->openDB->escape($ID),
-			$this->openDB->escape($this->secondID),
-			$this->openDB->escape($ID2)
+		$sql = sprintf("SELECT COUNT(*) FROM `%s` WHERE `%s`=? AND `%s`=?",
+			$this->db->escape($this->revisionTable),
+			$this->db->escape($this->primaryID),
+			$this->db->escape($this->secondID)
 			);
-		$sqlResult = $this->openDB->query($sql);
+		$sqlResult = $this->db->query($sql, array($ID, $ID2));
 
-		if (!$sqlResult['result']) {
+		if ($sqlResult->error()) {
 			errorHandle::newError(__METHOD__."() - Error determing revision duplication", errorHandle::DEBUG);
-			return(FALSE);
+			errorHandle::newError(__METHOD__."() - ".$sqlResult->errorMsg(), errorHandle::DEBUG);
+			return FALSE;
 		}
 
-		$row = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC);
-
-		if($row["COUNT(*)"] > 0) return(TRUE);
+		if ($sqlResult->fetchField() > 0) {
+			return TRUE;
+		}
 		/* ** End Count Check ** */
 
 		// Do the insert
-		$sql = sprintf("INSERT INTO %s (SELECT * FROM %s WHERE %s='%s' AND %s='%s' LIMIT 1)",
-			$this->openDB->escape($this->revisionTable),
-			$this->openDB->escape($this->productionTable),
-			$this->openDB->escape($this->primaryID),
-			$this->openDB->escape($ID),
-			$this->openDB->escape($this->secondID),
-			$this->openDB->escape($ID2)
+		$sql = sprintf("INSERT INTO `%s` (SELECT * FROM `%s` WHERE `%s`=? AND `%s`=? LIMIT 1)",
+			$this->db->escape($this->revisionTable),
+			$this->db->escape($this->productionTable),
+			$this->db->escape($this->primaryID),
+			$this->db->escape($this->secondID)
 		);
 
-		$sqlResult = $this->openDB->query($sql);
-		
-		if (!$sqlResult['result']) {
-			errorHandle::newError("Error copying row to revisions table. sql:".$sql." sql Error = ".$sqlResult['error'], errorHandle::CRITICAL);
-			return(FALSE);
+		$sqlResult = $this->db->query($sql, array($ID, $ID2));
+
+		if ($sqlResult->error()) {
+			errorHandle::newError("Error copying row to revisions table. sql: ".$sql." sql Error = ".$sqlResult->errorMsg(), errorHandle::CRITICAL);
+			return FALSE;
 		}
-		
-		return(TRUE);
+
+		return TRUE;
 	}
 
 	/**
@@ -151,23 +147,21 @@ class revisionControl {
 	 *        value of $secondary
 	 * @return bool
 	 */
-	public function revert2Revision($ID,$ID2) {
-		$sql = sprintf("REPLACE INTO %s (SELECT * FROM %s WHERE %s='%s' AND %s='%s' LIMIT 1)",
-			$this->openDB->escape($this->productionTable),
-			$this->openDB->escape($this->revisionTable),
-			$this->openDB->escape($this->primaryID),
-			$this->openDB->escape($ID),
-			$this->openDB->escape($this->secondID),
-			$this->openDB->escape($ID2));
-		$sqlResult = $this->openDB->query($sql);
-		
-		if (!$sqlResult['result']) {
-			errorHandle::newError("Error copying revision to production table. sql: ".$sql." sql Error = ".$sqlResult['error'], errorHandle::CRITICAL);
-			return(FALSE);
+	public function revert2Revision($ID, $ID2) {
+		$sql = sprintf("REPLACE INTO `%s` (SELECT * FROM `%s` WHERE `%s`=? AND `%s`=? LIMIT 1)",
+			$this->db->escape($this->productionTable),
+			$this->db->escape($this->revisionTable),
+			$this->db->escape($this->primaryID),
+			$this->db->escape($this->secondID)
+		);
+		$sqlResult = $this->db->query($sql, array($ID, $ID2));
+
+		if ($sqlResult->error()) {
+			errorHandle::newError("Error copying revision to production table. sql: ".$sql." sql Error = ".$sqlResult->errorMsg(), errorHandle::CRITICAL);
+			return FALSE;
 		}
-		
-		return(TRUE);
-		
+
+		return TRUE;
 	}
 
 	/**
@@ -184,23 +178,21 @@ class revisionControl {
 	 *            if a function chat function must take an argument, which is the value of the field.
 	 * @return bool|string
 	 */
-	public function generateRevistionTable($ID,$revisionDisplayFields) {
-	
-		$sql = sprintf("SELECT * FROM %s WHERE %s='%s'",
-			$this->openDB->escape($this->revisionTable),
-			$this->openDB->escape($this->primaryID),
-			$ID
-			);
+	public function generateRevistionTable($ID, $revisionDisplayFields) {
+		$sql = sprintf("SELECT * FROM `%s` WHERE `%s`=?",
+			$this->db->escape($this->revisionTable),
+			$this->db->escape($this->primaryID)
+		);
 
-		$sqlResult = $this->openDB->query($sql);
+		$sqlResult = $this->db->query($sql, array($ID));
 
-		if (!$sqlResult['result']) {
-			errorHandle::newError("Error retrieving revision information. sql: ".$sql." SQL ERROR: ".$sqlResult['error'], errorHandle::DEBUG);
+		if ($sqlResult->error()) {
+			errorHandle::newError("Error retrieving revision information. sql: ".$sql." SQL ERROR: ".$sqlResult->errorMsg(), errorHandle::DEBUG);
 			errorHandle::errorMsg("Error retrieving revision information.");
-			return(FALSE);
+			return FALSE;
 		}
-		
-		if ($sqlResult['numRows'] == 0) {
+
+		if ($sqlResult->rowCount() == 0) {
 			$error = TRUE;
 			errorHandle::errorMsg("No Revisions found for this item.");
 		}
@@ -209,7 +201,7 @@ class revisionControl {
 		$tableHeaders = array();
 		$firstItem    = TRUE;
 
-		if ($this->displayRevert === TRUE) { 
+		if ($this->displayRevert === TRUE) {
 			$tableHeaders[] = "Revert";
 		}
 
@@ -218,21 +210,19 @@ class revisionControl {
 			$tableHeaders[] = "Compare 2";
 		}
 
-		while ($row = mysql_fetch_array($sqlResult['result'],  MYSQL_ASSOC)) { // while 1
-
+		while ($row = $sqlResult->fetch()) { // while 1
 			$temp = array();
 
 			if ($this->displayRevert === TRUE) {
-				$temp["Revert"]    = '<input type="radio" name="revert"   value='.$row[$this->secondID].' />'; 
+				$temp["Revert"]    = '<input type="radio" name="revert"   value='.$row[$this->secondID].'>';
 			}
 
 			if ($this->displayCompare === TRUE) {
-				$temp["Compare 1"] = '<input type="radio" name="compare1" value='.$row[$this->secondID].' />'; 
-				$temp["Compare 2"] = '<input type="radio" name="compare2" value='.$row[$this->secondID].' />'; 
+				$temp["Compare 1"] = '<input type="radio" name="compare1" value='.$row[$this->secondID].'>';
+				$temp["Compare 2"] = '<input type="radio" name="compare2" value='.$row[$this->secondID].'>';
 			}
-			
-			foreach ($revisionDisplayFields as $I=>$V) { // foreach 1
-					
+
+			foreach ($revisionDisplayFields as $I => $V) { // foreach 1
 				if ($firstItem === TRUE) {
 					$tableHeaders[] = $V['label'];
 				}
@@ -243,26 +233,26 @@ class revisionControl {
 						if (isset($V['translation'][$value])) {
 							$value = $V['translation'][$value];
 						}
-						} // is array
-						else if (is_function($V['translation'])) {
-							$value = $V['translation']($value);
-						}
+					} // is array
+					else if (is_function($V['translation'])) {
+						$value = $V['translation']($value);
 					}
-					
-					$temp[$V['label']] = $value;
+				}
+
+				$temp[$V['label']] = $value;
 			} // foreach 1
+
 			$revArray[] = $temp;
-			$firstItem  = FALSE;
+			$firstItem = FALSE;
 		} // while 1
-			
+
 		$table = new tableObject("array");
 
 		$table->summary = "Revisions Table";
 		$table->sortable = FALSE;
 		$table->headers($tableHeaders);
 
-		return($table->display($revArray));
-
+		return $table->display($revArray);
 	}
 
 	/**
@@ -272,53 +262,47 @@ class revisionControl {
 	 * @param $ID2
 	 * @return bool
 	 */
-	public function revertSubmit($ID,$ID2) {
-	
+	public function revertSubmit($ID, $ID2) {
 		// begin database transactions
-		$result = $this->openDB->transBegin($this->openDB->escape($this->productionTable));
+		$result = $this->db->beginTransaction();
 		if ($result !== TRUE) {
 			errorHandle::errorMsg("Transaction could not begin.");
-			return(FALSE);
+			return FALSE;
 		}
-		
+
 		// first we move the current production value into the modified table
-		$prod2RevResult = $this->insertRevision($ID,$ID2);
+		$prod2RevResult = $this->insertRevision($ID, $ID2);
 
 		if ($prod2RevResult === FALSE) {
 			errorHandle::newError("Error Copying row from production to revision tables", errorHandle::DEBUG);
 			errorHandle::errorMsg("Error reverting to previous revision.");
 
 			// roll back database transaction
-			$this->openDB->transRollback();
-			$this->openDB->transEnd();
-			
-			return(FALSE);
+			$this->db->rollback();
+
+			return FALSE;
 		}
 
 		// second we move the selected modified value to the production table
-		$rev2ProdResult = $this->revert2Revision($ID,$ID2);
+		$rev2ProdResult = $this->revert2Revision($ID, $ID2);
 
 		if ($rev2ProdResult === FALSE) {
-
 			errorHandle::newError("Error Copying row from revision to production tables", errorHandle::DEBUG);
 			errorHandle::errorMsg("Error reverting to previous revision.");
 
 			// roll back database transactions
-			$this->openDB->transRollback();
-			$this->openDB->transEnd();
-			
-			return(FALSE);
+			$this->db->rollback();
+
+			return FALSE;
 		}
 
 		// commit database transactions
-		$this->openDB->transCommit();
-		$this->openDB->transEnd();
-		
+		$this->db->commit();
+
 		errorHandle::successMsg("Successfully reverted to revision.");
-		
-		return(TRUE);
+
+		return TRUE;
 	}
 
 }
-
 ?>
