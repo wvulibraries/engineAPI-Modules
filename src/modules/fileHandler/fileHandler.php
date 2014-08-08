@@ -291,7 +291,7 @@ class fileHandler {
 
 		$output = NULL;
 
-		$output .= '<form method="post" action="'.$_SERVER['PHP_SELF'].'?'.$_SERVER['QUERY_STRING'].'&uploadID='.(sessionGet("fileUploadID")).'" enctype="multipart/form-data">';
+		$output .= '<form method="post" action="'.$_SERVER['PHP_SELF'].'?'.$_SERVER['QUERY_STRING'].'&uploadID='.(session::get("fileUploadID")).'" enctype="multipart/form-data">';
 		$output .= '<input type="file" name="'.$name.'[]" id="'.$name.'_fileInsert" '.(($multiple)?'multiple':'').' />';
 
 		if (!isnull($hiddenFields)) {
@@ -836,7 +836,7 @@ class fileHandler {
 	 * @return string
 	 **/
 	public function getMimeType($file_path, $defaultMimeType='application/force-download', $realFilename=NULL){
-        
+
         $enginevars = enginevars::getInstance();
 
         $mimeType = $defaultMimeType;
