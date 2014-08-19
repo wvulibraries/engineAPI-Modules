@@ -404,6 +404,10 @@ class formBuilderTemplate {
 				// Build the <form> tag
 				if(!isset($this->renderOptions['noFormTag']) || !$this->renderOptions['noFormTag']){
 
+					// Add rel and rev attributes
+					if(isset($this->renderOptions['rel'])) $attrPairs['rel'] = $this->renderOptions['rel'];
+					if(isset($this->renderOptions['rev'])) $attrPairs['rev'] = $this->renderOptions['rev'];
+
 					// If we have browser validation turned off, add the attribute to <form>
 					if(!$this->formBuilder->browserValidation) $attrPairs['novalidate'] = '';
 
