@@ -38,7 +38,7 @@ class state {
 		$this->id   = $this->genID($id);
 
 	}
-	
+
 	/**
 	 * Set a variable in the session
 	 *
@@ -49,12 +49,12 @@ class state {
 	 * @return bool
 	 */
 	public function setVariable($var,$data = NULL) {
-	
+
 		$varArray = $this->genVarArray($var);
-		return(sessionSet($varArray,$data));
-		
+		return(session::set($varArray,$data));
+
 	}
-	
+
 	/**
 	 * Returns the data stored in $var from the session
 	 *
@@ -65,10 +65,10 @@ class state {
 	public function getVariable($var) {
 
 		$varArray = $this->genVarArray($var);
-		return(sessionGet($varArray));
-		
+		return(session::get($varArray));
+
 	}
-	
+
 	/**
 	 * Sets the internal states array to the passes array
 	 *
@@ -83,7 +83,7 @@ class state {
 		}
 		return(FALSE);
 	}
-	
+
 	/**
 	 * Set the current state of the application
 	 * Useful for flow control that is out of the scope of simple linear operations
@@ -112,7 +112,7 @@ class state {
 	public function getCurrentState() {
 		return($this->getVariable($this->stateVarName));
 	}
-	
+
 	/**
 	 * Executes the function assigned to the current state
 	 * Returns whatever the callback function returns, false if that function does not exist
@@ -120,7 +120,7 @@ class state {
 	 * @return bool|mixed
 	 */
 	public function execute() {
-		
+
 		$prevState = $this->getCurrentState();
 		if (is_null($prevState)) {
 			$currentState = array_getFirstIndex($this->states);
@@ -128,7 +128,7 @@ class state {
 		else {
 			$currentState = array_nextIndex($this->states,$prevState);
 		}
-		
+
 		$this->setCurrentState($currentState);
 
 		if (!isset($this->states[$currentState]) || !functionExists($this->states[$currentState])) {
@@ -138,7 +138,7 @@ class state {
 		$output = call_user_func($this->states[$currentState]);
 
 		return($output);
-		
+
 	}
 
 	/**
@@ -160,29 +160,29 @@ class state {
 	public function getID() {
 		return($this->id);
 	}
-	
+
 	/**
-	 * Generates the array that gets passes to sessionSet or sessionGet for setting/retrieving variables
+	 * Generates the array that gets passes to session::set or session::get for setting/retrieving variables
 	 *
 	 * @todo Doesn't actually generate an array???
 	 * @param $var
 	 * @return string
 	 */
 	private function genVarArray($var) {
-		
+
 		// sending back a string, the array was getting replaced incorrectly
-		
+
 		// $varArray = array();
-		// 	
+		//
 		// $varArray[] = $this->name;
 		// $varArray[] = $this->id;
 		// $varArray[] = $var;
-		
+
 		$sessionVar = $this->name."_".$this->id."_".$var;
-		
+
 		return($sessionVar);
 	}
-	
+
 }
 
 ?>
