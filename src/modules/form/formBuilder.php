@@ -146,6 +146,11 @@ class formBuilder{
 	public $expandable = TRUE;
 
 	/**
+	 * @var string URL which will be used for the <form>'s action
+	 */
+	public $formAction;
+
+	/**
 	 * Class constructor
 	 *
 	 * @param string $formName

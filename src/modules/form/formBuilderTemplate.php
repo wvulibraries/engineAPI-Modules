@@ -425,7 +425,23 @@ class formBuilderTemplate {
 						$attrs[] = 'data-'.$attr.'="'.addslashes($value).'"';
 					}
 
-					$output .= sprintf('<form method="post"%s>', (sizeof($attrs) ? ' '.implode(' ', $attrs): ''));
+					// Catch formAction
+					if($this->formBuilder->formAction || isset($this->renderOptions['action'])){
+						$action = isset($this->renderOptions['action'])
+							? $this->renderOptions['action']
+							: $this->formBuilder->formAction;
+						$actionText = 'action="'.$action.'"';
+					}
+
+					// Build attrText
+					$attrText = sizeof($attrs)
+						? ' '.implode(' ', $attrs)
+						: '';
+
+					// Generate <form> tag
+					$output .= sprintf('<form %s method="post" %s>',
+						$actionText,
+						$attrText);
 				}
 
 				// Include the formName
