@@ -426,6 +426,7 @@ class formBuilderTemplate {
 					}
 
 					// Catch formAction
+					$actionText = '';
 					if($this->formBuilder->formAction || isset($this->renderOptions['action'])){
 						$action = isset($this->renderOptions['action'])
 							? $this->renderOptions['action']
