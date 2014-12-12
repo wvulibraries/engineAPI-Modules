@@ -221,7 +221,7 @@ class formBuilderTemplate {
 		// Catch any sql error
 		if($sqlResult->errorCode()){
 			errorHandle::newError(__METHOD__."() SQL Error: {$sqlResult->errorCode()}:{$sqlResult->errorMsg()}", errorHandle::HIGH);
-			die('Internal database error!');
+			return 'Internal database error!';
 		}
 
 		// Save the number of rows for {rowCount}
