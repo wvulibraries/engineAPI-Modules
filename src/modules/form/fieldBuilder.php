@@ -270,7 +270,7 @@ class fieldBuilder{
 				$time = new time;
 				return $time->toSeconds($value);
 			case 'password':
-				return mhash($this->hash, $value);
+				return hash($this->hash, $value);
 			default:
 				return $value;
 		}
