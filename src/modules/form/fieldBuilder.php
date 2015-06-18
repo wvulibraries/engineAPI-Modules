@@ -55,7 +55,7 @@
  *  - checkbox    Checkbox group
  *    - options   Array of value->label pairs to be displayed
  *  - color       HTML5 color picker    *dependant on browser support*
- *  - date        HTML5 date picker     *dependant on browser support*
+ *  - date        HTML5 date picker     *dependant on browser support* -- Converts and saves as unix time (using strtotime)
  *  - datetime    HTML5 datetime picker *dependant on browser support*
  *  - dropdown    Alias for 'select'
  *  - email       HTML5 email field
