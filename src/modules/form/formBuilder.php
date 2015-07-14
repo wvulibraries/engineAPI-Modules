@@ -140,6 +140,8 @@ class formBuilder{
 	 */
 	public $submitTextEdit = 'Update';
 
+	public $submitFieldCSSEdit = "";
+
 	/**
 	 * @var bool editTable expandable
 	 */
@@ -554,7 +556,7 @@ class formBuilder{
 	 * @param string $buttonText
 	 * @return bool Returns TRUE if a field was added, FALSE otherwise
 	 */
-	private function addFormSubmit($buttonText){
+	private function addFormSubmit($buttonText,$fieldCSS = ""){
 		foreach ($this->fields as $field) {
 			if ($field->type == 'submit') return FALSE;
 		}
@@ -563,6 +565,7 @@ class formBuilder{
 			'type'   => 'submit',
 			'name'   => 'submit',
 			'value'  => $buttonText,
+			'fieldCSS' => $fieldCSS,
 			'showIn' => array(self::TYPE_INSERT, self::TYPE_UPDATE),
 		);
 
@@ -921,7 +924,7 @@ class formBuilder{
 		}
 
 		// Add a submit button if one does not exist
-		$submitAdded = $this->addFormSubmit($this->submitTextEdit);
+		$submitAdded = $this->addFormSubmit($this->submitTextEdit,$this->submitFieldCSSEdit);
 
 		// Set default title if needed
 		if (!isset($options['title'])) $options['title'] = $this->editTitle;
