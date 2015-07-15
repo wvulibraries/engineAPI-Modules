@@ -104,8 +104,11 @@ class formBuilderTemplate {
 			if(isset($this->renderOptions['expandable']) && $this->renderOptions['expandable']){
 				// Expandable enabled: only remove the {ifExpandable} and {/ifExpandable} tags
 				$block = preg_replace('|{/?ifExpandable}|i', '', $block);
-			}else{
+				$block = preg_replace('|{noShowExpandable(.*?)}(.+?){/noShowExpandable}|ism', '', $block);
+			}
+			else{
 				// Expandable disabled: remove entire {ifExpandable} block
+				$block = preg_replace('|{/?noShowExpandable}|i', '', $block);
 				$block = preg_replace('|{ifExpandable(.*?)}(.+?){/ifExpandable}|ism', '', $block);
 			}
 

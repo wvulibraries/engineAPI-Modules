@@ -909,10 +909,12 @@ class formBuilder{
 	 * @return string
 	 */
 	public function displayEditTable($options = array()){
+
 		if(!$this->ensurePrimaryFieldsSet()) return 'Misconfigured formBuilder!';
 
 		// Apply expandable default
-		if(!isset($options['expandable'])) $options['expandable'] = $this->expandable;
+		// if(!isset($options['expandable'])) $options['expandable'] = $this->expandable;
+		$options['expandable'] = ($this->expandable ? TRUE : FALSE);
 
 		// Handle the case where expandable is TRUE, but all the fields are in the editStrip (negating the need to expand)
 		if($options['expandable']){
