@@ -855,6 +855,7 @@ class fieldBuilder{
 		$this->field['type'] = 'submit';
 		$output = $this->__render_input();
 		$this->field['type'] = $type;
+		$this->field['name'] = "delete";
 
 		return $output;
 	}
