@@ -64,6 +64,7 @@
  *  - image       HTML5 image field *dependant on browser support*
  *  - month       HTML5 month picker *dependant on browser support*
  *  - multiSelect multiSelect field *requires linkedTo be defined*
+ *  - multiText   Dynamic Text Field that allows you to add multiple inputs *requires a linked Table and js plugins*
  *  - number      HTML5 number field *dependant on browser support*
  *  - password    Password field (will render a confirmation field as well)
  *  - plaintext   Plaintext field with support for text-replacements *note: replacements are case sensitive*
@@ -327,14 +328,16 @@ class fieldBuilder{
 	public function getAssets(){
 		$assets = array();
 
-		// Add assets for specific field types
-		switch($this->field['type']){
-			case 'multiselect':
+		if($this->field['type'] == 'multiselect'){
 				$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multi-select.css';
 				$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multi-select.js';
+		} elseif ($this->field['type'] == 'multitext') {
+				$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multiText.css';
+				$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multiText.js';
+		} else {
+			 // do nothing
 		}
 
-		// Add assets for specific field options
 		$help = $this->field['help'];
 		if(sizeof($help)){
 			switch(@$help['type']){
@@ -858,6 +861,53 @@ class fieldBuilder{
 
 		return $output;
 	}
+
+	/**
+	 * [Render Helper] Render a Multiple Text Input
+	 * Has Dynamic Buttons and JS Dependencies
+	 * @return string
+	 */
+	private function __render_multiText(){
+		$this->renderOptions['multiple'] = TRUE;
+		$value = $this->getFieldOption('value');
+		$type  = $this->field['type'];
+		$name  = $this->getFieldOption('name');
+
+		$html  = sprintf('<div id="%s" class="multi-text-outerContainer">
+							<div class="multi-text-container initial-multiText">
+								<label class="multi-text-label">
+									<input type="checkbox" class="default-choice-checkbox" name="%s[%s][0]" value="0">
+									<span class="default-choice">
+										<svg class="icon">
+											<use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#check"></use>
+										</svg>
+									</span>
+								</label>
+
+								<input name="%s[]" class="input-element" type="text" data-default="false" value="%s">
+
+								<button name="add" class="add-choice" type="button" title="Add a choice.">
+									<svg class="icon"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#plus"></use>]</svg>
+								</button>
+
+								<button name="remove" class="remove-choice" type="button" title="Remove this choice.">
+									<svg class="icon" viewBox="0 0 20 20"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#close"></use></svg>
+								</button>
+				    		</div>
+				    	</div>
+				    	<script>$("#%s").multiText({"name":"%s"});</script>',
+			$this->getFieldOption('fieldID'),
+			$this->getFieldOption('name'),
+			"default",
+			$this->getFieldOption('name'),
+			str_replace('"', '&quot;', $value),
+			$this->getFieldOption('fieldID'),
+			$this->getFieldOption('name')
+		);
+
+		return $html;
+	}
+
 
 	/**
 	 * Build the attribute pairs for the label element
