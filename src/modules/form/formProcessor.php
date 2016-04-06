@@ -395,16 +395,22 @@ class formProcessor{
 		try{
 			$updateFields = array();
 			$whereFields  = array();
-			foreach($data as $field => $value){
-				$field = $this->fields->getField($field);
-				if(!($field instanceof fieldBuilder)) continue;
+			$multiTextFields = array();
 
-				if($field->usesLinkTable()){
+			foreach($data as $field => $value){
+			  $field = $this->fields->getField($field);
+			  if(!($field instanceof fieldBuilder)) continue;
+
+
+			  if ($field->type == "multitext") {
+			    // save this field for later after we get an ID
+			    // similar usage for linked table
+			    $multiTextFields[] = $field;
+			  } elseif($field->usesLinkTable()){
 					// Process the link table, no local field to process
 					$this->processLinkedField($field, $data);
-				}else{
+				} else{
 					// Field doesn't use a link field, normalize arrays for single query
-
 					// Format the value accorting to the field
 					$value = $field->formatValue($value);
 
@@ -434,6 +440,16 @@ class formProcessor{
 				}
 			}
 
+			if(sizeof($multiTextFields)){
+						foreach($multiTextFields as $mtField){
+							$this->processMultiText($mtField, $data, $this->insertID);
+						}
+
+						die;
+					}
+			}
+
+
 			// Commit the transaction
 			$this->db->commit();
 
@@ -451,6 +467,24 @@ class formProcessor{
 		// If we're here then all went well!
 		return self::ERR_OK;
 	}
+
+
+	/**
+	 * @param fieldBuilder $field
+	 * @param              $formData
+	 * @param $linkID - Id of the previous insert or the parent form
+	 * @return int
+	 * @throws Exception
+	 */
+	private function dependentMultiText(fieldBuilder $field, $formData, $linkID){
+	  // get information from an array
+	  $settings = $field->__get('multiTextSettings');
+
+	  var_dump($formData);
+
+	  die;
+	}
+
 
 	/**
 	 * @param fieldBuilder $field
