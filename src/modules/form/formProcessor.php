@@ -305,16 +305,22 @@ class formProcessor{
 		$this->db->beginTransaction();
 
 		try{
-			$fields = array();
+			$fields                 = array();
 			$deferredLinkedToFields = array();
+			$multiTextFields        = array();
+
 			foreach($data as $field => $value){
 				$field = $this->fields->getField($field);
 				if(!($field instanceof fieldBuilder)) continue;
 
-				if($field->usesLinkTable()){
-					// Process the link table, no local field to process
-					$deferredLinkedToFields[] = $field;
-				}else{
+				if ($field->type == "multitext") {
+	  			    // save this field for later after we get an ID
+	  			    // similar usage for linked table
+	  			    $multiTextFields[] = $field;
+	  			} else if($field->usesLinkTable()) {
+  					// Process the link table, no local field to process
+	  				$deferredLinkedToFields[] = $field;
+	  			} else {
 					// Don't add this field if it's NULL
 					if (isnull($data[ $field->name ])) continue;
 
@@ -336,6 +342,13 @@ class formProcessor{
 
 				// Save the insertID for later usage
 				$this->insertID = $stmt->insertId();
+
+				// process multi text fields if there are some
+				if(sizeof($multiTextFields)){
+					foreach($multiTextFields as $mtField){
+						$this->processMultiText($mtField, $data, $this->insertID);
+					}
+				}
 
 				// If there's any deferred linkedTo fields, process them
 				if(sizeof($deferredLinkedToFields)){
@@ -393,19 +406,19 @@ class formProcessor{
 		$this->db->beginTransaction();
 
 		try{
-			$updateFields = array();
-			$whereFields  = array();
+			$updateFields    = array();
+			$whereFields     = array();
 			$multiTextFields = array();
 
 			foreach($data as $field => $value){
 			  $field = $this->fields->getField($field);
 			  if(!($field instanceof fieldBuilder)) continue;
 
-
 			  if ($field->type == "multitext") {
 			    // save this field for later after we get an ID
 			    // similar usage for linked table
 			    $multiTextFields[] = $field;
+				die;
 			  } elseif($field->usesLinkTable()){
 					// Process the link table, no local field to process
 					$this->processLinkedField($field, $data);
@@ -440,16 +453,6 @@ class formProcessor{
 				}
 			}
 
-			if(sizeof($multiTextFields)){
-						foreach($multiTextFields as $mtField){
-							$this->processMultiText($mtField, $data, $this->insertID);
-						}
-
-						die;
-					}
-			}
-
-
 			// Commit the transaction
 			$this->db->commit();
 
@@ -476,13 +479,56 @@ class formProcessor{
 	 * @return int
 	 * @throws Exception
 	 */
-	private function dependentMultiText(fieldBuilder $field, $formData, $linkID){
-	  // get information from an array
-	  $settings = $field->__get('multiTextSettings');
+	private function processMultiText(fieldBuilder $field, $formData, $linkID){
+		// get information from an array
+		$db        = $this->db;
+		$settings  = $field->__get('multiTextSettings');
+		$fieldName = $field->__get('name');
 
-	  var_dump($formData);
+		$multiTextData = $formData[$fieldName]['value'];
+		$defaults      = $formData[$fieldName]['default'];
 
-	  die;
+		// reformat the data to be inserted
+		$tempArray = array();
+		foreach ($multiTextData as $key => $value) {
+			$default = in_array($key, $defaults) ?  1 : 0;
+			$tempArray[] = array($value, $default);
+		}
+
+		// insert the data into the table grabbed from the $settings
+		$dataForLinkTable = array();
+
+
+		foreach ($tempArray as $insertData){
+
+			$insertSQL = sprintf('INSERT INTO `%s` (%s) VALUES(?,?)',
+				$db->escape($settings['foreignTable']),
+				$db->escape($settings['foreignColumns'])
+			);
+
+			$addedStmt = $db->query($insertSQL, $insertData);
+
+			if($addedStmt->errorCode()){
+				errorHandle::newError(__METHOD__."() SQL Error: {$addedStmt->errorCode()}:{$addedStmt->errorMsg()}! (SQL: $insertSQL)", errorHandle::DEBUG);
+				throw new Exception('Internal database error!');
+				return self::ERR_SYSTEM;
+			}
+
+			$dataForLinkTable[] = $addedStmt->insertId();
+		}
+
+		// Replace Field with LinkID's
+		$formData[$fieldName] = $dataForLinkTable;
+
+		// setup primary key for link table
+		$primaryField = array_shift($this->fields->listPrimaryFields()); // Shift 1st item off the array, ensures we get the 1st defined primary field
+		$formData[ $primaryField ] = $linkID;
+
+		// process the links
+		$this->processLinkedField($field, $formData);
+
+		// we did it yay!
+		return self::ERR_OK;
 	}
 
 
