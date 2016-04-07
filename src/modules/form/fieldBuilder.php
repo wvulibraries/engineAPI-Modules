@@ -884,7 +884,7 @@ class fieldBuilder{
 									</span>
 								</label>
 
-								<input name="%s[]" class="input-element" type="text" data-default="false" value="%s">
+								<input name="%s[%s][]" class="input-element" type="text" data-default="false" value="%s">
 
 								<button name="add" class="add-choice" type="button" title="Add a choice.">
 									<svg class="icon"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#plus"></use>]</svg>
@@ -900,6 +900,7 @@ class fieldBuilder{
 			$this->getFieldOption('name'),
 			"default",
 			$this->getFieldOption('name'),
+			"value", 
 			str_replace('"', '&quot;', $value),
 			$this->getFieldOption('fieldID'),
 			$this->getFieldOption('name')

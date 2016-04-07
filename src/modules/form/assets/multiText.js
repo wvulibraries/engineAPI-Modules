@@ -60,7 +60,7 @@
 	      			html += '<svg class="icon"><use xlink:href="#check"/></svg>';
 	      			html += '</span></label>'
 	      			// input text box
-	      			html += '<input name="'+name+'[]" class="input-element" type="text" data-default="false">';
+	      			html += '<input name="'+name+'[value][]" class="input-element" type="text" data-default="false">';
 	      			// add button
 	      			html += '<button name="add" class="add-choice" type="button" title="Add a choice."><svg class="icon"><use xlink:href="#plus"/></svg></button>';
 	      			// remove button
@@ -127,4 +127,3 @@
     };
 
 })(jQuery, window, document);
-
