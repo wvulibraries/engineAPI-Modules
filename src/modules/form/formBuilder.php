@@ -583,7 +583,7 @@ class formBuilder{
 	 * @param string $buttonText
 	 * @return bool Returns TRUE if a field was added, FALSE otherwise
 	 */
-	private function addFormDelete($buttonText){
+	private function addFormDelete($buttonText, $fieldCSS = ""){
 		foreach ($this->fields as $field) {
 			if ($field->type == 'delete') return FALSE;
 		}
