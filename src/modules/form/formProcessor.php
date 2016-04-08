@@ -418,7 +418,6 @@ class formProcessor{
 			    // save this field for later after we get an ID
 			    // similar usage for linked table
 			    $multiTextFields[] = $field;
-				die;
 			  } elseif($field->usesLinkTable()){
 					// Process the link table, no local field to process
 					$this->processLinkedField($field, $data);
