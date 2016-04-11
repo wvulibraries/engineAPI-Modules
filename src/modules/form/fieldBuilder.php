@@ -64,7 +64,7 @@
  *  - image       HTML5 image field *dependant on browser support*
  *  - month       HTML5 month picker *dependant on browser support*
  *  - multiSelect multiSelect field *requires linkedTo be defined*
- *  - multiText   Dynamic Text Field that allows you to add multiple inputs *requires a linked Table and js plugins*
+ *  - multiText   Dynamic Text Field that allows you to add multiple inputs *requires a linked Table and js plugins* **See documentation**
  *  - number      HTML5 number field *dependant on browser support*
  *  - password    Password field (will render a confirmation field as well)
  *  - plaintext   Plaintext field with support for text-replacements *note: replacements are case sensitive*
@@ -153,6 +153,11 @@ class fieldBuilder{
 	private $renderType;
 
 	/**
+	 * @var string formID of the main Form
+	 */
+	private $formID;
+
+	/**
 	 * Class constructor
 	 *
 	 * @param array $field
@@ -183,6 +188,23 @@ class fieldBuilder{
 	public function toSqlSnippet(){
 		return "`{$this->name}`=?";
 	}
+
+	/**
+	 * sets the renderType from formbuildertemplates
+	 * @param $type = Insert, Update, Edit Etc
+	 */
+	public function setRenderType($type){
+		$this->renderType = $type;
+	}
+
+	/**
+	 * sets the renderType from formbuildertemplates
+	 * @param $type = Insert, Update, Edit Etc
+	 */
+	public function setFormID($id){
+		$this->formID = $id;
+	}
+
 
 	/**
 	 * Returns TRUE if this is a 'special' field like a button
@@ -869,21 +891,52 @@ class fieldBuilder{
 	 */
 	private function __render_multiText(){
 		$this->renderOptions['multiple'] = TRUE;
-		$value = $this->getFieldOption('value');
-		$type  = $this->field['type'];
-		$name  = $this->getFieldOption('name');
 
+		// generate form / field information
+		$formType = $this->renderType;
+		$formID   = $this->formID;
+
+		$value    = $this->getFieldOption('value');
+		$name     = $this->getFieldOption('name');
+		$fieldID  = $this->getFieldOption('fieldID');
 		$linkedTo = $this->getFieldOption('linkedTo');
 
-		$debug = "\r\n".__METHOD__."() -------------------------------------";
-		$debug .= var_export($linkedTo, true);
-		$debug .= "\r\n"."-------------------------------------"."\r\n";
-		$fp = file_put_contents('/vagrant/debug.txt', $debug, FILE_APPEND);
+		// create the field based on the type of field
+		// can only be update(2) or insert (1)
+		if($formType === 1){
+			// generate a single row because there are now values yet
+			// easy one
+			$output = $this->generateMultiTextHTML($fieldID, $name, $value);
+		} elseif($formType === 2) {
+			// use link table to generate a list of id's
 
+			// get the foreign table information
+		}
+
+		// Init the JS Once
+		$output .= sprintf('<script>$("#%s").multiText({"name":"%s"});</script>',
+			$this->getFieldOption('fieldID'),
+			$this->getFieldOption('name')
+		);
+
+
+
+
+		return $output;
+	}
+
+	/**
+	 * seperating the concerns of the MultiText Functions
+	 * returns a string of HTML that can be re-used for different purposes in the __render_multiText function
+	 *
+	 * @return string
+	 */
+
+	private function generateMultiTextHTML($fieldID, $name, $value = "", $checked = false, $num = 0){
 		$html  = sprintf('<div id="%s" class="multi-text-outerContainer">
 							<div class="multi-text-container initial-multiText">
 								<label class="multi-text-label">
-									<input type="checkbox" class="default-choice-checkbox" name="%s[%s][0]" value="0">
+									<input type="checkbox" class="default-choice-checkbox" name="%s[%s][%s]" value="0" %s>
 									<span class="default-choice">
 										<svg class="icon">
 											<use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#check"></use>
@@ -891,7 +944,7 @@ class fieldBuilder{
 									</span>
 								</label>
 
-								<input name="%s[%s][]" class="input-element" type="text" data-default="false" value="%s">
+								<input name="%s[%s][%s]" class="input-element" type="text" data-default="false" value="%s">
 
 								<button name="add" class="add-choice" type="button" title="Add a choice.">
 									<svg class="icon"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#plus"></use>]</svg>
@@ -901,20 +954,81 @@ class fieldBuilder{
 									<svg class="icon" viewBox="0 0 20 20"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#close"></use></svg>
 								</button>
 				    		</div>
-				    	</div>
-				    	<script>$("#%s").multiText({"name":"%s"});</script>',
-			$this->getFieldOption('fieldID'),
-			$this->getFieldOption('name'),
+				    	</div>',
+			$fieldID,
+			$name,
 			"default",
-			$this->getFieldOption('name'),
+			$num,
+			($checked ? 'checked' : ''),
+			$name,
 			"value",
-			str_replace('"', '&quot;', $value),
-			$this->getFieldOption('fieldID'),
-			$this->getFieldOption('name')
+			$num,
+			str_replace('"', '&quot;', $value)
 		);
 
 		return $html;
 	}
+
+	private function multiTextlinkTable(){
+		// Get the linkedTo settings
+		$linkedTo = $this->getFieldOption('linkedTo');
+
+		// If no linkedTo settings, return FALSE
+		if(is_empty($linkedTo)) return FALSE;
+
+		// Pull out all the settings we need
+		$dbConnection     = isset($linkedTo['dbConnection'])     ? $linkedTo['dbConnection']     : 'appDB';
+
+		$foreignTable     = isset($linkedTo['foreignTable'])     ? $linkedTo['foreignTable']     : NULL;
+		$foreignKey       = isset($linkedTo['foreignKey'])       ? $linkedTo['foreignKey']       : 'ID';
+		$foreignLabel     = isset($linkedTo['foreignLabel'])     ? $linkedTo['foreignLabel']     : NULL;
+
+		$linkTable        = isset($linkedTo['linkTable'])        ? $linkedTo['linkTable']        : NULL;
+		$linkLocalField   = isset($linkedTo['linkLocalField'])   ? $linkedTo['linkLocalField']   : NULL;
+		$linkForeignField = isset($linkedTo['linkForeignField']) ? $linkedTo['linkForeignField'] : NULL;
+
+
+		// get the primary key value for the SQL Needed
+		$primaryField = array_shift($this->formFields->getPrimaryFields());
+		$primaryValue = $primaryField->value;
+
+		// Multi Text Items
+		$multiTextSettings = $this->getFieldOption('multiTextSettings');
+		$mtTable           = $multiTextSettings['foreignTable'];
+		$mtKey             = $multiTextSettings['foreignKey'];
+		$mtColumns         = $multiTextSettings['foreignColumns'];
+
+		// Get the db connection we'll be talking to
+		$db = db::getInstance()->$dbConnection;
+
+		$linkSQL = sprintf("SELECT %s FROM %s WHERE %s='%s'",
+			$db->escape($linkForeignField),
+			$db->escape($linkTable),
+			$db->escape($linkLocalField),
+			$db->escape($primaryValue)
+		);
+
+		// Run the SQL
+		$sqlResult = $db->query($linkSQL);
+		if($sqlResult->errorCode()){
+			errorHandle::newError(__METHOD__."() SQL Error: {$sqlResult->errorCode()}:{$sqlResult->errorMsg()} (SQL: $linkSQL)", errorHandle::DEBUG);
+			return FALSE;
+		}
+
+		$foreignSQL = sprintf('SELECT `%s`, `%s` FROM `%s`',
+			$db->escape($foreignKey),
+			$db->escape($foreignLabel),
+			$db->escape($foreignTable)
+		);
+
+		// Run the SQL
+		$sqlResult = $db->query($foreignSQL);
+		if($sqlResult->errorCode()){
+			errorHandle::newError(__METHOD__."() SQL Error: {$sqlResult->errorCode()}:{$sqlResult->errorMsg()} (SQL: $foreignSQL)", errorHandle::DEBUG);
+			return FALSE;
+		}
+	}
+
 
 
 	/**
