@@ -873,6 +873,13 @@ class fieldBuilder{
 		$type  = $this->field['type'];
 		$name  = $this->getFieldOption('name');
 
+		$linkedTo = $this->getFieldOption('linkedTo');
+
+		$debug = "\r\n".__METHOD__."() -------------------------------------";
+		$debug .= var_export($linkedTo, true);
+		$debug .= "\r\n"."-------------------------------------"."\r\n";
+		$fp = file_put_contents('/vagrant/debug.txt', $debug, FILE_APPEND);
+
 		$html  = sprintf('<div id="%s" class="multi-text-outerContainer">
 							<div class="multi-text-container initial-multiText">
 								<label class="multi-text-label">
@@ -900,7 +907,7 @@ class fieldBuilder{
 			$this->getFieldOption('name'),
 			"default",
 			$this->getFieldOption('name'),
-			"value", 
+			"value",
 			str_replace('"', '&quot;', $value),
 			$this->getFieldOption('fieldID'),
 			$this->getFieldOption('name')
