@@ -346,6 +346,10 @@ class formBuilderTemplate {
 		preg_match('/^{\w+(.+)}$/', $tag, $matches);
 		$attrPairs = attPairs($matches[1]);
 
+		// set form info in Field Builder
+		$field->setRenderType($this->formType);
+		$field->setFormID($this->formID);
+
 		// Restore value from POST if we weren't given it
 		if(isset($value)) {
 			$attrPairs['value'] = $value;
