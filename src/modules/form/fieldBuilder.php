@@ -906,8 +906,6 @@ class fieldBuilder{
 		$mtColumns         = $multiTextSettings['foreignColumns'];
 		$mtColumns         = explode(',',str_replace('`', '', $mtColumns));
 
-
-
 		// create the field based on the type of field
 		// can only be update(2) or insert (1)
 		if($formType === 1){
@@ -920,18 +918,12 @@ class fieldBuilder{
 			$multiTextValues = $this->renderOptions['multiTextValue'];
 
 			$output = "";
+			// generate the output HTML
 			foreach($multiTextValues as $key => $mtValue){
 				$checked = ($mtValue[$mtColumns[1]] == 1 ? true : false);
 				$field   = $mtValue[$mtColumns[0]];
-
-				$debug = __METHOD__."() \n\r-------------------------------------";
-				$debug .= var_export($checked, true);
-				$debug .= "-------------------------------------\n\r";
-				$fp = file_put_contents('/vagrant/debug.txt', $debug, FILE_APPEND);
 				$output .= $this->generateMultiTextHTML($fieldID, $name, $field, $checked,$key);
 			}
-
-			// get the foreign table information
 		}
 
 		// Init the JS Once
@@ -940,6 +932,7 @@ class fieldBuilder{
 			$this->getFieldOption('name')
 		);
 
+		// wrap into the coontainer
 		$htmlOutput = sprintf('<div id="%s" class="multi-text-outerContainer">%s</div>',
 			$this->getFieldOption('fieldID'),
 			$output
