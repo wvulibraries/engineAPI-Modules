@@ -31,6 +31,9 @@
         		$(defaults.element).append(this.multiTextHTML('initial'));
         	}
 
+            // check for checked boxes that were manually checked by html
+            this.checkActive();
+            
         	// addEvents
         	this.addEvents();
         },
@@ -68,6 +71,16 @@
 			html += '</div>';
 
 			return html;
+        },
+
+        checkActive:function(){
+            $('.default-choice-checkbox').each(function(){
+                if(this.checked){
+                	$(this).next('span').addClass('active');
+                } else {
+                	$(this).next('span').removeClass('active');
+                }
+            });
         },
 
         addEvents:function(){
