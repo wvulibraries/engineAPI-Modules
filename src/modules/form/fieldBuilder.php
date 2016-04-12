@@ -901,6 +901,13 @@ class fieldBuilder{
 		$fieldID  = $this->getFieldOption('fieldID');
 		$linkedTo = $this->getFieldOption('linkedTo');
 
+		// get MultiTextSettings
+		$multiTextSettings = $this->getFieldOption('multiTextSettings');
+		$mtColumns         = $multiTextSettings['foreignColumns'];
+		$mtColumns         = explode(',',str_replace('`', '', $mtColumns));
+
+
+
 		// create the field based on the type of field
 		// can only be update(2) or insert (1)
 		if($formType === 1){
@@ -909,6 +916,20 @@ class fieldBuilder{
 			$output = $this->generateMultiTextHTML($fieldID, $name, $value);
 		} elseif($formType === 2) {
 			// use link table to generate a list of id's
+			$this->setMultiTextLinkValues();
+			$multiTextValues = $this->renderOptions['multiTextValue'];
+
+			$output = "";
+			foreach($multiTextValues as $key => $mtValue){
+				$checked = ($mtValue[$mtColumns[1]] == 1 ? true : false);
+				$field   = $mtValue[$mtColumns[0]];
+
+				$debug = __METHOD__."() \n\r-------------------------------------";
+				$debug .= var_export($checked, true);
+				$debug .= "-------------------------------------\n\r";
+				$fp = file_put_contents('/vagrant/debug.txt', $debug, FILE_APPEND);
+				$output .= $this->generateMultiTextHTML($fieldID, $name, $field, $checked,$key);
+			}
 
 			// get the foreign table information
 		}
@@ -919,10 +940,12 @@ class fieldBuilder{
 			$this->getFieldOption('name')
 		);
 
+		$htmlOutput = sprintf('<div id="%s" class="multi-text-outerContainer">%s</div>',
+			$this->getFieldOption('fieldID'),
+			$output
+		);
 
-
-
-		return $output;
+		return $htmlOutput;
 	}
 
 	/**
@@ -932,9 +955,8 @@ class fieldBuilder{
 	 * @return string
 	 */
 
-	private function generateMultiTextHTML($fieldID, $name, $value = "", $checked = false, $num = 0){
-		$html  = sprintf('<div id="%s" class="multi-text-outerContainer">
-							<div class="multi-text-container initial-multiText">
+	private function generateMultiTextHTML($fieldID, $name, $value = "", $checked = 'false', $num = 0){
+		$html  = sprintf('<div class="multi-text-container initial-multiText">
 								<label class="multi-text-label">
 									<input type="checkbox" class="default-choice-checkbox" name="%s[%s][%s]" value="0" %s>
 									<span class="default-choice">
@@ -953,9 +975,7 @@ class fieldBuilder{
 								<button name="remove" class="remove-choice" type="button" title="Remove this choice.">
 									<svg class="icon" viewBox="0 0 20 20"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#close"></use></svg>
 								</button>
-				    		</div>
-				    	</div>',
-			$fieldID,
+				    		</div>',
 			$name,
 			"default",
 			$num,
@@ -969,7 +989,14 @@ class fieldBuilder{
 		return $html;
 	}
 
-	private function multiTextlinkTable(){
+	/**
+	 * This gets all of the SQL and Databse work done for the Linking of the MultiText values
+	 * Sets an array in renderingOptions for the different values that are associated with each of the fields.
+	 *
+	 * @return true or false
+	 */
+
+	private function setMultiTextLinkValues(){
 		// Get the linkedTo settings
 		$linkedTo = $this->getFieldOption('linkedTo');
 
@@ -1015,18 +1042,31 @@ class fieldBuilder{
 			return FALSE;
 		}
 
-		$foreignSQL = sprintf('SELECT `%s`, `%s` FROM `%s`',
-			$db->escape($foreignKey),
-			$db->escape($foreignLabel),
-			$db->escape($foreignTable)
-		);
+		// ID value information for next SQL Statements
+		$idValues = $sqlResult->fetchFieldAll();
 
-		// Run the SQL
-		$sqlResult = $db->query($foreignSQL);
-		if($sqlResult->errorCode()){
-			errorHandle::newError(__METHOD__."() SQL Error: {$sqlResult->errorCode()}:{$sqlResult->errorMsg()} (SQL: $foreignSQL)", errorHandle::DEBUG);
-			return FALSE;
+		$multiTextData = array();
+
+		foreach($idValues as $ids){
+			$sqlMultiTextData = sprintf("SELECT %s FROM %s WHERE %s='%s'",
+				$db->escape($mtColumns),
+				$db->escape($mtTable),
+				$db->escape($mtKey),
+				$db->escape($ids)
+			);
+
+			$multiTextSqlResult = $db->query($sqlMultiTextData);
+
+			if($multiTextSqlResult->errorCode()){
+				errorHandle::newError(__METHOD__."() SQL Error: {$multiTextSqlResult->errorCode()}:{$multiTextSqlResult->errorMsg()} (SQL: $sqlMultiTextData)", errorHandle::DEBUG);
+				return FALSE;
+			}
+
+			$multiTextData[] = $multiTextSqlResult->fetch();
 		}
+
+		$this->renderOptions['multiTextValue'] = $multiTextData;
+		return TRUE;
 	}
 
 
