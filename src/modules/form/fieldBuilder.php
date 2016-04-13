@@ -955,7 +955,7 @@ class fieldBuilder{
 	private function generateMultiTextHTML($fieldID, $name, $value = "", $checked = 'false', $num = 0){
 		$html  = sprintf('<div class="multi-text-container initial-multiText">
 								<label class="multi-text-label">
-									<input type="checkbox" class="default-choice-checkbox" name="%s[%s][%s]" value="0" %s>
+									<input type="checkbox" class="default-choice-checkbox" name="%s[%s][%s]" value="%s" %s>
 									<span class="default-choice">
 										<svg class="icon">
 											<use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#check"></use>
@@ -975,6 +975,7 @@ class fieldBuilder{
 				    		</div>',
 			$name,
 			"default",
+			$num,
 			$num,
 			($checked ? 'checked' : ''),
 			$name,
