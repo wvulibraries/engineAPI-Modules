@@ -583,7 +583,7 @@ class formBuilder{
 	 * @param string $buttonText
 	 * @return bool Returns TRUE if a field was added, FALSE otherwise
 	 */
-	private function addFormDelete($buttonText){
+	private function addFormDelete($buttonText, $fieldCSS = ""){
 		foreach ($this->fields as $field) {
 			if ($field->type == 'delete') return FALSE;
 		}
@@ -592,6 +592,7 @@ class formBuilder{
 			'type'   => 'delete',
 			'name'   => 'delete',
 			'value'  => $buttonText,
+			'fieldCSS' => $fieldCSS,
 			'showIn' => array(self::TYPE_UPDATE),
 		);
 
@@ -721,26 +722,24 @@ class formBuilder{
 	 */
 	public static function displayAssets(){
 		$assetFiles = array();
+
 		foreach (self::$formObjects as $form) {
 			$assetFiles = array_merge($assetFiles, $form->getAssets());
 		}
-		$assetFiles = array_unique($assetFiles);
 
-		$jsAssetBlob  = '';
-		$cssAssetBlob = '';
+		$assetFiles = array_unique($assetFiles);
+		$assetBlob  = '';
+
 		foreach ($assetFiles as $file) {
 			$ext = pathinfo($file, PATHINFO_EXTENSION);
+			$name = pathinfo($file, PATHINFO_FILENAME);
+
 			switch ($ext) {
-				case 'less':
-					// TODO
-				case 'sass':
-					// TODO
 				case 'css':
-					$cssAssetBlob .= minifyCSS($file);
+					$assetBlob .= sprintf('<style class="formBuilderStyleAssets %s">%s</style>', $name, minifyCSS($file));
 					break;
 				case 'js':
-					// $jsAssetBlob .= minifyJS($file);  @TODO: Fix this function to not rely on ob_start() which doesn't work from engine tags
-					$jsAssetBlob .= file_get_contents($file);
+					$assetBlob .= sprintf('<script class="formBuilderScriptAssets %s"> %s </script>', $name, file_get_contents($file));
 					break;
 				default:
 					errorHandle::newError(__METHOD__."() Unknown asset file type '$ext'. Ignoring file!", errorHandle::DEBUG);
@@ -748,11 +747,9 @@ class formBuilder{
 			}
 		}
 
-		$output = "<!-- engine Instruction displayTemplateOff -->\n";
-		if (!is_empty($jsAssetBlob)) $output .= "<script class='formBuilderScriptAssets'>".$jsAssetBlob."</script>";
-		if (!is_empty($cssAssetBlob)) $output .= "<style class='formBuilderStyleAssets'>".$cssAssetBlob."</style>";
-		return $output."<!-- engine Instruction displayTemplateOn -->\n";
+		return $assetBlob;
 	}
+
 
 	/**
 	 * Displays an insert or update form depending on if the primary fields have values

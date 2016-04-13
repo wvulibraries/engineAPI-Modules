@@ -64,6 +64,7 @@
  *  - image       HTML5 image field *dependant on browser support*
  *  - month       HTML5 month picker *dependant on browser support*
  *  - multiSelect multiSelect field *requires linkedTo be defined*
+ *  - multiText   Dynamic Text Field that allows you to add multiple inputs *requires a linked Table and js plugins* **See documentation**
  *  - number      HTML5 number field *dependant on browser support*
  *  - password    Password field (will render a confirmation field as well)
  *  - plaintext   Plaintext field with support for text-replacements *note: replacements are case sensitive*
@@ -152,6 +153,11 @@ class fieldBuilder{
 	private $renderType;
 
 	/**
+	 * @var string formID of the main Form
+	 */
+	private $formID;
+
+	/**
 	 * Class constructor
 	 *
 	 * @param array $field
@@ -181,6 +187,22 @@ class fieldBuilder{
 	 */
 	public function toSqlSnippet(){
 		return "`{$this->name}`=?";
+	}
+
+	/**
+	 * sets the renderType from formbuildertemplates
+	 * @param $type = Insert, Update, Edit Etc
+	 */
+	public function setRenderType($type){
+		$this->renderType = $type;
+	}
+
+	/**
+	 * sets the renderType from formbuildertemplates
+	 * @param $type = Insert, Update, Edit Etc
+	 */
+	public function setFormID($id){
+		$this->formID = $id;
 	}
 
 	/**
@@ -327,14 +349,16 @@ class fieldBuilder{
 	public function getAssets(){
 		$assets = array();
 
-		// Add assets for specific field types
-		switch($this->field['type']){
-			case 'multiselect':
+		if($this->field['type'] == 'multiselect'){
 				$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multi-select.css';
 				$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multi-select.js';
+		} elseif ($this->field['type'] == 'multitext') {
+				$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multiText.css';
+				$assets[] = __DIR__.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'multiText.js';
+		} else {
+			 // do nothing
 		}
 
-		// Add assets for specific field options
 		$help = $this->field['help'];
 		if(sizeof($help)){
 			switch(@$help['type']){
@@ -361,6 +385,11 @@ class fieldBuilder{
 		if (isset($this->renderOptions[$optionName])) return $this->renderOptions[$optionName];
 		if (isset($this->field[$optionName])) return $this->field[$optionName];
 		return NULL;
+	}
+
+	public function getPrimaryField(){
+		$primaryField = array_shift($this->formFields->getPrimaryFields());
+		return $primaryField->value;
 	}
 
 	/**
@@ -858,6 +887,187 @@ class fieldBuilder{
 
 		return $output;
 	}
+
+	/**
+	 * [Render Helper] Render a Multiple Text Input
+	 * Has Dynamic Buttons and JS Dependencies
+	 * @return string
+	 */
+	private function __render_multiText(){
+		$this->renderOptions['multiple'] = TRUE;
+
+		// generate form / field information
+		$formType = $this->renderType;
+		$formID   = $this->formID;
+
+		$value    = $this->getFieldOption('value');
+		$name     = $this->getFieldOption('name');
+		$fieldID  = $this->getFieldOption('fieldID');
+		$linkedTo = $this->getFieldOption('linkedTo');
+
+		// get MultiTextSettings
+		$multiTextSettings = $this->getFieldOption('multiTextSettings');
+		$mtColumns         = $multiTextSettings['foreignColumns'];
+		$mtColumns         = explode(',',str_replace('`', '', $mtColumns));
+
+		// create the field based on the type of field
+		// can only be update(2) or insert (1)
+		if($formType === 1){
+			// generate a single row because there are now values yet
+			// easy one
+			$output = $this->generateMultiTextHTML($fieldID, $name, $value);
+		} elseif($formType === 2) {
+			// use link table to generate a list of id's
+			$this->setMultiTextLinkValues();
+			$multiTextValues = $this->renderOptions['multiTextValue'];
+
+			$output = "";
+			// generate the output HTML
+			foreach($multiTextValues as $key => $mtValue){
+				$checked = ($mtValue[$mtColumns[1]] == 1 ? true : false);
+				$field   = $mtValue[$mtColumns[0]];
+				$output .= $this->generateMultiTextHTML($fieldID, $name, $field, $checked,$key);
+			}
+		}
+
+		// Init the JS Once
+		$output .= sprintf('<script>$("#%s").multiText({"name":"%s"});</script>',
+			$this->getFieldOption('fieldID'),
+			$this->getFieldOption('name')
+		);
+
+		// wrap into the coontainer
+		$htmlOutput = sprintf('<div id="%s" class="multi-text-outerContainer">%s</div>',
+			$this->getFieldOption('fieldID'),
+			$output
+		);
+
+		return $htmlOutput;
+	}
+
+	/**
+	 * seperating the concerns of the MultiText Functions
+	 * returns a string of HTML that can be re-used for different purposes in the __render_multiText function
+	 *
+	 * @return string
+	 */
+
+	private function generateMultiTextHTML($fieldID, $name, $value = "", $checked = false, $num = 0){
+		$html  = sprintf('<div class="multi-text-container initial-multiText">
+								<label class="multi-text-label">
+									<input type="checkbox" class="default-choice-checkbox" name="%s[%s][%s]" value="%s" %s>
+									<span class="default-choice">
+										<svg class="icon">
+											<use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#check"></use>
+										</svg>
+									</span>
+								</label>
+
+								<input name="%s[%s][%s]" class="input-element" type="text" data-default="false" value="%s">
+
+								<button name="add" class="add-choice" type="button" title="Add a choice.">
+									<svg class="icon"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#plus"></use>]</svg>
+								</button>
+
+								<button name="remove" class="remove-choice" type="button" title="Remove this choice.">
+									<svg class="icon" viewBox="0 0 20 20"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#close"></use></svg>
+								</button>
+				    		</div>',
+			$name,
+			"default",
+			$num,
+			$num,
+			($checked ? 'checked' : ''),
+			$name,
+			"value",
+			$num,
+			str_replace('"', '&quot;', $value)
+		);
+
+		return $html;
+	}
+
+	/**
+	 * This gets all of the SQL and Databse work done for the Linking of the MultiText values
+	 * Sets an array in renderingOptions for the different values that are associated with each of the fields.
+	 *
+	 * @return true or false
+	 */
+
+	private function setMultiTextLinkValues(){
+		// Get the linkedTo settings
+		$linkedTo = $this->getFieldOption('linkedTo');
+
+		// If no linkedTo settings, return FALSE
+		if(is_empty($linkedTo)) return FALSE;
+
+		// Pull out all the settings we need
+		$dbConnection     = isset($linkedTo['dbConnection'])     ? $linkedTo['dbConnection']     : 'appDB';
+
+		$foreignTable     = isset($linkedTo['foreignTable'])     ? $linkedTo['foreignTable']     : NULL;
+		$foreignKey       = isset($linkedTo['foreignKey'])       ? $linkedTo['foreignKey']       : 'ID';
+		$foreignLabel     = isset($linkedTo['foreignLabel'])     ? $linkedTo['foreignLabel']     : NULL;
+
+		$linkTable        = isset($linkedTo['linkTable'])        ? $linkedTo['linkTable']        : NULL;
+		$linkLocalField   = isset($linkedTo['linkLocalField'])   ? $linkedTo['linkLocalField']   : NULL;
+		$linkForeignField = isset($linkedTo['linkForeignField']) ? $linkedTo['linkForeignField'] : NULL;
+
+
+		// get the primary key value for the SQL Needed
+		$primaryField = array_shift($this->formFields->getPrimaryFields());
+		$primaryValue = $primaryField->value;
+
+		// Multi Text Items
+		$multiTextSettings = $this->getFieldOption('multiTextSettings');
+		$mtTable           = $multiTextSettings['foreignTable'];
+		$mtKey             = $multiTextSettings['foreignKey'];
+		$mtColumns         = $multiTextSettings['foreignColumns'];
+
+		// Get the db connection we'll be talking to
+		$db = db::getInstance()->$dbConnection;
+
+		$linkSQL = sprintf("SELECT %s FROM %s WHERE %s='%s'",
+			$db->escape($linkForeignField),
+			$db->escape($linkTable),
+			$db->escape($linkLocalField),
+			$db->escape($primaryValue)
+		);
+
+		// Run the SQL
+		$sqlResult = $db->query($linkSQL);
+		if($sqlResult->errorCode()){
+			errorHandle::newError(__METHOD__."() SQL Error: {$sqlResult->errorCode()}:{$sqlResult->errorMsg()} (SQL: $linkSQL)", errorHandle::DEBUG);
+			return FALSE;
+		}
+
+		// ID value information for next SQL Statements
+		$idValues = $sqlResult->fetchFieldAll();
+
+		$multiTextData = array();
+
+		foreach($idValues as $ids){
+			$sqlMultiTextData = sprintf("SELECT %s FROM %s WHERE %s='%s'",
+				$db->escape($mtColumns),
+				$db->escape($mtTable),
+				$db->escape($mtKey),
+				$db->escape($ids)
+			);
+
+			$multiTextSqlResult = $db->query($sqlMultiTextData);
+
+			if($multiTextSqlResult->errorCode()){
+				errorHandle::newError(__METHOD__."() SQL Error: {$multiTextSqlResult->errorCode()}:{$multiTextSqlResult->errorMsg()} (SQL: $sqlMultiTextData)", errorHandle::DEBUG);
+				return FALSE;
+			}
+
+			$multiTextData[] = $multiTextSqlResult->fetch();
+		}
+
+		$this->renderOptions['multiTextValue'] = $multiTextData;
+		return TRUE;
+	}
+
+
 
 	/**
 	 * Build the attribute pairs for the label element
