@@ -205,7 +205,6 @@ class fieldBuilder{
 		$this->formID = $id;
 	}
 
-
 	/**
 	 * Returns TRUE if this is a 'special' field like a button
 	 * @return bool
@@ -386,6 +385,11 @@ class fieldBuilder{
 		if (isset($this->renderOptions[$optionName])) return $this->renderOptions[$optionName];
 		if (isset($this->field[$optionName])) return $this->field[$optionName];
 		return NULL;
+	}
+
+	public function getPrimaryField(){
+		$primaryField = array_shift($this->formFields->getPrimaryFields());
+		return $primaryField->value;
 	}
 
 	/**
