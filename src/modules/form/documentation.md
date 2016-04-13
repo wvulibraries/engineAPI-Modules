@@ -133,7 +133,10 @@ Below is an example of a form builder that has only 2 fields.  Each field will b
 You can see examples of where to put the form options, field options, and field types using the example below.
 
 ```php
- // create customer form
+    //get formID if one is provided
+    $id = isset($_GET['MYSQL']['id']) ? $_GET['MYSQL']['id'] : '');
+
+    // create customer form
     $form = formBuilder::createForm('formName');
     $form->linkToDatabase( array(
         'table' => 'formDatabaseTable'
@@ -180,29 +183,146 @@ Below is an example of what an edit table will appear.  This will allow you to e
 
 ## Asset Pipelines / Form Templates
 
+** Needs Documented
+
 ## MultiText
 
-The example below is an idea of how a typical multi text box will be setup.  The multi text box will rely on MySQL tables being setup properly and perform a link between multiple tables.  
+The example below is an idea of how a typical multi text box will be setup.  The multi text box will rely on MySQL tables being setup properly and perform a link between multiple tables.
+For example lets say we are creating questions for a test and we need to have one that has the correct answer.  We could setup a database structure using form builder like the options below.      
+
+
+#### answers Table
+
+```sql
+DROP TABLE IF EXISTS `question`;
+CREATE TABLE `question`(
+    `ID` tinyint(3) unsigned NOT NULL AUTO_INCREMENT,
+    `name` varchar(50) NOT NULL,
+    `question` varchar(300) NOT NULL,
+    PRIMARY KEY(`ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- example table for storing the answers or the multi-text values
+-- this is always going to need a value slot that accepts varchar and a boolean or tinyint (( in mysql boolean references are treated as 1/0 ))
+DROP TABLE IF EXISTS `answer`;
+CREATE TABLE `answer`(
+    `aID` tinyint(3) unsigned NOT NULL AUTO_INCREMENT,
+    `value` varchar(300) NOT NULL,
+    `default` boolean NOT NULL,
+    PRIMARY KEY(`aID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- example setup of the link table for multi-text example
+DROP TABLE IF EXISTS `qaLinkTable`;
+CREATE TABLE `qaLinkTable`(
+    `ID` tinyint(3) unsigned NOT NULL AUTO_INCREMENT,
+    `questionID` tinyint(3) NOT NULL,
+    `answerID` tinyint(3) NOT NULL,
+    PRIMARY KEY(`ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+```
+
+#### MultiText Add Field looks like this
 
 ```php
 $form->addField(array(
-     'name'       => 'answers',
-     'type'       => 'multiText',
-     'label'      => 'Answers',
-     'fieldID'    => 'answers',
-     'fieldClass' => 'answersFieldClass',
-     'multiTextSettings'   => array(
-         'foreignTable'     => 'answers',
-         'foreignKey'       => 'ID',
-         'foreignValue'     => 'value',
-         'foreignDefault'   => 'default',
-         'linkTable'        => 'qaLinkTable',
-         'linkLocalField'   => 'ID',
-         'linkForeignField' => 'aID'
-     ),
- ));
- ```
+    'name'              => 'answer', // same as foreginTable
+    'type'              => 'multiText',
+    'label'             => 'Answers',
+    'fieldID'           => 'answers',
+    'fieldClass'        => 'answersFieldClass',
+    'showIn'            => array(formBuilder::TYPE_INSERT, formBuilder::TYPE_UPDATE),
+    'multiTextSettings' => array(
+                              'foreignTable'   => 'answer',
+                              'foreignKey'	   => 'aID',
+                              'foreignColumns' => '`value`,`default`' ),
+    'linkedTo'          => array(
+                              'foreignTable'     => 'answer',
+                              'foreignKey'       => 'aID',
+                              'foreignLabel'     => 'value',
+                              'linkTable'        => 'qaLinkTable',
+                              'linkLocalField'   => 'questionID',
+                              'linkForeignField' => 'answerID' ),
+));
+```
+
+#### Entire Form for this Example Looks like this
+
+```php
+<?php
+    formBuilder::ajaxHandler();
+
+    $form = formBuilder::createForm('formName');
+    $form->linkToDatabase( array(
+        'table' => 'question'
+    ));
+
+	$id = isset($_GET['MYSQL']['id']) ? $_GET['MYSQL']['id'] : "";
+
+    if(!is_empty($_POST) || session::has('POST')) {
+        $processor = formBuilder::createProcessor();
+        $processor->processPost();
+    }
+
+    // form titles
+    $form->insertTitle = "Insert Title";
+    $form->editTitle   = "Edit Title";
+    $form->updateTitle = "Update Title";
+
+    // form information
+    $form->addField(array(
+        'name'       => 'ID',
+        'type'       => 'hidden',
+        'primary'    => TRUE,
+        'fieldClass' => 'id',
+		'value'      => $id,
+        'showIn'     => array(formBuilder::TYPE_INSERT, formBuilder::TYPE_UPDATE),
+    ));
+
+    $form->addField(array(
+        'name'     => 'name',
+        'label'    => 'Question Name:',
+        'required' => TRUE
+    ));
+
+    $form->addField(array(
+        'name'     => 'question',
+        'label'    => 'The Question:',
+        'required' => TRUE
+    ));
+
+    $form->addField(array(
+        'name'       => 'answer',
+        'type'       => 'multiText',
+        'label'      => 'Answers',
+        'fieldID'    => 'answers',
+        'fieldClass' => 'answersFieldClass',
+        'showIn'     => array(formBuilder::TYPE_INSERT, formBuilder::TYPE_UPDATE),
+        'multiTextSettings'  => array(
+                            'foreignTable'   => 'answer',
+			                      'foreignKey'	   => 'aID',
+                            'foreignColumns' => '`value`,`default`'
+        ),
+    		'linkedTo' => array(
+                      			'foreignTable'     => 'answer',
+                      			'foreignKey'       => 'aID',
+                      			'foreignLabel'     => 'value',
+                      			'linkTable'        => 'qaLinkTable',
+                      			'linkLocalField'   => 'questionID',
+                      			'linkForeignField' => 'answerID'
+    		)
+    ));
+
+    templates::display('header');
+?>
+
+<h2> test </h2>
+
+{form name="formName" display="form"}
+```
 
 ## CallBack
+
+** Needs Documented
 
 ## MultiSelect
