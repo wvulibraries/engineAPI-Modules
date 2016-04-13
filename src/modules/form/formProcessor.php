@@ -491,7 +491,7 @@ class formProcessor{
 		$settings     = $field->__get('multiTextSettings');
 		$fieldName    = $field->__get('name');
 		$primaryValue = $field->getPrimaryField();
-		$linkID       = (isnull($linkID) || is_empty($linkID) ? $primaryValue : $linkID); \
+		$linkID       = (isnull($linkID) || is_empty($linkID) ? $primaryValue : $linkID);
 
 		// link tables
 		$linkedTo         = $field->__get('linkedTo');
@@ -525,7 +525,7 @@ class formProcessor{
 
 			// loop through and delete those items
 			foreach ($idValues as $id) {
-				$deleteSQL = sprintf("DELETE FROM %s WHERE %s='%s's",
+				$deleteSQL = sprintf("DELETE FROM %s WHERE %s='%s'",
 					$db->escape($mtTable),
 					$db->escape($mtKey),
 					$db->escape($id)
@@ -533,7 +533,7 @@ class formProcessor{
 
 				$deleteResult = $db->query($deleteSQL);
 				if($deleteResult->errorCode()){
-					errorHandle::newError(__METHOD__."() SQL Error: {$sqlResult->errorCode()}:{$sqlResult->errorMsg()} (SQL: $linkSQL)", errorHandle::DEBUG);
+					errorHandle::newError(__METHOD__."() SQL Error: {$deleteResult->errorCode()}:{$deleteResult->errorMsg()} (SQL: $deleteSQL)", errorHandle::DEBUG);
 					return FALSE;
 				}
 			}
@@ -552,7 +552,6 @@ class formProcessor{
 
 		// insert the data into the table grabbed from the $settings
 		$dataForLinkTable = array();
-
 
 		foreach ($tempArray as $insertData){
 
