@@ -952,7 +952,7 @@ class fieldBuilder{
 	 * @return string
 	 */
 
-	private function generateMultiTextHTML($fieldID, $name, $value = "", $checked = 'false', $num = 0){
+	private function generateMultiTextHTML($fieldID, $name, $value = "", $checked = false, $num = 0){
 		$html  = sprintf('<div class="multi-text-container initial-multiText">
 								<label class="multi-text-label">
 									<input type="checkbox" class="default-choice-checkbox" name="%s[%s][%s]" value="%s" %s>
