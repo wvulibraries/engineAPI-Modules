@@ -104,8 +104,11 @@ class formBuilderTemplate {
 			if(isset($this->renderOptions['expandable']) && $this->renderOptions['expandable']){
 				// Expandable enabled: only remove the {ifExpandable} and {/ifExpandable} tags
 				$block = preg_replace('|{/?ifExpandable}|i', '', $block);
-			}else{
+				$block = preg_replace('|{noShowExpandable(.*?)}(.+?){/noShowExpandable}|ism', '', $block);
+			}
+			else{
 				// Expandable disabled: remove entire {ifExpandable} block
+				$block = preg_replace('|{/?noShowExpandable}|i', '', $block);
 				$block = preg_replace('|{ifExpandable(.*?)}(.+?){/ifExpandable}|ism', '', $block);
 			}
 
@@ -221,7 +224,7 @@ class formBuilderTemplate {
 		// Catch any sql error
 		if($sqlResult->errorCode()){
 			errorHandle::newError(__METHOD__."() SQL Error: {$sqlResult->errorCode()}:{$sqlResult->errorMsg()}", errorHandle::HIGH);
-			die('Internal database error!');
+			return 'Internal database error!';
 		}
 
 		// Save the number of rows for {rowCount}
@@ -343,6 +346,10 @@ class formBuilderTemplate {
 		preg_match('/^{\w+(.+)}$/', $tag, $matches);
 		$attrPairs = attPairs($matches[1]);
 
+		// set form info in Field Builder
+		$field->setRenderType($this->formType);
+		$field->setFormID($this->formID);
+
 		// Restore value from POST if we weren't given it
 		if(isset($value)) {
 			$attrPairs['value'] = $value;
@@ -404,6 +411,10 @@ class formBuilderTemplate {
 				// Build the <form> tag
 				if(!isset($this->renderOptions['noFormTag']) || !$this->renderOptions['noFormTag']){
 
+					// Add rel and rev attributes
+					if(isset($this->renderOptions['rel'])) $attrPairs['rel'] = $this->renderOptions['rel'];
+					if(isset($this->renderOptions['rev'])) $attrPairs['rev'] = $this->renderOptions['rev'];
+
 					// If we have browser validation turned off, add the attribute to <form>
 					if(!$this->formBuilder->browserValidation) $attrPairs['novalidate'] = '';
 
@@ -421,7 +432,24 @@ class formBuilderTemplate {
 						$attrs[] = 'data-'.$attr.'="'.addslashes($value).'"';
 					}
 
-					$output .= sprintf('<form method="post"%s>', (sizeof($attrs) ? ' '.implode(' ', $attrs): ''));
+					// Catch formAction
+					$actionText = '';
+					if($this->formBuilder->formAction || isset($this->renderOptions['action'])){
+						$action = isset($this->renderOptions['action'])
+							? $this->renderOptions['action']
+							: $this->formBuilder->formAction;
+						$actionText = 'action="'.$action.'"';
+					}
+
+					// Build attrText
+					$attrText = sizeof($attrs)
+						? ' '.implode(' ', $attrs)
+						: '';
+
+					// Generate <form> tag
+					$output .= sprintf('<form %s method="post" %s>',
+						$actionText,
+						$attrText);
 				}
 
 				// Include the formName

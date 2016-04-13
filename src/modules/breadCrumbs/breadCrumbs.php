@@ -105,12 +105,13 @@ class breadCrumbs {
 					}
 				}
 
-				if (file_exists($path ."/.breadCrumbs")) {
-					$lines = file($path ."/.breadCrumbs");
-					$trailArray[] = '<a href="'.$href.'" class="breadCrumbLink">'.(($str2upper === TRUE)?str2TitleCase($lines[0]):$lines[0]).'</a>';
+				$displayName = $this->displayName($path,$url[$I],$str2upper);
+
+				if ($I == $urlCount-1) {
+					$trailArray[] = $displayName;
 				}
 				else {
-					$trailArray[] = '<a href="'.$href.'" class="breadCrumbLink">'.(($str2upper === TRUE)?str2TitleCase($url[$I]):$url[$I]).'</a>';
+					$trailArray[] = sprintf('<a href="%s" class="breadCrumbLink">%s</a>',$href,$displayName);
 				}
 			}
 
@@ -124,6 +125,21 @@ class breadCrumbs {
 
 
 		return($trail);
+
+	}
+	
+		private function displayName($path,$url,$str2upper) {
+
+		$displayName = "";
+		if (file_exists($path ."/.breadCrumbs")) {
+			$lines = file($path ."/.breadCrumbs");
+			$displayName = $lines[0];
+		}
+		else {
+			$displayName = $url;
+		}
+
+		return (($str2upper === TRUE)?str2TitleCase($displayName):$displayName);
 
 	}
 }
