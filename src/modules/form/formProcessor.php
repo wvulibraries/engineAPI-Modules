@@ -415,9 +415,9 @@ class formProcessor{
 			  if(!($field instanceof fieldBuilder)) continue;
 
 			  if ($field->type == "multitext") {
-			    // save this field for later after we get an ID
-			    // similar usage for linked table
-			    $multiTextFields[] = $field;
+				    // save this field for later after we get an ID
+				    // similar usage for linked table
+				    $multiTextFields[] = $field;
 			  } elseif($field->usesLinkTable()){
 					// Process the link table, no local field to process
 					$this->processLinkedField($field, $data);
@@ -452,6 +452,13 @@ class formProcessor{
 				}
 			}
 
+			// process multi text fields if there are some
+			if(sizeof($multiTextFields)){
+				foreach($multiTextFields as $mtField){
+					$this->processMultiText($mtField, $data, $this->insertID);
+				}
+			}
+
 			// Commit the transaction
 			$this->db->commit();
 
@@ -480,10 +487,59 @@ class formProcessor{
 	 */
 	private function processMultiText(fieldBuilder $field, $formData, $linkID){
 		// get information from an array
-		$db        = $this->db;
-		$settings  = $field->__get('multiTextSettings');
-		$fieldName = $field->__get('name');
+		$db           = $this->db;
+		$settings     = $field->__get('multiTextSettings');
+		$fieldName    = $field->__get('name');
+		$primaryValue = $field->getPrimaryField();
+		$linkID       = (isnull($linkID) || is_empty($linkID) ? $primaryValue : $linkID); \
 
+		// link tables
+		$linkedTo         = $field->__get('linkedTo');
+		$linkTable        = isset($linkedTo['linkTable']) ? $linkedTo['linkTable'] : NULL;
+		$linkLocalField   = isset($linkedTo['linkLocalField']) ? $linkedTo['linkLocalField'] : NULL;
+		$linkForeignField = isset($linkedTo['linkForeignField']) ? $linkedTo['linkForeignField'] : NULL;
+
+		if($this->processorType == formBuilder::TYPE_UPDATE){
+			// find the id numbers of the old link table
+			$linkSQL = sprintf("SELECT %s FROM %s WHERE %s='%s'",
+				$db->escape($linkForeignField),
+				$db->escape($linkTable),
+				$db->escape($linkLocalField),
+				$db->escape($primaryValue)
+			);
+
+			// Run the SQL
+			$sqlResult = $db->query($linkSQL);
+			if($sqlResult->errorCode()){
+				errorHandle::newError(__METHOD__."() SQL Error: {$sqlResult->errorCode()}:{$sqlResult->errorMsg()} (SQL: $linkSQL)", errorHandle::DEBUG);
+				return FALSE;
+			}
+
+			// ID value information for next SQL Statements
+			$idValues = $sqlResult->fetchFieldAll();
+
+			// Multi Text Items
+			$mtTable           = $settings['foreignTable'];
+			$mtKey             = $settings['foreignKey'];
+			$mtColumns         = $settings['foreignColumns'];
+
+			// loop through and delete those items
+			foreach ($idValues as $id) {
+				$deleteSQL = sprintf("DELETE FROM %s WHERE %s='%s's",
+					$db->escape($mtTable),
+					$db->escape($mtKey),
+					$db->escape($id)
+				);
+
+				$deleteResult = $db->query($deleteSQL);
+				if($deleteResult->errorCode()){
+					errorHandle::newError(__METHOD__."() SQL Error: {$sqlResult->errorCode()}:{$sqlResult->errorMsg()} (SQL: $linkSQL)", errorHandle::DEBUG);
+					return FALSE;
+				}
+			}
+		}
+
+		// grab data
 		$multiTextData = $formData[$fieldName]['value'];
 		$defaults      = $formData[$fieldName]['default'];
 
