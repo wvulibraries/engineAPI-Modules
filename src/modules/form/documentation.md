@@ -330,19 +330,15 @@ Callbacks are used for calling methods to happen before, after, during, or by so
 - beforeInsert 
 - doInsert     
 - afterInsert  
- 
 - beforeUpdate 
 - doUpdate     
 - afterUpdate  
- 
 - beforeEdit   
 - doEdit       
 - afterEdit    
- 
 - beforeDelete 
 - doDelete     
 - afterDelete  
-
 - onSuccess    
 - onFailure    
 
