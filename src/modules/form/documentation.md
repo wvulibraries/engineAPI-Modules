@@ -323,6 +323,50 @@ $form->addField(array(
 
 ## CallBack
 
-** Needs Documented
+Callbacks are used for calling methods to happen before, after, during, or by some event in the form submission process.  Each callback is called on any of the following events for the submission process.  Each callback is done on a processor class for form builder.  Over-ridding the Processor must be done before you can run a callback.
+
+### Callback Events 
+
+- beforeInsert 
+- doInsert     
+- afterInsert  
+ 
+- beforeUpdate 
+- doUpdate     
+- afterUpdate  
+ 
+- beforeEdit   
+- doEdit       
+- afterEdit    
+ 
+- beforeDelete 
+- doDelete     
+- afterDelete  
+
+- onSuccess    
+- onFailure    
+
+### Processor Over-ride / Callback Example 
+
+```php 
+if(!is_empty($_POST) || session::has('POST')) {
+    $processor = formBuilder::createProcessor(); // creates a new processor 
+    $processor->setCallback('beforeInsert', 'processInsert'); // sets the callback event and the callback function 
+    $processor->processPost(); // runs the processor 
+}
+```
+
+### Callback Function 
+
+The callback function has two default parameters that can be used inside of the function.  Processor is a copy of the processor object that reveals more about the class and the form builder object itself.  The other one is the data that comes from the form.  Depending upon the event depends upon the information that is expected in the return values. The insert/update/edit events all expect the callback to return the data for the database. 
+
+```php 
+    function processInsert($processor, $data){ 
+        $data['someField'] = doSomething($data['someField']); 
+        return $data; 
+    }
+```
+
+The above example shows how you might use the processor to manipulate data before an Insert.  It could also be a way to extract a File from an upload field, or modify some choices that may be added dynamically by JavaScript.  
 
 ## MultiSelect
