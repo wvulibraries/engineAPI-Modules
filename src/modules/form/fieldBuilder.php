@@ -881,7 +881,6 @@ class fieldBuilder{
   private function __render_delete(){
     $this->field['type'] = 'submit';
     $this->field['name'] = "delete";
-    $this->field['method'] = "delete"; 
     return  $this->__render_input();
   }
 
