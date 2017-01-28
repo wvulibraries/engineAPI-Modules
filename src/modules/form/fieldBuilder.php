@@ -880,11 +880,14 @@ class fieldBuilder{
 	 */
 	private function __render_delete(){
 		$type = $this->field['type'];
+		$name = $this->field['name'];
 
 		$this->field['type'] = 'submit';
-		$output = $this->__render_input();
-		$this->field['type'] = $type;
 		$this->field['name'] = "delete";
+		$output = $this->__render_input();
+
+		$this->field['type'] = $type;
+		$this->field['name'] = $name;
 
 		return $output;
 	}
@@ -1093,9 +1096,7 @@ class fieldBuilder{
 	 */
 	private function buildFieldAttributes(){
 		$attributes         = (array)$this->getFieldOption('fieldMetadata');
-		if($this->getFieldOption('type') != 'submit'){
-			$attributes['name'] = $this->getFieldOption('name');
-		}
+		$attributes['name'] = $this->getFieldOption('name');
 
 		if (str2bool($this->getFieldOption('disabled'))) $attributes['bool'][] = 'disabled';
 		if (str2bool($this->getFieldOption('readonly'))) $attributes['bool'][] = 'readonly';
@@ -1148,7 +1149,7 @@ class fieldBuilder{
 		 * This is needed so the submit button doesn't show up in POST data and thus overwrite
 		 * the value of any generated submit buttons on the next page load.
 		 */
-		if($this->getFieldOption('type') == 'submit' && in_array('name', array_keys($attrPairs))){
+		if($this->getFieldOption('name') != 'delete' && $this->getFieldOption('type') == 'submit' && in_array('name', array_keys($attrPairs))){
 			unset($attrPairs['name']);
 		}
 
